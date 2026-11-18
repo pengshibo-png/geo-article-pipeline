@@ -92,6 +92,10 @@ class FakeRunner:
 def runner(monkeypatch):
     fake = FakeRunner()
     monkeypatch.setattr(yxer_cli, "_run_subprocess", fake)
+    # cli_exe 是 run_yxer 的**前置闸门**（which 找不到真 CLI 会提前 raise，
+    # 永远走不到 _run_subprocess 替身）——不 mock 它，用例结果就取决于
+    # 运行机器装没装 yxer（本机绿、干净 CI 红）。桩成"已安装"即可真正离线。
+    monkeypatch.setattr(yxer_cli, "cli_exe", lambda: "/usr/local/bin/yxer")
     monkeypatch.setattr(yxer_cli, "_CONFIG_PATH", None)
     return fake
 

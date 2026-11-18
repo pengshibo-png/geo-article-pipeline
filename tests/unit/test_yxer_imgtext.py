@@ -142,6 +142,14 @@ class FakeRunner:
             args=[], returncode=0, stdout=json.dumps(payload, ensure_ascii=False), stderr="")
 
 
+@pytest.fixture(autouse=True)
+def _fake_cli_installed(monkeypatch):
+    """桩掉 `cli_exe` 前置闸门：本文件的 subprocess 全部有替身，但 run_yxer
+    会先 `which yxer`——不桩它，结果就取决于运行机器**装没装**蚁小二 CLI
+    （开发机碰巧装了 → 绿；干净 CI / 新环境 → 红）。"""
+    monkeypatch.setattr(yxer_cli, "cli_exe", lambda: "/usr/local/bin/yxer")
+
+
 @pytest.fixture()
 def runner(monkeypatch, tmp_path):
     fake = FakeRunner()
