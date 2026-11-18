@@ -27,6 +27,17 @@ jobs:
           python spec/prompts/_样例/validate_review.py spec/prompts/_样例/B-审稿输出-样例.json
           python spec/品牌资料规范/check_brand.py
       - name: Tests (fake provider, offline)
+        shell: bash
         env:
           GEO_ENV: test
-        run: python -m pytest tests -q -p no:cacheprovider
+        run: |
+          set -o pipefail
+          python -m pytest tests -q -ra --tb=short -p no:cacheprovider 2>&1 | tee pytest-out.log
+      - name: Surface failures as annotations
+        if: failure()
+        shell: bash
+        run: |
+          set +e
+          fails=$(grep -E '^(FAILED|ERROR)' pytest-out.log | head -6)
+          [ -z "$fails" ] && fails=$(tail -c 700 pytest-out.log | tr '\n' ' ')
+          printf '::error title=pytest failed::%s\n' "${fails//$'\n'/%0A}"
