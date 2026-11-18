@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN" class="theme-light">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>竞品对比 · GEO 优化系统</title>
+
+<link rel="stylesheet" href="/static/client_style.css?v={{ asset_ver }}">
+
+<link rel="stylesheet" href="/static/ds.css?v={{ asset_ver }}">
+
+<link rel="stylesheet" href="/static/theme-light.css?v={{ asset_ver }}">
+
+<style>
+
+/* ============================================================
+
+   竞品对比 · 页内样式(近黑 + 铜金)
+
+   规范: 只用 var(--*) token / 圆角 ≤ 8px / 无渐变 无发光 无玻璃拟态
+
+   间距落在 8px 栅格(8/12/16/20/24), 卡片之间 16px, 卡片内边距 16–20px
+
+   通用组件(.phead/.sec/.tbl/.pill/.empty/.btn/.toolbar)全部来自 theme-light.css,
+
+   此处只保留三类补丁: 1) 提示条与品牌选择 chip  2) 双图栅格与图表容器  3) 对比表格列
+
+   ============================================================ */
+
+
+
+/* [hidden] 通用压制: 组件类自带的 display(grid/flex) 会盖过 UA 的 [hidden]{display:none},
+
+   与 client_home 对 .pill[hidden] 的补丁同理 */
+
+html.theme-light [hidden] { display: none !important; }
+
+
+
+/* 1) 数据源提示条(诚实标注): 铜金边 + 图标 + 文案, mock 模式常驻; ?real=1 时由脚本移除 */
+
+html.theme-light .mock-note {
+
+    display: flex; align-items: flex-start; gap: 12px; padding: 12px 16px; margin: 0 0 16px;
+
+    background: var(--brand-soft); border: 1px solid var(--brand); border-radius: var(--r);
+
+}
+
+html.theme-light .mock-note > .ic { color: var(--brand); flex: none; margin-top: 2px; }
+
+html.theme-light .mock-note .mn-t { flex: 1 1 auto; min-width: 0; }
+
+html.theme-light .mock-note .mn-t > b { display: block; font-size: 13px; font-weight: 600; color: var(--ink); line-height: 20px; }
+
+html.theme-light .mock-note .mn-s b { font-weight: 600; color: var(--brand); }
+
+html.theme-light .mock-note .mn-s { display: block; font-size: 12px; color: var(--ink2); line-height: 18px; margin-top: 4px; }
+
+html.theme-light .mock-note[hidden] { display: none; }
+
+
+
+/* 对比对象选择 chip: 可点选切换高亮, 色点与图表系列色一一对应 */
+
+html.theme-light .brand-chip {
+
+    display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px;
+
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: var(--r-btn);
+
+    color: var(--ink2); font-family: inherit; font-size: 13px; font-weight: 400; cursor: pointer;
+
+    transition: border-color .12s, color .12s, background .12s;
+
+}
+
+html.theme-light .brand-chip:hover { border-color: var(--brand); color: var(--ink); }
+
+html.theme-light .brand-chip.on { border-color: var(--brand); background: var(--brand-soft); color: var(--brand); font-weight: 500; }
+
+html.theme-light .brand-chip .dot { width: 8px; height: 8px; border-radius: 2px; flex: none; }
+
+html.theme-light .brand-chip .dot.c1 { background: var(--c1); }
+
+html.theme-light .brand-chip .dot.c2 { background: var(--c2); }
+
+html.theme-light .brand-chip .dot.c5 { background: var(--c5); }
+
+
+
+/* 2) 双图栅格: 1440/1280 等宽双列, ≤1150 收单列(ds.css 断点一致) */
+
+html.theme-light .bento-2 { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: stretch; gap: 16px; }
+
+html.theme-light .bento-2 > .sec { display: flex; flex-direction: column; }
+
+html.theme-light .bento-2 > .sec > .sec-b { flex: 1; }
+
+@media (max-width: 1150px) {
+
+    html.theme-light .bento-2 { grid-template-columns: 1fr; }
+
+}
+
+/* 图表空态为覆盖层: 保留 canvas 容器尺寸, 数据到达后无需重建实例 */
+
+.chart-wrap { position: relative; }
+
+.chart-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: var(--card); }
+
+.chart-empty[hidden] { display: none; }
+
+
+
+/* 3) 对比表格: 维度列固定宽, 数值列右对齐等宽不折行, 「领先」pill 与数字留 8px 间距 */
+
+html.theme-light .sec > .tbl-wrap { border: none; border-radius: 0; }
+
+html.theme-light table.tbl td.empty-cell { padding: 0; border-bottom: none; }
+
+html.theme-light table.tbl th, html.theme-light table.tbl td { white-space: nowrap; }
+
+html.theme-light table.tbl th.col-dim, html.theme-light table.tbl td.col-dim { width: 160px; }
+
+html.theme-light table.tbl td.num .pill { margin-left: 8px; }
+
+/* 结论卡: 客观结论文字走 --ink2, 关键数字提亮 */
+
+html.theme-light .concl { font-size: 13px; color: var(--ink2); line-height: 1.8; margin: 0; }
+
+html.theme-light .concl b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+</style>
+
+</head>
+
+<body class="cl" data-page="competitor">
+
+
+
+<header class="topbar" id="topbar">
+
+  <div class="tb-brand"><span class="tb-logo">G</span><span class="tb-name">GEO 优化系统</span><span class="tb-env" id="tb-env">运营管理端</span></div>
+
+  <div class="tb-right">
+
+    <span class="tb-chip" id="model-tag">模型 · —</span>
+
+    <span class="tb-chip" id="run-tag">空闲</span>
+
+    <span class="tb-chip"><select class="cl-tsel" id="tb-tenant" style="height:24px;border:none;background:transparent"></select></span>
+
+    <div class="tb-user" id="tb-user-btn"><span class="tb-av" id="tb-av">管</span><span class="tb-uname" id="tb-uname">—</span><i class="ic" data-ic="chevronDown" data-sz="16"></i></div>
+
+  </div>
+
+  <div class="tb-menu" id="tb-menu"><button onclick="doLogout()"><i class="ic" data-ic="logout"></i>退出登录</button></div>
+
+</header>
+
+
+
+<div class="cl-app">
+
+  <aside class="cl-side" id="sidebar"></aside>
+
+  <main class="cl-main">
+
+    <nav class="crumb" id="crumb"></nav>
+
+
+
+    <!-- ===== 页头: 对比口径 ===== -->
+
+    <div class="phead">
+
+      <div class="phead-l">
+
+        <div class="phead-eyebrow">数据洞察 · 竞品对比</div>
+
+        <div class="phead-h1">竞品对比</div>
+
+        <div class="phead-sub">与同行品牌在四大 AI 引擎中的可见度、份额走势与关键指标对比 · 数据更新至 <b id="hi-date">-</b></div>
+
+        <div class="phead-chips">
+
+          <span class="phead-chip"><i class="ic" data-ic="users" data-sz="16"></i>对比品牌 <b id="pc-brands">-</b> 个</span>
+
+          <span class="phead-chip"><i class="ic" data-ic="search" data-sz="16"></i>监测词 <b id="pc-words">-</b> 个</span>
+
+          <span class="phead-chip"><i class="ic" data-ic="clock" data-sz="16"></i>更新日期 <b id="pc-date">-</b></span>
+
+        </div>
+
+      </div>
+
+      <div class="phead-r">
+
+        <span class="pr-l">数据源</span>
+
+        <span class="pill gray" id="src-tag">待接入</span>
+
+      </div>
+
+    </div>
+
+
+
+    <!-- ===== 数据源提示条(诚实标注): 竞品数据源尚未接入, 以下全部为演示数据 ===== -->
+
+    <div class="mock-note" id="mock-note">
+
+      <i class="ic" data-ic="alert" data-sz="20"></i>
+
+      <div class="mn-t">
+
+        <b>竞品数据源尚未接入，以下为演示数据（mock）</b>
+
+        <span class="mn-s">当前页面所有数字均为占位示例，仅用于界面与交互验收；数据源接入后，此提示条与演示数据将一并移除。通过 <b>?real=1</b> 可预览「等待接入」空态。</span>
+
+      </div>
+
+    </div>
+
+
+
+    <!-- ===== 对比对象选择器: 品牌 chip 可点选切换高亮(至少保留 1 个) ===== -->
+
+    <section class="sec" id="sec-pick">
+
+      <div class="sec-h">
+
+        <span class="sec-ico"><i class="ic" data-ic="users" data-sz="20"></i></span>
+
+        <div class="sec-t"><b>对比对象</b><span>点选品牌切换图表系列与表格列</span></div>
+
+        <div class="sec-x"><span class="pill gray" id="pick-count">-</span></div>
+
+      </div>
+
+      <div class="sec-b flush">
+
+        <div class="toolbar">
+
+          <button type="button" class="brand-chip on" id="chip-ours" onclick="toggleBrand('ours')"><span class="dot c1"></span>本品牌</button>
+
+          <button type="button" class="brand-chip on" id="chip-compA" onclick="toggleBrand('compA')"><span class="dot c2"></span>竞品A · 同业防水</button>
+
+          <button type="button" class="brand-chip on" id="chip-compB" onclick="toggleBrand('compB')"><span class="dot c5"></span>竞品B · 防水科技</button>
+
+          <span class="sp"></span>
+
+          <span class="pill gray"><i class="ic" data-ic="info" data-sz="16"></i>色点与图表系列一一对应</span>
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+
+    <!-- ===== 图 1 可见度对比(分组柱状) / 图 2 份额趋势(折线) ===== -->
+
+    <div class="bento-2" id="wrap-charts">
+
+      <section class="sec">
+
+        <div class="sec-h">
+
+          <span class="sec-ico"><i class="ic" data-ic="chartBar" data-sz="20"></i></span>
+
+          <div class="sec-t"><b>可见度对比</b><span>四大引擎提及率 · 缺失引擎记 0</span></div>
+
+        </div>
+
+        <div class="sec-b">
+
+          <div class="chart-wrap" id="wrap-vis">
+
+            <div class="chart" id="ch-vis" style="height:260px"></div>
+
+            <div class="chart-empty" id="em-vis" hidden>
+
+              <div class="empty">
+
+                <div class="e-ic"><i class="ic" data-ic="chartBar" data-sz="20"></i></div>
+
+                <div class="e-t">暂无引擎数据</div>
+
+                <div class="e-s">完成竞品监测后，这里按引擎对比各品牌提及率</div>
+
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </section>
+
+      <section class="sec">
+
+        <div class="sec-h">
+
+          <span class="sec-ico"><i class="ic" data-ic="trend" data-sz="20"></i></span>
+
+          <div class="sec-t"><b>份额趋势</b><span>近 8 周提及率走势</span></div>
+
+        </div>
+
+        <div class="sec-b">
+
+          <div class="chart-wrap" id="wrap-tr">
+
+            <div class="chart" id="ch-tr" style="height:260px"></div>
+
+            <div class="chart-empty" id="em-tr" hidden>
+
+              <div class="empty">
+
+                <div class="e-ic"><i class="ic" data-ic="trend" data-sz="20"></i></div>
+
+                <div class="e-t">暂无趋势数据</div>
+
+                <div class="e-s">持续监测后，这里按周展示各品牌提及率走势</div>
+
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </section>
+
+    </div>
+
+
+
+    <!-- ===== 指标明细对比表: 行 = 维度, 列 = 品牌, 每行最优标注「领先」 ===== -->
+
+    <section class="sec" id="sec-tbl">
+
+      <div class="sec-h">
+
+        <span class="sec-ico"><i class="ic" data-ic="list" data-sz="20"></i></span>
+
+        <div class="sec-t"><b>指标明细</b><span>每行最优值标注「领先」 · 数字右对齐</span></div>
+
+        <div class="sec-x"><span class="pill gray" id="tbl-side">-</span></div>
+
+      </div>
+
+      <div class="sec-b flush">
+
+        <div class="tbl-wrap"><div class="tbl-scroll">
+
+          <table class="tbl">
+
+            <thead id="cmp-head"></thead>
+
+            <tbody id="cmp-body"></tbody>
+
+          </table>
+
+        </div></div>
+
+      </div>
+
+    </section>
+
+
+
+    <!-- ===== 结论卡 ===== -->
+
+    <section class="sec" id="sec-concl">
+
+      <div class="sec-h">
+
+        <span class="sec-ico"><i class="ic" data-ic="spark" data-sz="20"></i></span>
+
+        <div class="sec-t"><b>对比结论</b><span>基于当前对比口径的客观摘要</span></div>
+
+        <div class="sec-x"><span class="pill gray">演示数据</span></div>
+
+      </div>
+
+      <div class="sec-b">
+
+        <p class="concl" id="concl-text">-</p>
+
+      </div>
+
+    </section>
+
+
+
+    <!-- ===== ?real=1 等待接入空态(证明页面不是假数据壳) ===== -->
+
+    <section class="sec" id="sec-real" hidden>
+
+      <div class="sec-b">
+
+        <div class="empty">
+
+          <div class="e-ic"><i class="ic" data-ic="target" data-sz="24"></i></div>
+
+          <div class="e-t">竞品对比数据等待接入</div>
+
+          <div class="e-s">竞品数据源尚未接入，接入后此处将展示与同行品牌的可见度对比、份额走势与指标明细</div>
+
+          <button class="btn gray sm" onclick="location.reload()"><i class="ic" data-ic="refresh" data-sz="16"></i><span>重新检查</span></button>
+
+        </div>
+
+      </div>
+
+    </section>
+
+  </main>
+
+</div>
+
+
+
+<script src="/static/icons.js?v={{ asset_ver }}"></script>
+
+
+<script src="/static/layout.js?v={{ asset_ver }}"></script>
+
+<script>
+
+/* ============================================================
+
+   竞品对比 · 页内脚本
+
+   数据源: 竞品监测数据源尚未接入 —— 页面全部数字来自 MOCK 常量(演示数据),
+
+   不发起任何竞品相关请求; 接入后删除 MOCK 分支并改为真实接口拉取
+
+   ?real=1: 切换到「等待接入」空态, 验证页面不是假数据壳
+
+   图表: ECharts(本地 vendor) · tok() 读 CSS 变量 · animationDuration 300 · ResizeObserver 自适应
+
+   ============================================================ */
+
+const QS = new URLSearchParams(location.search);
+
+const REAL_ON = QS.get('real') === '1';
+
+const MOCK_ON = !REAL_ON;
+
+
+
+/* ------------------------------------------------------------
+
+   MOCK —— 竞品数据源待接入，接入后删除 MOCK 分支
+
+   所有演示数字集中于此: 品牌 / 引擎可见度 / 周趋势 / 指标表 / 结论
+
+   口径: 提及率 = 品牌在 AI 回答中被提及的比例(%); 缺失引擎记 0(见 vis.compB 第 4 项 豆包)
+
+   ------------------------------------------------------------ */
+
+const MOCK = {
+
+    updated: '2026-09-15',          // 演示数据统计截止日
+
+    words: 24,                      // 监测词数
+
+    brands: { ours: '本品牌', compA: '竞品A · 同业防水', compB: '竞品B · 防水科技' },
+
+    order: ['ours', 'compA', 'compB'],
+
+    colorKey: { ours: 'c1', compA: 'c2', compB: 'c5' },
+
+    engines: ['腾讯元宝', 'DeepSeek', '通义千问', '豆包'],
+
+    // 可见度对比(4 引擎 × 3 品牌, %): 本品牌均值 47 / 竞品A 38 / 竞品B 25; 竞品B 未监测豆包 → 记 0
+
+    vis: {
+
+        ours:  [58, 33, 52, 45],
+
+        compA: [41, 44, 35, 32],
+
+        compB: [42, 24, 34, 0]
+
+    },
+
+    // 份额趋势(近 8 周, %): 本品牌缓升 / 竞品A 平稳 / 竞品B 下滑
+
+    weeks: ['07/27', '08/03', '08/10', '08/17', '08/24', '08/31', '09/07', '09/14'],
+
+    trend: {
+
+        ours:  [40, 41, 42, 42, 44, 45, 46, 47],
+
+        compA: [38, 39, 37, 38, 39, 38, 38, 38],
+
+        compB: [32, 31, 30, 28, 28, 27, 26, 25]
+
+    },
+
+    // 指标明细: 行 = 对比维度, 列 = 品牌; unit 为展示单位
+
+    rows: [
+
+        { label: '提及率',     unit: '%',  vals: { ours: 47, compA: 38, compB: 25 } },
+
+        { label: '首位推荐率', unit: '%',  vals: { ours: 22, compA: 24, compB: 12 } },
+
+        { label: '前三上榜率', unit: '%',  vals: { ours: 35, compA: 29, compB: 18 } },
+
+        { label: '被引次数',   unit: ' 次', vals: { ours: 86, compA: 64, compB: 31 } },
+
+        { label: '内容量',     unit: ' 篇', vals: { ours: 128, compA: 152, compB: 47 } }
+
+    ],
+
+    // 结论: 与上方 MOCK 数字保持一致(通义千问 52 vs 35 领先; DeepSeek 33 vs 44 落后 11 个百分点)
+
+    concl: '近 8 周本品牌整体提及率 <b>47%</b> 居首。分引擎看，<b>通义千问</b>领先最多（52%，竞品A 35%）；<b>DeepSeek</b> 落后竞品A <b>11</b> 个百分点（33% 对 44%）；首位推荐率与内容量仍低于竞品A。'
+
+};
+
+
+
+/* ===== 选中品牌状态: 至少保留 1 个, 点选切换高亮 ===== */
+
+let selBrands = MOCK.order.slice();
+
+
+
+/* ===== 图表基础: token 色板 / 提示框 / 自适应 ===== */
+
+const CH = { vis: null, trend: null };
+
+const CH_FONT = '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif';
+
+
+
+function tok(name, fb) {
+
+    try {
+
+        const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
+        return v || fb;
+
+    } catch (e) { return fb; }
+
+}
+
+function palette() {
+
+    return {
+
+        c1: tok('--c1', '#B08D57'), c2: tok('--c2', '#D6B473'), c5: tok('--c5', '#C25B54'),
+
+        grid: tok('--c-grid', '#1F1F24'), axis: tok('--c-axis', '#3A3A42'),
+
+        ink: tok('--ink', '#F4F4F5'), ink2: tok('--ink2', '#A1A1AA'), ink3: tok('--ink3', '#8A8A94'),
+
+        line: tok('--line', '#29292F'), card: tok('--card', '#141417')
+
+    };
+
+}
+
+function chartTip(C) {
+
+    return {
+
+        backgroundColor: C.card, borderColor: C.line, borderWidth: 1, padding: [8, 12],
+
+        textStyle: { color: C.ink, fontSize: 12, fontFamily: CH_FONT },
+
+        /* canvas 阴影无法读 CSS 变量, 数值与 var(--shadow-lg) 同档; 其余颜色一律走 token */
+
+        shadowBlur: 8, shadowColor: 'rgba(0,0,0,.45)',
+
+        extraCssText: 'box-shadow: var(--shadow-lg);border-radius: var(--r);'
+
+    };
+
+}
+
+function initCharts() {
+
+    if (typeof echarts === 'undefined') { showChartEmpty(); return; }
+
+    const v = document.getElementById('ch-vis');
+
+    const t = document.getElementById('ch-tr');
+
+    if (v) CH.vis = echarts.init(v, null, { renderer: 'canvas' });
+
+    if (t) CH.trend = echarts.init(t, null, { renderer: 'canvas' });
+
+    const all = () => [CH.vis, CH.trend];
+
+    let timer = null;
+
+    const doResize = () => { all().forEach(c => { try { c && c.resize(); } catch (err) { } }); };
+
+    const debounced = () => { if (timer) clearTimeout(timer); timer = setTimeout(doResize, 120); };
+
+    window.addEventListener('resize', debounced);
+
+    if (window.ResizeObserver) {
+
+        const ro = new ResizeObserver(debounced);
+
+        ['ch-vis', 'ch-tr'].forEach(id => {
+
+            const el = document.getElementById(id);
+
+            if (el) ro.observe(el);
+
+        });
+
+    }
+
+}
+
+/* echarts 加载失败时显示图表空态覆盖层(canvas 不再出现) */
+
+function showChartEmpty() {
+
+    ['em-vis', 'em-tr'].forEach(id => { const el = document.getElementById(id); if (el) el.hidden = false; });
+
+}
+
+
+
+/* ===== 图 1: 可见度对比(分组柱状: 4 引擎 × 选中品牌) ===== */
+
+function renderVisChart() {
+
+    const em = document.getElementById('em-vis');
+
+    if (!CH.vis) { if (em) em.hidden = false; return; }
+
+    const C = palette();
+
+    const keys = MOCK.order.filter(k => selBrands.indexOf(k) >= 0);
+
+    if (em) em.hidden = keys.length ? true : false;
+
+    const series = keys.map(k => ({
+
+        name: MOCK.brands[k], type: 'bar',
+
+        barMaxWidth: 18, barGap: '25%',
+
+        itemStyle: { color: C[MOCK.colorKey[k]] },
+
+        data: MOCK.vis[k].slice()   // 缺失引擎保持 0, 不做视觉补齐
+
+    }));
+
+    CH.vis.setOption({
+
+        color: keys.map(k => C[MOCK.colorKey[k]]),
+
+        textStyle: { fontFamily: CH_FONT, fontSize: 12 },
+
+        animationDuration: 300, animationEasing: 'cubicOut',
+
+        legend: { data: keys.map(k => MOCK.brands[k]), top: 0, right: 0, icon: 'roundRect', itemWidth: 10, itemHeight: 10, itemGap: 16, textStyle: { color: C.ink2, fontSize: 12 } },
+
+        grid: { left: 8, right: 8, top: 40, bottom: 8, containLabel: true },
+
+        tooltip: Object.assign(chartTip(C), {
+
+            trigger: 'axis',
+
+            axisPointer: { type: 'shadow', shadowStyle: { color: C.grid } },
+
+            formatter: function (ps) {
+
+                let h = '<b>' + MOCK.engines[ps[0].dataIndex] + '</b>';
+
+                ps.forEach(p => {
+
+                    const v = MOCK.vis[keys[p.seriesIndex]][p.dataIndex];
+
+                    const txt = v > 0 ? '<b>' + v + '%</b>' : '<span style="color:' + C.ink3 + '">未监测（记 0）</span>';
+
+                    h += '<br/>' + p.marker + ' ' + MOCK.brands[keys[p.seriesIndex]] + ' ' + txt;
+
+                });
+
+                return h;
+
+            }
+
+        }),
+
+        xAxis: {
+
+            type: 'category', data: MOCK.engines,
+
+            axisLine: { lineStyle: { color: C.axis } }, axisTick: { show: false },
+
+            axisLabel: { color: C.ink3, fontSize: 12 },
+
+            splitLine: { show: false }
+
+        },
+
+        yAxis: {
+
+            type: 'value', min: 0, max: 60,
+
+            axisLine: { show: false }, axisTick: { show: false },
+
+            splitLine: { lineStyle: { color: C.grid } },
+
+            axisLabel: { formatter: '{value}%', color: C.ink3, fontSize: 12 }
+
+        },
+
+        series: series
+
+    }, true);
+
+}
+
+
+
+/* ===== 图 2: 份额趋势(折线: 近 8 周 × 选中品牌) ===== */
+
+function renderTrendChart() {
+
+    const em = document.getElementById('em-tr');
+
+    if (!CH.trend) { if (em) em.hidden = false; return; }
+
+    const C = palette();
+
+    const keys = MOCK.order.filter(k => selBrands.indexOf(k) >= 0);
+
+    if (em) em.hidden = keys.length ? true : false;
+
+    const series = keys.map(k => ({
+
+        name: MOCK.brands[k], type: 'line',
+
+        symbol: 'circle', symbolSize: 6,
+
+        lineStyle: { width: 2, color: C[MOCK.colorKey[k]] },
+
+        itemStyle: { color: C[MOCK.colorKey[k]] },
+
+        data: MOCK.trend[k].slice()
+
+    }));
+
+    CH.trend.setOption({
+
+        color: keys.map(k => C[MOCK.colorKey[k]]),
+
+        textStyle: { fontFamily: CH_FONT, fontSize: 12 },
+
+        animationDuration: 300, animationEasing: 'cubicOut',
+
+        legend: { data: keys.map(k => MOCK.brands[k]), top: 0, right: 0, icon: 'roundRect', itemWidth: 10, itemHeight: 10, itemGap: 16, textStyle: { color: C.ink2, fontSize: 12 } },
+
+        grid: { left: 8, right: 16, top: 40, bottom: 8, containLabel: true },
+
+        tooltip: Object.assign(chartTip(C), {
+
+            trigger: 'axis',
+
+            axisPointer: { type: 'line', lineStyle: { color: C.axis } },
+
+            formatter: function (ps) {
+
+                let h = '<b>' + MOCK.weeks[ps[0].dataIndex] + '（周）</b>';
+
+                ps.forEach(p => { h += '<br/>' + p.marker + ' ' + MOCK.brands[keys[p.seriesIndex]] + ' <b>' + p.value + '%</b>'; });
+
+                return h;
+
+            }
+
+        }),
+
+        xAxis: {
+
+            type: 'category', data: MOCK.weeks, boundaryGap: false,
+
+            axisLine: { lineStyle: { color: C.axis } }, axisTick: { show: false },
+
+            axisLabel: { color: C.ink3, fontSize: 12 },
+
+            splitLine: { show: false }
+
+        },
+
+        yAxis: {
+
+            type: 'value', min: 0, max: 60,
+
+            axisLine: { show: false }, axisTick: { show: false },
+
+            splitLine: { lineStyle: { color: C.grid } },
+
+            axisLabel: { formatter: '{value}%', color: C.ink3, fontSize: 12 }
+
+        },
+
+        series: series
+
+    }, true);
+
+}
+
+
+
+/* ===== 品牌选择: 切换高亮并联动两张图与表格(至少保留 1 个品牌) ===== */
+
+function toggleBrand(k) {
+
+    const i = selBrands.indexOf(k);
+
+    if (i >= 0) {
+
+        if (selBrands.length <= 1) return;   // 至少保留 1 个对比对象
+
+        selBrands.splice(i, 1);
+
+    } else {
+
+        selBrands.push(k);
+
+    }
+
+    syncChips();
+
+    renderVisChart();
+
+    renderTrendChart();
+
+    renderTable();
+
+}
+
+function syncChips() {
+
+    MOCK.order.forEach(k => {
+
+        const el = document.getElementById('chip-' + k);
+
+        if (el) el.classList.toggle('on', selBrands.indexOf(k) >= 0);
+
+    });
+
+    const pc = document.getElementById('pick-count');
+
+    if (pc) pc.textContent = '已选 ' + selBrands.length + ' / 3';
+
+}
+
+
+
+/* ===== 对比表格: 行 = 维度, 列 = 选中品牌; 每行唯一最大值标注「领先」(并列不标注) ===== */
+
+function renderTable() {
+
+    const keys = MOCK.order.filter(k => selBrands.indexOf(k) >= 0);
+
+    const head = document.getElementById('cmp-head');
+
+    const body = document.getElementById('cmp-body');
+
+    if (!head || !body) return;
+
+    head.innerHTML = '<tr><th class="col-dim">对比维度</th>' +
+
+        keys.map(k => '<th class="num">' + MOCK.brands[k] + '</th>').join('') + '</tr>';
+
+    body.innerHTML = MOCK.rows.map(r => {
+
+        const vals = keys.map(k => r.vals[k]);
+
+        const best = Math.max.apply(null, vals);
+
+        const bestCount = vals.filter(v => v === best).length;
+
+        const cells = keys.map(k => {
+
+            const v = r.vals[k];
+
+            const lead = (v === best && bestCount === 1) ? '<span class="pill ok">领先</span>' : '';
+
+            return '<td class="num">' + v + (r.unit || '') + lead + '</td>';
+
+        });
+
+        return '<tr><td class="col-dim strong">' + r.label + '</td>' + cells.join('') + '</tr>';
+
+    }).join('');
+
+    const side = document.getElementById('tbl-side');
+
+    if (side) side.textContent = keys.length + ' 个品牌 · ' + MOCK.rows.length + ' 个维度';
+
+    if (window.ICONS) ICONS.mount(body);
+
+}
+
+
+
+/* ===== ?real=1: 等待接入空态(移除演示数据与提示条, 证明页面不是假数据壳) ===== */
+
+function enterRealMode() {
+
+    const note = document.getElementById('mock-note');
+
+    if (note) note.remove();
+
+    ['sec-pick', 'wrap-charts', 'sec-tbl', 'sec-concl'].forEach(id => {
+
+        const el = document.getElementById(id);
+
+        if (el) el.hidden = true;
+
+    });
+
+    const real = document.getElementById('sec-real');
+
+    if (real) real.hidden = false;
+
+    const set = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
+
+    set('hi-date', '待接入'); set('pc-brands', '待接入'); set('pc-words', '待接入'); set('pc-date', '待接入');
+
+}
+
+
+
+/* ===== 入口 ===== */
+
+window.addEventListener('load', () => {
+
+    if (window.ICONS) ICONS.mount(document);
+
+    if (!MOCK_ON) { enterRealMode(); return; }
+
+    /* mock 模式: 填充页头口径 → 初始化图表 → 渲染全部区块(数字全部来自 MOCK) */
+
+    document.getElementById('hi-date').textContent = MOCK.updated;
+
+    document.getElementById('pc-brands').textContent = MOCK.order.length;
+
+    document.getElementById('pc-words').textContent = MOCK.words;
+
+    document.getElementById('pc-date').textContent = MOCK.updated;
+
+    document.getElementById('concl-text').innerHTML = MOCK.concl;
+
+    initCharts();
+
+    syncChips();
+
+    renderVisChart();
+
+    renderTrendChart();
+
+    renderTable();
+
+});
+
+</script>
+
+</body>
+
+</html>
+

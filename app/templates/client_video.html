@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN" class="theme-light">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<title>AI短视频产线</title>
+
+<link rel="stylesheet" href="/static/client_style.css?v={{ asset_ver }}">
+
+<link rel="stylesheet" href="/static/ds.css?v={{ asset_ver }}">
+
+<link rel="stylesheet" href="/static/theme-light.css?v={{ asset_ver }}">
+
+<style>
+
+/* ============================================================
+
+   AI 短视频产线 · 页内样式(近黑 #08080A + 铜金 #B08D57)
+
+   规范: 只用 var(--*) token / 圆角 <=8px / 无渐变 无发光 无玻璃拟态
+
+   通用组件(.topbar/.crumb/.phead/.kpi/.sec/.icard/.btn/.pill)
+
+   全部由 theme-light.css 提供, 此处只留本页必要的补丁
+
+   ============================================================ */
+
+
+
+/* 页签(视频库/生成台/自动发布计划) */
+
+.v-tabs{display:inline-flex;gap:4px;background:var(--bg-soft);border:1px solid var(--line);border-radius:var(--r-sm);padding:4px;margin-bottom:16px;flex-wrap:wrap}
+
+.v-tabs button{display:inline-flex;align-items:center;gap:6px;background:none;border:none;color:var(--ink3);font:500 13px/1 inherit;padding:8px 16px;cursor:pointer;border-radius:var(--r-sm);transition:all .16s}
+
+.v-tabs button:hover{color:var(--ink)}
+
+.v-tabs button.on{color:var(--brand);background:var(--brand-soft);font-weight:600}
+
+.tab{display:none}
+
+.tab.on{display:block;animation:fadein .22s}
+
+@keyframes fadein{from{opacity:0;transform:translateY(4px)}}
+
+
+
+/* 生成中徽标(页头 H1 内): 圆点由 CSS 承担 */
+
+.chip{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:var(--r-tag);background:var(--brand-soft);border:1px solid rgba(176,141,87,.35);font-size:12px;font-weight:500;color:var(--brand);vertical-align:3px}
+
+.chip.run i{width:6px;height:6px;border-radius:50%;background:currentColor;animation:pulse 1s infinite}
+
+html.theme-light body .chip.run{background:var(--brand-soft)!important;border-color:rgba(176,141,87,.35)!important;color:var(--brand)!important}
+
+@keyframes pulse{50%{opacity:.25}}
+
+/* KPI 运行态(ds.css 深色期硬编码色压回 token) */
+
+html.theme-light body .kpi.run{border-color:rgba(176,141,87,.45)!important}
+
+html.theme-light body .kpi.run .kpi-v{color:var(--brand)!important}
+
+/* KPI 进度条填充: ds.css 为渐变, 浅色期按 token 改纯色 */
+
+html.theme-light .viz-bar .sg{background:var(--brand)}
+
+/* 页头状态点(ds.css 已给尺寸, 这里只保底) */
+
+.phead-chip .dot{width:7px;height:7px;border-radius:50%;display:inline-block;flex:none}
+
+
+
+.term{background:var(--term-bg);border:1px solid var(--line);border-radius:var(--r);padding:12px 16px;height:220px;overflow-y:auto;font-family:Consolas,monospace;font-size:12.5px;line-height:1.75;color:var(--term-text);white-space:pre-wrap;word-break:break-all}
+
+.term .ok{color:var(--ok)}.term .err{color:var(--bad)}.term .w{color:var(--warn)}
+
+
+
+/* 视频库: 横向信息卡 —— 左 9:16 封面帧 + 右信息(标题/摘要/元信息/操作)
+
+   2 列 minmax(420px) / 8px 间距栅格 / 卡片高度由封面决定且内容自适应 */
+
+#packList{grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:8px}
+
+#packList .icard{padding:8px}
+
+#packList .icard-f{align-items:center;flex-wrap:nowrap;gap:8px;margin-top:auto;padding-top:8px;
+
+  font-size:11px;white-space:nowrap;overflow:hidden}
+
+#packList .icard-f .ops{margin-left:auto}
+
+#packList .icard-h{gap:8px;align-items:flex-start}
+
+#packList .icard-h .t{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+
+  min-width:0;line-height:1.3;word-break:break-word}
+
+#packList .icard-b{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+
+  min-width:0;margin-top:4px;font-size:12px;line-height:1.5}
+
+#packList .empty{grid-column:1/-1}
+
+.ops{display:flex;gap:8px;flex:none}
+
+.vcard{display:flex;gap:12px;align-items:flex-start}
+
+.vinfo{display:flex;flex-direction:column;flex:1;min-width:0;align-self:stretch}
+
+.vf-m{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
+
+.vf-d,.vf-c{flex:none}
+
+.vf-d::before,.vf-c::before{content:"·";margin-right:6px;color:var(--ink4)}
+
+
+
+/* 开关(自动发布计划) */
+
+label.sw{position:relative;display:inline-block;width:40px;height:22px;vertical-align:middle;cursor:pointer;flex:none}
+
+label.sw input{opacity:0;width:0;height:0}
+
+label.sw i{position:absolute;inset:0;background:var(--line-strong);border-radius:var(--r);transition:.2s}
+
+label.sw input:checked+i{background:var(--ok)}
+
+label.sw i::before{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;background:#fff;border-radius:50%;transition:.2s}
+
+label.sw input:checked+i::before{left:20px}
+
+
+
+.hint-ok{display:none;align-items:center;gap:4px;color:var(--ok);font-size:12px;font-weight:500;margin-left:8px}
+
+/* 竖版 9:16 封面: <video preload=metadata #t=0.5> 解出第 0.5 秒首帧作静态封面
+
+   加载失败/未生成(onerror) → 图标占位「封面生成中」; 点击封面才换成播放器(vthumb 逻辑保留) */
+
+.vthumb{width:70px;aspect-ratio:9/16;border-radius:var(--r-sm);flex:none;position:relative;cursor:pointer;overflow:hidden;
+
+  background:var(--bg-deep);border:1px solid var(--line-strong);
+
+  display:flex;align-items:center;justify-content:center;color:var(--ink3);transition:border-color .16s,color .16s}
+
+.vthumb:hover{border-color:var(--brand);color:var(--brand)}
+
+.vthumb video{display:block;width:100%;height:100%;object-fit:cover;background:var(--bg-deep)}
+
+.vthumb .vp{display:flex;flex-direction:column;align-items:center;gap:4px;padding:0 4px;
+
+  font-size:10px;line-height:1.3;text-align:center}
+
+.vthumb .vd{position:absolute;right:4px;bottom:4px;font-size:10px;color:var(--ink);background:rgba(0,0,0,.6);
+
+  padding:0 4px;line-height:16px;border-radius:var(--r-tag);font-weight:500;font-variant-numeric:tabular-nums;pointer-events:none}
+
+.vplayer{width:70px;aspect-ratio:9/16;border-radius:var(--r-sm);flex:none;object-fit:cover;background:#000}
+
+/* 删除按钮: 危险描边(主题层 ghost 中性色压回) */
+
+html.theme-light body .cl-btn.del{color:var(--bad)!important;border-color:rgba(194,91,84,.45)!important;background:var(--card)!important}
+
+html.theme-light body .cl-btn.del:hover{border-color:var(--bad)!important;color:var(--bad)!important;background:var(--bad-bg)!important}
+
+</style>
+
+</head>
+
+<body class="cl" data-page="video">
+
+
+
+<header class="topbar" id="topbar">
+
+  <div class="tb-brand"><span class="tb-logo">G</span><span class="tb-name">GEO 优化系统</span><span class="tb-env" id="tb-env">运营管理端</span></div>
+
+  <div class="tb-right">
+
+    <span class="tb-chip" id="model-tag">模型 · —</span>
+
+    <span class="tb-chip" id="run-tag">空闲</span>
+
+    <div class="tb-user" id="tb-user-btn"><span class="tb-av" id="tb-av">管</span><span class="tb-uname" id="tb-uname">—</span><i class="ic" data-ic="chevronDown" data-sz="16"></i></div>
+
+  </div>
+
+  <div class="tb-menu" id="tb-menu"><button onclick="doLogout()"><i class="ic" data-ic="logout"></i>退出登录</button></div>
+
+</header>
+
+
+
+<div class="cl-app">
+
+<aside class="cl-side" id="sidebar"></aside>
+
+<main class="cl-main">
+
+  <nav class="crumb" id="crumb"></nav>
+
+
+
+    <div class="phead">
+
+        <div class="phead-l">
+
+            <div class="phead-eyebrow">内容生产 · 短视频</div>
+
+            <div class="phead-h1">AI 短视频产线
+
+                <span class="chip run" id="genChip" style="display:none"><i></i>生成进行中</span>
+
+            </div>
+
+            <div class="phead-sub">自动完成 分镜脚本 <i class="ic" data-ic="chevronRight" data-sz="16"></i> 画面生成 <i class="ic" data-ic="chevronRight" data-sz="16"></i> 配音 <i class="ic" data-ic="chevronRight" data-sz="16"></i> 字幕装配 <i class="ic" data-ic="chevronRight" data-sz="16"></i> 抖音发布，单条约 6-10 分钟</div>
+
+            <div class="phead-chips">
+
+                <span class="phead-chip"><span class="dot" style="background:var(--ok)"></span>产线 <b id="pc-status">待命</b></span>
+
+                <span class="phead-chip">库存 <b id="pc-stock">-</b> 条</span>
+
+                <span class="phead-chip">累计发布 <b id="pc-pub">-</b> 条</span>
+
+            </div>
+
+        </div>
+
+        <div class="phead-r">
+
+            <div class="pr-l">视频生产</div>
+
+            <button class="cl-btn" id="btnGen" onclick="gen()"><i class="ic" data-ic="spark" data-sz="16"></i>生成一条视频</button>
+
+        </div>
+
+    </div>
+
+
+
+    <!-- KPI -->
+
+    <div class="kpi-grid">
+
+        <div class="kpi" id="tileGen">
+
+            <div class="kpi-l">视频生成 <span class="kpi-x"><i class="ic" data-ic="video" data-sz="20"></i></span></div>
+
+            <div class="kpi-r"><span class="kpi-v" id="k-gen">空闲</span></div>
+
+            <div class="kpi-l" style="margin-top:12px;font-size:12px">AI 分镜 · 配音 · 字幕</div>
+
+        </div>
+
+        <div class="kpi">
+
+            <div class="kpi-l">待发布库存 <span class="kpi-x"><i class="ic" data-ic="archive" data-sz="20"></i></span></div>
+
+            <div class="kpi-r"><span class="kpi-v" id="k-stock">-</span><span class="kpi-u">条</span></div>
+
+            <div class="viz-bar thin" style="margin-top:12px"><span class="sg brand" id="k-stock-bar" style="width:0%"></span></div>
+
+            <div class="kpi-l" style="margin-top:8px;font-size:12px" id="k-stock-sub">已生成待上架</div>
+
+        </div>
+
+        <div class="kpi">
+
+            <div class="kpi-l">累计已发布 <span class="kpi-x"><i class="ic" data-ic="send" data-sz="20"></i></span></div>
+
+            <div class="kpi-r"><span class="kpi-v" id="k-pub">-</span><span class="kpi-u">条</span></div>
+
+            <div class="kpi-l" style="margin-top:12px;font-size:12px">全渠道成功数</div>
+
+        </div>
+
+        <div class="kpi">
+
+            <div class="kpi-l">自动发布计划 <span class="kpi-x"><i class="ic" data-ic="clock" data-sz="20"></i></span></div>
+
+            <div class="kpi-r"><span class="kpi-v" id="k-sched" style="font-size:20px">关闭</span></div>
+
+            <div class="kpi-l" style="margin-top:12px;font-size:12px">循环发布节奏</div>
+
+        </div>
+
+    </div>
+
+
+
+    <div class="v-tabs">
+
+        <button class="on" onclick="showTab('lib',this)"><i class="ic" data-ic="film" data-sz="16"></i>视频库</button>
+
+        <button onclick="showTab('gen',this)"><i class="ic" data-ic="spark" data-sz="16"></i>生成台</button>
+
+        <button onclick="showTab('sched',this)"><i class="ic" data-ic="refresh" data-sz="16"></i>自动发布计划</button>
+
+    </div>
+
+
+
+    <!-- 视频库 -->
+
+    <div class="tab on" id="tab-lib">
+
+        <section class="sec">
+
+            <div class="sec-h">
+
+                <span class="sec-ico"><i class="ic" data-ic="film" data-sz="20"></i></span>
+
+                <div class="sec-t"><b>视频库</b><span>已生成成片 · 点击封面播放 · 支持发布与删除</span></div>
+
+                <div class="sec-x"><span class="pill gray" id="pk-count">0 条</span></div>
+
+            </div>
+
+            <div class="sec-b"><div class="icard-grid cols" id="packList"></div></div>
+
+        </section>
+
+    </div>
+
+
+
+    <!-- 生成台 -->
+
+    <div class="tab" id="tab-gen">
+
+        <section class="sec">
+
+            <div class="sec-h">
+
+                <span class="sec-ico"><i class="ic" data-ic="spark" data-sz="20"></i></span>
+
+                <div class="sec-t"><b>生成台</b><span>分镜 <i class="ic" data-ic="chevronRight" data-sz="16"></i> 画面 <i class="ic" data-ic="chevronRight" data-sz="16"></i> 配音 <i class="ic" data-ic="chevronRight" data-sz="16"></i> 字幕装配，实时输出</span></div>
+
+            </div>
+
+            <div class="sec-b flush">
+
+                <div class="term" id="term" style="border:none;border-radius:0;box-shadow:none">等待开始…</div>
+
+            </div>
+
+        </section>
+
+    </div>
+
+
+
+    <!-- 自动计划 -->
+
+    <div class="tab" id="tab-sched">
+
+        <section class="sec">
+
+            <div class="sec-h">
+
+                <span class="sec-ico"><i class="ic" data-ic="refresh" data-sz="20"></i></span>
+
+                <div class="sec-t"><b>视频自动发布</b><span>库存不足自动补产 · 账号按最近发布最久轮换</span></div>
+
+            </div>
+
+            <div class="sec-b">
+
+            <div class="card-toolbar">
+
+                <label class="sw"><input type="checkbox" id="swEn" onchange="markDirty()"><i></i></label>
+
+                <span>每</span>
+
+                <input type="number" id="ivMin" min="10" value="120" style="width:90px" onchange="markDirty()">
+
+                <span>分钟发布一条</span>
+
+                <button class="cl-btn" onclick="saveSched()"><i class="ic" data-ic="check" data-sz="16"></i>保存计划</button>
+
+                <span class="hint-ok" id="schedHint"><i class="ic" data-ic="check" data-sz="16"></i>已保存</span>
+
+            </div>
+
+            <div style="font-size:12px" class="muted">关闭状态下随时可手动发布单条。账号分配沿用图文账号池（按最近发布最久优先）。</div>
+
+            </div>
+
+        </section>
+
+    </div>
+
+
+
+</main>
+
+</div>
+
+<script src="/static/icons.js?v={{ asset_ver }}"></script>
+
+<script src="/static/layout.js?v={{ asset_ver }}"></script>
+
+<script>
+
+let S={packs:[],gen_running:false,logs:[]};
+
+const $=id=>document.getElementById(id);
+
+function showTab(id,btn){
+
+    document.querySelectorAll('.v-tabs button').forEach(b=>b.classList.remove('on'));
+
+    btn.classList.add('on');
+
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+
+    $('tab-'+id).classList.add('on');
+
+}
+
+function term(msg){
+
+    const el=$('term');
+
+    if(el.textContent==='等待开始…') el.textContent='';
+
+    for(const line of String(msg).split('\n')){
+
+        const sp=document.createElement('span');
+
+        let cls='';
+
+        if(line.includes('\u2705')||line.includes('完成')) cls='ok';
+
+        else if(line.includes('\u274C')||line.includes('失败')||line.includes('异常')) cls='err';
+
+        else if(line.includes('\u23F3')||line.includes('限流')||line.includes('补跑')) cls='w';
+
+        sp.className=cls; sp.textContent=line+'\n';
+
+        el.appendChild(sp);
+
+    }
+
+    el.scrollTop=el.scrollHeight;
+
+}
+
+async function load(){
+
+    try{
+
+        S=await (await fetch('/api/video/list')).json();
+
+        $('k-gen').textContent=S.gen_running?'进行中':'空闲';
+
+        $('tileGen').classList.toggle('run',!!S.gen_running);
+
+        $('genChip').style.display=S.gen_running?'inline-flex':'none';
+
+        const stock=S.packs.filter(p=>!p.published).length;
+
+        const pubN=S.packs.filter(p=>p.published).length;
+
+        $('k-stock').textContent=stock;
+
+        $('k-pub').textContent=pubN;
+
+        const total=Math.max(1,S.packs.length);
+
+        const sb=$('k-stock-bar'); if(sb) sb.style.width=Math.round(stock/total*100)+'%';
+
+        const ss=$('k-stock-sub'); if(ss) ss.textContent='共 '+S.packs.length+' 条 · 已发布 '+pubN+' 条';
+
+        if($('pc-stock')) $('pc-stock').textContent=stock;
+
+        if($('pc-pub')) $('pc-pub').textContent=pubN;
+
+        if($('pc-status')) $('pc-status').textContent=S.gen_running?'生成中':'待命';
+
+        if($('pk-count')) $('pk-count').textContent=S.packs.length+' 条';
+
+        renderPacks();
+
+        term((S.logs||[]).join('\n'));
+
+    }catch(e){ term('加载失败: '+e); }
+
+}
+
+function renderPacks(){
+
+    const box=$('packList'); box.innerHTML='';
+
+    if(!S.packs.length){ box.innerHTML='<div class="empty"><div class="e-ic"><i class="ic" data-ic="film" data-sz="24"></i></div><div class="e-t">暂无视频</div><div class="e-s">点右上「生成一条视频」开始 · 单条约 6-10 分钟</div></div>'; if(window.ICONS) ICONS.mount(box); return; }
+
+    for(const p of S.packs){
+
+        const div=document.createElement('div'); div.className='icard flat vcard';
+
+        // 左: 9:16 封面帧 —— <video src=…mp4#t=0.5 preload=metadata muted playsinline> 解出第 0.5 秒
+
+        // 加载失败或未生成时用 film 图标占位; 点击封面才换成播放器(播放按需, 不预载整片)
+
+        const thumb=document.createElement('div'); thumb.className='vthumb'; thumb.title='点击播放';
+
+        const cov=document.createElement('video');
+
+        cov.src='/api/video/file/'+encodeURIComponent(p.id)+'.mp4#t=0.5';
+
+        cov.preload='metadata'; cov.muted=true; cov.playsInline=true; cov.tabIndex=-1;
+
+        cov.setAttribute('muted',''); cov.setAttribute('playsinline','');   // 静态封面: 只解首帧, 不播放不预载整片
+
+        cov.onerror=()=>{
+
+            thumb.innerHTML='<span class="vp"><i class="ic" data-ic="film" data-sz="20"></i>封面生成中</span>';
+
+            if(window.ICONS) ICONS.mount(thumb);
+
+        };
+
+        thumb.appendChild(cov);
+
+        const vd=document.createElement('span'); vd.className='vd'; vd.textContent=(p.duration||'')+'s';
+
+        thumb.appendChild(vd);
+
+        thumb.onclick=()=>vthumb(thumb,p.id);
+
+        div.appendChild(thumb);
+
+
+
+        // 右: 信息(标题 / 摘要 / 生成时间·时长·城市 / 发布状态 / 操作)
+
+        const info=document.createElement('div'); info.className='vinfo';
+
+        const head=document.createElement('div'); head.className='icard-h';
+
+        head.innerHTML='<span class="t">'+esc(p.title||p.id)+'</span>'
+
+            +'<span class="x">'+(p.published?'<span class="pill ok">已发布</span>':'<span class="pill warn">待发布</span>')+'</span>';
+
+        info.appendChild(head);
+
+        const meta=document.createElement('div'); meta.className='icard-b';
+
+        const raw=String(p.desc||p.script||p.summary||'').replace(/\s+/g,' ').trim();
+
+        // 无 desc/script 字段时用「城市 · 业务 · 成片形态」组合成一句摘要
+
+        const brief=[[p.city,p.business].filter(Boolean).join(' · '),'竖版 9:16 实拍成片','已装配配音与字幕','可直接发布抖音']
+
+            .filter(Boolean).join('，');
+
+        meta.textContent=raw||brief;
+
+        info.appendChild(meta);
+
+        const foot=document.createElement('div'); foot.className='icard-f';
+
+        const ft=document.createElement('span'); ft.className='vf-m';
+
+        ft.textContent=String(p.time||'').slice(0,16)||'—';
+
+        const fd=document.createElement('span'); fd.className='vf-d'; fd.textContent='时长 '+(p.duration||'-')+'s';
+
+        const fc=document.createElement('span'); fc.className='vf-c'; fc.textContent=p.city||'—';
+
+        foot.appendChild(ft); foot.appendChild(fd); foot.appendChild(fc);
+
+        const ops=document.createElement('div'); ops.className='ops';
+
+        const bp=document.createElement('button'); bp.className='cl-btn sm'; bp.textContent=p.published?'重发':'发布';
+
+        bp.onclick=()=>pub(p.id,p.published); ops.appendChild(bp);
+
+        const bd=document.createElement('button'); bd.className='cl-btn ghost sm del'; bd.textContent='删除';
+
+        bd.onclick=()=>del(p.id); ops.appendChild(bd);
+
+        foot.appendChild(ops);
+
+        info.appendChild(foot);
+
+        div.appendChild(info);
+
+        box.appendChild(div);
+
+    }
+
+    if(window.ICONS) ICONS.mount(box);
+
+}
+
+/* 点击封面 → 原地换成 controls+autoplay 播放器(vthumb 逻辑保留) */
+
+function vthumb(el,id){
+
+    const v=document.createElement('video');
+
+    v.src='/api/video/file/'+encodeURIComponent(id)+'.mp4';
+
+    v.controls=true; v.autoplay=true; v.className='vplayer';
+
+    el.replaceWith(v);
+
+}
+
+async function gen(){
+
+    $('btnGen').disabled=true;
+
+    const r=await fetch('/api/video/generate',{method:'POST'});
+
+    const j=await r.json().catch(()=>({}));
+
+    if(j.error){ alert(j.error); $('btnGen').disabled=false; return; }
+
+    showTab('gen',document.querySelectorAll('.v-tabs button')[1]);
+
+    poll();
+
+}
+
+let pollT=null;
+
+function poll(){
+
+    clearTimeout(pollT);
+
+    pollT=setTimeout(async()=>{
+
+        await load();
+
+        if(S.gen_running) poll();
+
+    },4000);
+
+}
+
+async function pub(id,published){
+
+    const tip=published?'该视频已发布过一次, 确定再次发布(会消耗账号当日额度)?':'确定发布 '+id+' 到轮询选中的抖音账号?';
+
+    if(!confirm(tip)) return;
+
+    const r=await fetch('/api/video/publish',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})});
+
+    const j=await r.json().catch(()=>({}));
+
+    alert(j.ok?'发布受理成功 ('+(j.stage||'')+')':(j.error||j.stage||'失败'));
+
+    load();
+
+}
+
+async function del(id){
+
+    if(!confirm('删除 '+id+' (成片+封面+内容包)?')) return;
+
+    await fetch('/api/video/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})});
+
+    load();
+
+}
+
+function markDirty(){ $('schedHint').style.display='none'; }
+
+async function saveSched(){
+
+    await fetch('/api/video/sched',{method:'POST',headers:{'Content-Type':'application/json'},
+
+        body:JSON.stringify({enabled:$('swEn').checked, interval_min:parseInt($('ivMin').value)||120})});
+
+    $('schedHint').style.display='inline-flex';
+
+    setTimeout(()=>{$('schedHint').style.display='none'},2500);
+
+    load();
+
+}
+
+async function loadSched(){
+
+    try{
+
+        const s=await (await fetch('/api/video/sched')).json();
+
+        $('swEn').checked=!!s.enabled;
+
+        $('ivMin').value=s.interval_min||120;
+
+        $('k-sched').textContent=s.enabled?('每'+s.interval_min+'分钟'):'关闭';
+
+        $('k-sched').style.color=s.enabled?'var(--ink)':'var(--ink3)';
+
+    }catch(e){}
+
+}
+
+load(); loadSched();
+
+setInterval(loadSched,15000);
+
+</script>
+
+</body>
+
+</html>
+

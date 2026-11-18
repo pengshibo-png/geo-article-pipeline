@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN" class="theme-light">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>品牌资料 · GEO优化系统</title>
+
+<link rel="stylesheet" href="/static/client_style.css?v={{ asset_ver }}">
+
+<link rel="stylesheet" href="/static/ds.css?v={{ asset_ver }}">
+
+<link rel="stylesheet" href="/static/theme-light.css?v={{ asset_ver }}">
+
+<style>
+
+/* ============================================================
+
+   品牌资料(客户工作台) · 页内样式(近黑画布 + 铜金品牌色)
+
+   规范: 只用 var(--*) token / 圆角 ≤8px / 无渐变 无发光 无玻璃拟态
+
+   通用组件(.topbar/.crumb/.phead/.kpi/.sec/.icard/.pill/.btn)来自
+
+   client_style.css + theme-light.css, 此处只留本页补丁
+
+   ============================================================ */
+
+
+
+/* 1) 外壳栅格: theme-light 只给了列宽, display 由本页补(与 settings 一致) */
+
+.cl-app { display: grid; }
+
+
+
+/* 2) 页头右侧: 完整度环 + 说明文字不折行(窄屏会挤成两行) */
+
+.phead-r .pr-l { white-space: nowrap; }
+
+.kb-pct-ring { text-align: center; min-width: 64px; }
+
+.kb-pct-ring .v { font-size: 20px; font-weight: 600; color: var(--brand); font-variant-numeric: tabular-nums; line-height: 1.2; }
+
+.kb-pct-ring .l { font-size: 12px; color: var(--ink3); line-height: 16px; }
+
+
+
+/* 3) KPI 完整度条: 纯品牌色 + 归位 12px 栅格 */
+
+.viz-bar .sg.brand { background: var(--brand); }
+
+.kpi .viz-bar { margin-top: 12px; }
+
+.kpi .kpi-l + .kpi-l { margin-top: 12px; }
+
+
+
+/* 4) 资料正文: .inp 同族 token 样式, 撑满区块 */
+
+.bp-ta {
+
+    width: 100%; display: block; min-height: 400px; line-height: 1.9;
+
+    font-size: 13px; padding: 12px 16px; font-family: inherit;
+
+}
+
+.bp-ta:focus { background: var(--bg-soft); }
+
+
+
+/* 5) 分区卡: 填写示例 + 内容预览 + 页脚 chip/按钮行 */
+
+.icard .icard-f { display: flex; align-items: center; }
+
+.kb-how { font-size: 13px; color: var(--ink2); line-height: 1.85; }
+
+.kb-how b { color: var(--brand); font-weight: 600; }
+
+.kb-ex {
+
+    font-size: 12px; color: var(--ink3); line-height: 1.75; margin-top: 12px;
+
+    padding: 8px 12px; background: var(--bg-soft);
+
+    border-left: 2px solid var(--brand); border-radius: 0 var(--r-sm) var(--r-sm) 0;
+
+}
+
+.kb-ex b { color: var(--brand); font-weight: 600; margin-right: 8px; }
+
+.kb-fill {
+
+    font-size: 13px; color: var(--ink2); line-height: 1.85; white-space: pre-wrap;
+
+    max-height: 190px; overflow-y: auto; margin-top: 12px; padding: 12px 16px;
+
+    background: var(--bg); border: 1px solid var(--line-soft); border-radius: var(--r-sm);
+
+}
+
+.kb-fill.empty { color: var(--ink3); border: 1px dashed var(--line); background: transparent; }
+
+.kb-acts { margin-left: auto; display: flex; gap: 8px; }
+
+.kb-editor { margin-top: 12px; }
+
+.kb-editor .cl-ta { width: 100%; min-height: 140px; display: block; }
+
+.kb-editor-acts { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+
+</style>
+
+</head>
+
+<body class="cl" data-page="brand">
+
+
+
+<header class="topbar" id="topbar">
+
+  <div class="tb-brand"><span class="tb-logo">G</span><span class="tb-name">GEO 优化系统</span><span class="tb-env" id="tb-env">客户工作台</span></div>
+
+  <div class="tb-right">
+
+    <span class="tb-chip" id="model-tag">模型 · 未就绪</span>
+
+    <span class="tb-chip" id="run-tag">空闲</span>
+
+    <div class="tb-user" id="tb-user-btn"><span class="tb-av" id="tb-av">客</span><span class="tb-uname" id="tb-uname">客户</span><i class="ic" data-ic="chevronDown" data-sz="16"></i></div>
+
+  </div>
+
+  <div class="tb-menu" id="tb-menu"><button onclick="doLogout()"><i class="ic" data-ic="logout"></i>退出登录</button></div>
+
+</header>
+
+
+
+<div class="cl-app">
+
+  <aside class="cl-side" id="sidebar"></aside>
+
+  <main class="cl-main">
+
+    <nav class="crumb" id="crumb"></nav>
+
+
+
+    <!-- ===== 页头: 资料摘要 + 完整度环 + 保存入口 ===== -->
+
+    <div class="phead">
+
+        <div class="phead-l">
+
+            <div class="phead-eyebrow">内容生产 · 品牌资产</div>
+
+            <div class="phead-h1">品牌资料</div>
+
+            <div class="phead-sub">您的品牌资料全渠道共用 · 填得越具体，AI 文章越专业 · 保存后下一批文章立即生效</div>
+
+            <div class="phead-chips">
+
+                <span class="phead-chip"><i class="ic" data-ic="file" data-sz="16"></i>资料字数 <b id="pc-len">-</b></span>
+
+                <span class="phead-chip"><i class="ic" data-ic="layers" data-sz="16"></i>分区完整度 <b id="pc-sect">-</b></span>
+
+                <span class="phead-chip"><i class="ic" data-ic="clock" data-sz="16"></i>更新时间 <b id="pc-upd">-</b></span>
+
+            </div>
+
+        </div>
+
+        <div class="phead-r">
+
+            <div class="kb-pct-ring" title="资料完整度">
+
+                <div class="v" id="kb-pct">-</div>
+
+                <div class="l">完整度</div>
+
+            </div>
+
+            <div class="pr-l">品牌资料</div>
+
+            <button class="btn" onclick="saveBrand()"><i class="ic" data-ic="check"></i>保存资料</button>
+
+        </div>
+
+    </div>
+
+
+
+    <!-- ===== KPI: 字数 / 分区完整度 / 最近更新 ===== -->
+
+    <div class="kpi-grid">
+
+        <div class="kpi">
+
+            <div class="kpi-l">资料字数 <span class="kpi-x"><i class="ic" data-ic="file"></i></span></div>
+
+            <div class="kpi-r"><span class="kpi-v" id="k-len">-</span><span class="kpi-u">字</span></div>
+
+            <div class="kpi-l">您填的每个字都会进入 AI 写作素材</div>
+
+        </div>
+
+        <div class="kpi">
+
+            <div class="kpi-l">分区完整度 <span class="kpi-x"><i class="ic" data-ic="layers"></i></span></div>
+
+            <div class="kpi-r"><span class="kpi-v" id="k-sect">-</span><span class="kpi-u">%</span></div>
+
+            <div class="viz-bar thin"><span class="sg brand" id="k-sect-bar" style="width:0%"></span></div>
+
+            <div class="kpi-l" id="k-sect-sub">9 个标准分区</div>
+
+        </div>
+
+        <div class="kpi">
+
+            <div class="kpi-l">最近更新 <span class="kpi-x"><i class="ic" data-ic="clock"></i></span></div>
+
+            <div class="kpi-r"><span class="kpi-v" id="k-upd" style="font-size:16px">-</span></div>
+
+            <div class="kpi-l">保存后自动记录时间</div>
+
+        </div>
+
+    </div>
+
+
+
+    <!-- ===== 资料正文 ===== -->
+
+    <section class="sec">
+
+        <div class="sec-h">
+
+            <span class="sec-ico"><i class="ic" data-ic="archive" data-sz="20"></i></span>
+
+            <div class="sec-t"><b>资料正文</b><span>按【分区】逐条填写：资质 / 门店 / 产品 / 价格 / 团队 / 流程 / 方法论 / 总结</span></div>
+
+            <div class="sec-x">
+
+                <span class="pill gray" id="brand-state">未修改</span>
+
+                <button class="btn sm" onclick="saveBrand()"><i class="ic" data-ic="check"></i>保存资料</button>
+
+            </div>
+
+        </div>
+
+        <div class="sec-b">
+
+            <textarea class="cl-ta bp-ta" id="brand-input" rows="18" placeholder="【品牌概述】&#10;一句话讲清：您是谁、做什么、凭什么是您 —— 行业 / 规模 / 年限 / 定位 / 差异化&#10;&#10;【资质与认证】&#10;证照名称 + 编号 + 核验渠道&#10;…"></textarea>
+
+        </div>
+
+    </section>
+
+
+
+    <!-- ===== 怎么用: 客户引导 ===== -->
+
+    <section class="sec">
+
+        <div class="sec-h">
+
+            <span class="sec-ico"><i class="ic" data-ic="info" data-sz="20"></i></span>
+
+            <div class="sec-t"><b>怎么用</b><span>照着卡片示例写就行 · 写完点「保存资料」 · 建议每月更新一次</span></div>
+
+            <div class="sec-x"><span class="pill brand">九大标准分区适用于任何行业</span></div>
+
+        </div>
+
+        <div class="sec-b">
+
+            <div class="kb-how">正文里用<b>【分区名】</b>单独成行，系统按此识别资料完整度 · 每张卡片下方有<b>填写示例</b>，也可以点卡片的「填写」按钮单独录入一个分区，不影响其他内容。</div>
+
+        </div>
+
+    </section>
+
+
+
+    <!-- ===== 九大标准分区: 卡片索引(分区名与 BRAND_SECTIONS 逐字一致) ===== -->
+
+    <section class="sec">
+
+        <div class="sec-h">
+
+            <span class="sec-ico"><i class="ic" data-ic="layers" data-sz="20"></i></span>
+
+            <div class="sec-t"><b>九大标准分区</b><span>正文里用【分区名】单独成行，系统按此识别资料完整度 · 覆盖越全，AI 引用率越高</span></div>
+
+            <div class="sec-x"><span class="pill gray">9 个分区</span></div>
+
+        </div>
+
+        <div class="sec-b">
+
+            <div class="icard-grid cols" id="kb-grid">
+
+                <div class="icard flat" data-sec="品牌概述">
+
+                    <div class="icard-h"><span class="ico"><i class="ic" data-ic="info"></i></span><span class="t">品牌概述</span><span class="x"><span class="pill gray" data-st="品牌概述">待填写</span></span></div>
+
+                    <div class="icard-b">一句话讲清：您是谁、做什么、凭什么是您 —— 行业 / 规模 / 年限 / 定位 / 差异化。</div>
+
+                    <div class="kb-ex"><b>这样写</b>例：XX 防水工程，2012 年成立，南京本地 12 年老品牌，专注房顶 / 外墙 / 卫生间渗水维修，累计服务 3 万+ 户，质保 10 年。</div>
+
+                    <div class="kb-dyn"></div>
+
+                </div>
+
+                <div class="icard flat" data-sec="资质与认证">
+
+                    <div class="icard-h"><span class="ico"><i class="ic" data-ic="shield"></i></span><span class="t">资质与认证</span><span class="x"><span class="pill gray" data-st="资质与认证">待填写</span></span></div>
+
+                    <div class="icard-b">可核验的资质是 AI 最爱引用的信任背书，写证照名称 + 编号 + 核验渠道。</div>
+
+                    <div class="kb-ex"><b>这样写</b>例：建筑防水防腐保温工程专业承包资质；营业执照统一社会信用代码，可在「国家企业信用信息公示系统」查询。</div>
+
+                    <div class="kb-dyn"></div>
+
+                </div>
+
+                <div class="icard flat" data-sec="门店与服务网络">
+
+                    <div class="icard-h"><span class="ico"><i class="ic" data-ic="pin"></i></span><span class="t">门店与服务网络</span><span class="x"><span class="pill gray" data-st="门店与服务网络">待填写</span></span></div>
+
+                    <div class="icard-b">写清地址与服务半径，AI 推荐「附近」时会用到。</div>
+
+                    <div class="kb-ex"><b>这样写</b>例：南京市建邺区 XX 路 88 号；服务覆盖鼓楼 / 建邺 / 秦淮 / 玄武等主城区，全市上门，24 小时应急抢修。</div>
+
+                    <div class="kb-dyn"></div>
+
+                </div>
+
+                <div class="icard flat" data-sec="核心产品与服务">
+
+                    <div class="icard-h"><span class="ico"><i class="ic" data-ic="grid"></i></span><span class="t">核心产品与服务</span><span class="x"><span class="pill gray" data-st="核心产品与服务">待填写</span></span></div>
+
+                    <div class="icard-b">一项一条：服务名 + 适合谁 + 内容特点，这是 AI 文章的主体素材。</div>
+
+                    <div class="kb-ex"><b>这样写</b>例：房顶防水补漏：适合老小区顶层渗水，免砸砖注浆工艺；卫生间漏水检测：仪器精准定位漏点，不破坏装修。</div>
+
+                    <div class="kb-dyn"></div>
+
+                </div>
+
+                <div class="icard flat" data-sec="价格体系">
+
+                    <div class="icard-h"><span class="ico"><i class="ic" data-ic="money"></i></span><span class="t">价格体系</span><span class="x"><span class="pill gray" data-st="价格体系">待填写</span></span></div>
+
+                    <div class="icard-b">写区间不写死价，注明包含项与免费项，计价逻辑越清楚越有可信度。</div>
+
+                    <div class="kb-ex"><b>这样写</b>例：卫生间免砸砖注浆 1980 元起 / 间（含检测 + 材料 + 质保）；上门检测 0 元，报价不满意不开工。</div>
+
+                    <div class="kb-dyn"></div>
+
+                </div>
+
+                <div class="icard flat" data-sec="专业团队">
+
+                    <div class="icard-h"><span class="ico"><i class="ic" data-ic="users"></i></span><span class="t">专业团队</span><span class="x"><span class="pill gray" data-st="专业团队">待填写</span></span></div>
+
+                    <div class="icard-b">规模 + 从业年限 + 持证情况 + 代表人物资历，团队资历就是专业度背书。</div>
+
+                    <div class="kb-ex"><b>这样写</b>例：持证防水工 18 名，平均从业 9 年；师傅上门均出示工作证，全程规范施工。</div>
+
+                    <div class="kb-dyn"></div>
+
+                </div>
+
+                <div class="icard flat" data-sec="服务流程与承诺">
+
+                    <div class="icard-h"><span class="ico"><i class="ic" data-ic="check"></i></span><span class="t">服务流程与承诺</span><span class="x"><span class="pill gray" data-st="服务流程与承诺">待填写</span></span></div>
+
+                    <div class="icard-b">完整流程步骤 + 保障政策 + 独特承诺，打消客户决策顾虑。</div>
+
+                    <div class="kb-ex"><b>这样写</b>例：电话预约 → 免费检测 → 出方案报价 → 施工 → 验收开质保卡；承诺质保 10 年，漏了免费返修。</div>
+
+                    <div class="kb-dyn"></div>
+
+                </div>
+
+                <div class="icard flat" data-sec="核心方法">
+
+                    <div class="icard-h"><span class="ico"><i class="ic" data-ic="target"></i></span><span class="t">核心方法</span><span class="x"><span class="pill gray" data-st="核心方法">待填写</span></span></div>
+
+                    <div class="icard-b">步骤化写清每一步用什么、达到什么指标，越细越显专业。</div>
+
+                    <div class="kb-ex"><b>这样写</b>例：高压注浆工艺：定位漏点 → 开孔 → 高压灌注聚氨酯 → 闭水试验 48 小时验证，一次治理长久不漏。</div>
+
+                    <div class="kb-dyn"></div>
+
+                </div>
+
+                <div class="icard flat" data-sec="品牌总结">
+
+                    <div class="icard-h"><span class="ico"><i class="ic" data-ic="spark"></i></span><span class="t">品牌总结</span><span class="x"><span class="pill gray" data-st="品牌总结">待填写</span></span></div>
+
+                    <div class="icard-b">3-5 句核心卖点，浓缩前面所有分区，给 AI 一个标准收尾。</div>
+
+                    <div class="kb-ex"><b>这样写</b>例：XX 防水，南京人自己的防水品牌：持证团队 + 明码标价 + 十年质保，一次施工，长久安心。</div>
+
+                    <div class="kb-dyn"></div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+
+  </main>
+
+</div>
+
+
+
+<script src="/static/icons.js?v={{ asset_ver }}"></script>
+
+<script src="/static/layout.js?v={{ asset_ver }}"></script>
+
+<script>
+
+// ============ 品牌资料(客户工作台) ============
+
+// 分区名与上方九张卡片的 data-sec 逐字一致(脚本校验)
+
+const BRAND_SECTIONS = ['品牌概述', '资质与认证', '门店与服务网络', '核心产品与服务', '价格体系', '专业团队', '服务流程与承诺', '核心方法', '品牌总结'];
+
+
+
+// 分区是否已填写: 正文中命中分区关键词 且 关键词后 60 字内有实质内容
+
+// (与「分区完整度」同一口径 —— 卡片 pill 与 KPI 因此始终自洽)
+
+function secFilled(text, key) {
+
+    const t = String(text || '');
+
+    const i = t.indexOf(key);
+
+    if (i < 0) return false;
+
+    const seg = t.slice(i + key.length, i + key.length + 60).replace(/[【】\s]/g, '');
+
+    return seg.length > 8;
+
+}
+
+
+
+// KPI: 字数 / 分区完整度 / 最近更新(与页头 chip、完整度环同步)
+
+function brandKpi(content) {
+
+    const text = String(content || '');
+
+    const el = id => document.getElementById(id);
+
+    const len = text.replace(/\s/g, '').length;
+
+    const filledSect = BRAND_SECTIONS.filter(sn => secFilled(text, sn)).length;
+
+    const pct = Math.round(filledSect / BRAND_SECTIONS.length * 100);
+
+    if (el('k-len')) el('k-len').textContent = len;
+
+    if (el('pc-len')) el('pc-len').textContent = len + ' 字';
+
+    if (el('k-sect')) el('k-sect').textContent = pct;
+
+    if (el('k-sect-bar')) el('k-sect-bar').style.width = pct + '%';
+
+    if (el('pc-sect')) el('pc-sect').textContent = filledSect + ' / ' + BRAND_SECTIONS.length + ' 分区';
+
+    if (el('k-sect-sub')) el('k-sect-sub').textContent = filledSect + ' / ' + BRAND_SECTIONS.length + ' 个标准分区已填';
+
+    if (el('kb-pct')) el('kb-pct').textContent = pct + '%';
+
+}
+
+
+
+// 解析正文: 【分区名】单独成行为一块, 首块前的文字视为品牌概述
+
+function parse(txt) {
+
+    const raw = {}; const order = []; const intro = []; let cur = null;
+
+    String(txt || '').split('\n').forEach(ln => {
+
+        const m = ln.match(/^【(.+?)】\s*$/);
+
+        if (m) { cur = m[1]; if (!(cur in raw)) { raw[cur] = []; order.push(cur); } }
+
+        else if (cur) raw[cur].push(ln);
+
+        else intro.push(ln);
+
+    });
+
+    const blocks = {};
+
+    order.forEach(t => { const v = raw[t].join('\n').trim(); if (v) blocks[t] = v; });
+
+    return { blocks, order, intro: intro.join('\n').trim() };
+
+}
+
+
+
+// 取某分区的当前内容(兼容【核心方法/技术/工艺】等带后缀的标题; 品牌概述无块时取正文开头)
+
+function secValue(p, key) {
+
+    if (p.blocks[key] !== undefined) return p.blocks[key];
+
+    const t = p.order.find(t => t.indexOf(key) >= 0);
+
+    if (t) return p.blocks[t];
+
+    if (key === '品牌概述' && p.intro) return p.intro;
+
+    return '';
+
+}
+
+
+
+// ===== 分区卡: 状态徽章 + 内容预览 + 展开/填写按钮 =====
+
+let EDITING = '';
+
+function renderBrandCards() {
+
+    const grid = document.getElementById('kb-grid');
+
+    if (!grid) return;
+
+    const text = document.getElementById('brand-input').value;
+
+    const p = parse(text);
+
+    grid.querySelectorAll('.icard[data-sec]').forEach(card => {
+
+        const key = card.getAttribute('data-sec');
+
+        if (BRAND_SECTIONS.indexOf(key) < 0) return;
+
+        const v = secValue(p, key);
+
+        const st = card.querySelector('[data-st]');
+
+        if (st) { const ok = secFilled(text, key); st.textContent = ok ? '已填写' : '待填写'; st.className = ok ? 'pill ok' : 'pill gray'; }
+
+        const dyn = card.querySelector('.kb-dyn');
+
+        if (!dyn) return;
+
+        if (EDITING === key) {
+
+            dyn.innerHTML = '<div class="kb-editor">'
+
+                + '<textarea class="cl-ta" id="ta-' + key + '" placeholder="按【' + key + '】分区填写，保存后下一批文章立即生效">' + esc(v) + '</textarea>'
+
+                + '<div class="kb-editor-acts">'
+
+                + '<button class="btn gray sm" onclick="cancelEdit()"><i class="ic" data-ic="close"></i>取消</button>'
+
+                + '<button class="btn sm" onclick="saveSec(\'' + key + '\')"><i class="ic" data-ic="check"></i>保存</button>'
+
+                + '</div></div>';
+
+        } else {
+
+            const acts = [];
+
+            if (v) acts.push('<button class="btn gray sm" onclick="expandSec(\'' + key + '\')"><i class="ic" data-ic="chevronDown"></i>展开</button>');
+
+            acts.push('<button class="btn sm" onclick="editSec(\'' + key + '\')"><i class="ic" data-ic="pencil"></i>' + (v ? '编辑' : '填写') + '</button>');
+
+            dyn.innerHTML = '<div class="kb-fill' + (v ? '' : ' empty') + '" id="pv-' + key + '">'
+
+                + (v ? esc(v) : '待填写 —— 参考下方示例，点「填写」直接录入')
+
+                + '</div>'
+
+                + '<div class="icard-f"><span class="var-chip">【' + key + '】</span><span class="kb-acts">' + acts.join('') + '</span></div>';
+
+        }
+
+    });
+
+    if (window.ICONS) ICONS.mount(grid);
+
+    if (EDITING) { const t = document.getElementById('ta-' + EDITING); if (t) t.focus(); }
+
+}
+
+
+
+// 展开长内容预览(不再限高)
+
+function expandSec(key) { const el = document.getElementById('pv-' + key); if (el) el.style.maxHeight = 'none'; }
+
+
+
+// 展开分区编辑框
+
+function editSec(key) { EDITING = key; renderBrandCards(); }
+
+
+
+function cancelEdit() { EDITING = ''; renderBrandCards(); }
+
+
+
+// 把分区编辑结果写回正文(保持原有分区顺序与自定义分区), 再统一保存
+
+async function saveSec(key) {
+
+    const ta = document.getElementById('ta-' + key);
+
+    const main = document.getElementById('brand-input');
+
+    if (!ta || !main) return;
+
+    const nv = ta.value.trim();
+
+    const p = parse(main.value);
+
+    let out = '';
+
+    let done = false;
+
+    const hasBlock = p.order.some(t => t.indexOf(key) >= 0);
+
+    if (key === '品牌概述' && !hasBlock) { done = true; if (nv) out += nv + '\n'; }
+
+    else if (p.intro) out += p.intro + '\n';
+
+    for (const t of p.order) {
+
+        let body = p.blocks[t];
+
+        if (!done && t.indexOf(key) >= 0) { body = nv; done = true; }
+
+        if (body) out += '【' + t + '】\n' + body + '\n';
+
+    }
+
+    if (!done) out += '【' + key + '】\n' + nv + '\n';
+
+    main.value = out.trim() + '\n';
+
+    EDITING = '';
+
+    brandKpi(main.value);
+
+    await saveBrand();
+
+}
+
+
+
+async function loadBrand() {
+
+    const r = await fetch('/api/brand');
+
+    const d = await r.json();
+
+    const ta = document.getElementById('brand-input');
+
+    ta.value = d.content;
+
+    brandKpi(d.content);
+
+    renderBrandCards();
+
+    const el = id => document.getElementById(id);
+
+    if (el('k-upd')) el('k-upd').textContent = new Date().toISOString().slice(5, 16).replace('T', ' ');
+
+    if (el('pc-upd')) el('pc-upd').textContent = new Date().toISOString().slice(5, 10);
+
+    if (ta && !ta.dataset.bound) {
+
+        ta.dataset.bound = '1';
+
+        ta.addEventListener('input', e => {
+
+            brandKpi(e.target.value);
+
+            const st = document.getElementById('brand-state');
+
+            if (st) { st.textContent = '未保存'; st.className = 'pill warn'; }
+
+        });
+
+    }
+
+}
+
+
+
+async function saveBrand() {
+
+    const r = await fetch('/api/brand', {
+
+        method: 'POST',
+
+        headers: {'Content-Type': 'application/json'},
+
+        body: JSON.stringify({content: document.getElementById('brand-input').value})
+
+    });
+
+    const d = await r.json();
+
+    if (d.ok) {
+
+        alert('已保存');
+
+        const st = document.getElementById('brand-state');
+
+        if (st) { st.textContent = '已保存'; st.className = 'pill ok'; }
+
+    }
+
+    renderBrandCards();
+
+}
+
+window.addEventListener('load', loadBrand);
+
+</script>
+
+</body>
+
+</html>
+

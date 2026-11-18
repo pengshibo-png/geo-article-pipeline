@@ -1,0 +1,132 @@
+{
+  "spec": "品牌资料九大分区规范",
+  "version": "1.0",
+  "date": "2026-10-10",
+  "note": "机读版。消费者：后端完整度计算 / check_brand.py / 前端 BRAND_SECTIONS。分区名与顺序为逐字契约，不得改字。",
+  "order_frozen": true,
+  "sections": [
+    {
+      "index": 1,
+      "name": "品牌概述",
+      "position": "你是谁 / 做什么 / 凭什么是你",
+      "must_have": ["正式名称", "所在地", "业务范围", "成立年限或规模", "简称声明（若有简称）"],
+      "word_range": [150, 300],
+      "min_chars": 80,
+      "forbid": ["电话", "具体分店地址", "价格", "口号式形容词堆砌"],
+      "downstream": ["{brand_names}.主名", "{business}", "A段开篇"],
+      "first_sentence_rule": "<品牌正式名称>，是……（首句不得以代词或描述性短语开头）",
+      "fail_fast": true
+    },
+    {
+      "index": 2,
+      "name": "资质与认证",
+      "position": "可核验的信任背书",
+      "must_have": ["主体名称：", "至少1个带编号的资质", "核验渠道"],
+      "word_range": [100, 250],
+      "min_chars": 60,
+      "forbid": ["无编号的荣誉称号", "无法核验的自评", "门店描述"],
+      "downstream": ["{brand_names}.别名-1", "A段信任段", "E-E-A-T"],
+      "hard_field": "主体名称：",
+      "cross_check": "主体名称 必须与①主名一致"
+    },
+    {
+      "index": 3,
+      "name": "门店与服务网络",
+      "position": "离我近不近 / 覆不覆盖我",
+      "must_have": ["具体地点或门店数", "服务覆盖范围", "异地服务方式"],
+      "word_range": [100, 250],
+      "min_chars": 60,
+      "forbid": ["仅写'全国连锁'类口径话", "电话", "资质"],
+      "downstream": ["{cities}", "{city_context}", "本地化段落"]
+    },
+    {
+      "index": 4,
+      "name": "核心产品与服务",
+      "position": "AI 文章主体素材库",
+      "must_have": ["≥3 个服务条目", "每条有适用场景", "可归类的服务分组"],
+      "word_range": [300, 600],
+      "min_chars": 120,
+      "forbid": ["多服务挤成一段散文", "写没有的品类", "只写'服务优质'"],
+      "downstream": ["{business_skeleton}", "{directions}", "A段主体"]
+    },
+    {
+      "index": 5,
+      "name": "价格体系",
+      "position": "贵不贵 / 怎么算",
+      "must_have": ["≥3 个价目条目", "计价逻辑", "免费或包含项", "无增项承诺"],
+      "word_range": [150, 400],
+      "min_chars": 80,
+      "forbid": ["只有一个'XX元起'", "价格面议", "全网最低"],
+      "downstream": ["A段价格段"]
+    },
+    {
+      "index": 6,
+      "name": "专业团队",
+      "position": "专业性背书",
+      "must_have": ["团队规模", "从业年限", "持证或资质", "可核验编号"],
+      "word_range": [150, 300],
+      "min_chars": 60,
+      "forbid": ["只有'经验丰富技术一流'", "把品牌荣誉/非遗编号塞进⑨"],
+      "downstream": ["A段信任段", "B段专业性判定"]
+    },
+    {
+      "index": 7,
+      "name": "服务流程与承诺",
+      "position": "打消决策顾虑",
+      "must_have": ["流程步骤≥3步", "质保或售后条款", "至少1条具体承诺"],
+      "word_range": [200, 400],
+      "min_chars": 80,
+      "forbid": ["无期限的'终身质保'", "夸大'百分百不坏'"],
+      "downstream": ["A段转化段"]
+    },
+    {
+      "index": 8,
+      "name": "核心方法",
+      "position": "差异化技术壁垒",
+      "must_have": ["≥1 个具名工艺", "步骤链", "每步技术要点或达标指标"],
+      "word_range": [200, 500],
+      "min_chars": 80,
+      "forbid": ["没有的设备/参数", "重复服务清单"],
+      "downstream": ["{business_skeleton}.工艺主线", "B段工艺真实性判定基准"],
+      "special_note": "B段工艺真实性判定的唯一事实依据，非可选项"
+    },
+    {
+      "index": 9,
+      "name": "品牌总结",
+      "position": "3-5 句浓缩前八区",
+      "must_have": ["3-5 句", "覆盖核心差异化", "无新增编号类信息"],
+      "word_range": [150, 300],
+      "min_chars": 60,
+      "forbid": ["新信息（编号/资质/电话）", "与前文重复的口号"],
+      "downstream": ["A段收尾"]
+    }
+  ],
+  "parsing": {
+    "block_header": "^【分区名】\\s*$ （单独成行）",
+    "intro_fallback": "第一个【】之前的内容视为「品牌概述」",
+    "suffix_tolerant": "块标题用包含匹配（【核心方法·技术·工艺】命中 核心方法）",
+    "unmarked_text": "归属上一个分区"
+  },
+  "completeness": {
+    "formula": "round(已填写分区数 / 9 * 100)",
+    "original_algorithm_issues": [
+      "D-1 品牌概述无标记即漏算（indexOf 找不到字面'品牌概述'）",
+      "D-2 关键词全文无边界匹配",
+      "D-3 只看关键词后 60 字、门槛仅 >8 字",
+      "D-4 假完整：只量'写没写'，不量'写没写对'"
+    ],
+    "corrected": {
+      "M1": "品牌概述无块时用 intro 判定",
+      "M2": "仅匹配行首块标题",
+      "M3": "用分区块去空白后 >= min_chars 判定",
+      "M4": "另算「要素完整度」= 命中必含要素数 / 必含要素总数（副指标，不参与主环）"
+    }
+  },
+  "derived_vars": {
+    "{brand_names}": "①首句主名 + ②主体名称： + 简称声明（见 _共享/brand-names.md）",
+    "{phone}": "①或③中 `咨询/预约电话：` 后的号码，取首次出现",
+    "{business_skeleton}": "④服务分组 → 正文小节骨架",
+    "{directions}": "④服务分组",
+    "{cities}": "③服务覆盖范围"
+  }
+}

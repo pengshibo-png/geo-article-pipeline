@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN" class="theme-light">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>素材库 · GEO优化系统</title>
+
+<link rel="stylesheet" href="/static/client_style.css?v={{ asset_ver }}">
+
+<link rel="stylesheet" href="/static/ds.css?v={{ asset_ver }}">
+
+<link rel="stylesheet" href="/static/theme-light.css?v={{ asset_ver }}">
+
+<style>
+
+/* ============================================================
+
+   素材库 · 共用页(运营端 /assets + 客户工作台 /assets)
+
+   theme-light.css 已提供 顶栏/面包屑/页头/KPI/区块/卡片/按钮/标签/空态 全套,
+
+   此处只保留四类必要规则: 外壳补丁、KPI 修正、上传拖拽区、素材卡与预览遮罩
+
+   约束: 只用 var(--*) token / 圆角 ≤ 8px / 无渐变 · 无发光 · 无玻璃拟态
+
+   间距只落 8px 栅格(4/8/12/16/20/24/32), 字号 12/13/14/16/20/24, 图标 16/20(+空态 24)
+
+   ============================================================ */
+
+
+
+/* 1) 外壳栅格: theme-light 只给了列宽, display 由本页补(与 dash/settings 一致) */
+
+.cl-app { display: grid; }
+
+.phead-r .pr-l { white-space: nowrap; }
+
+
+
+/* 2) KPI: 进度条填充去渐变(ds.css 的 .sg 仍是渐变), 角标图标统一 20 */
+
+html.theme-light .viz-bar .sg.brand { background: var(--brand); }
+
+html.theme-light .kpi .viz-bar { margin-top: 12px; }
+
+html.theme-light .kpi .kpi-l + .kpi-l { margin-top: 8px; }
+
+html.theme-light body .kpi-x .ic { width: 20px; height: 20px; }
+
+html.theme-light body .kpi-x .ic svg, html.theme-light body .kpi-x .ic .svg-ic { width: 20px !important; height: 20px !important; flex: none; }
+
+
+
+/* 3) 上传拖拽区: 虚线 token 化(--line-strong + --bg-soft), hover/拖入 品牌浅底 */
+
+.as-drop { border: 1px dashed var(--line-strong); border-radius: var(--r); background: var(--bg-soft); padding: 24px 20px; text-align: center; cursor: pointer; }
+
+.as-drop:hover, .as-drop.on { border-color: var(--brand); background: var(--brand-soft); }
+
+.as-drop .ad-ic { width: 40px; height: 40px; margin: 0 auto; border-radius: var(--r); display: flex; align-items: center; justify-content: center; background: var(--bg-deep); border: 1px solid var(--line); color: var(--brand); }
+
+.as-drop:hover .ad-ic, .as-drop.on .ad-ic { border-color: var(--brand); }
+
+.as-drop .ad-t { font-size: 13px; font-weight: 600; color: var(--ink); margin-top: 12px; }
+
+.as-drop .ad-s { font-size: 12px; color: var(--ink3); margin-top: 4px; }
+
+/* 上传中提示(原内联样式收进主题 token) */
+
+#uptip { display: none; margin-top: 12px; background: var(--warn-bg); border: 1px solid var(--warn); border-radius: var(--r-sm); padding: 8px 16px; font-size: 13px; color: var(--warn); }
+
+
+
+/* 4) 素材卡: 封面(等比裁切, hover 微放大, 点击大图预览) + 文件名 + 大小/时间 + 操作 */
+
+.as-grid { gap: 16px; }
+
+.as-card { overflow: hidden; padding: 0; }
+
+.as-thumb { height: 152px; background: var(--bg-deep); display: flex; align-items: center; justify-content: center; cursor: zoom-in; overflow: hidden; border-bottom: 1px solid var(--line-soft); }
+
+.as-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.as-card:hover .as-thumb img { transform: scale(1.04); }
+
+.as-thumb img { transition: transform .16s cubic-bezier(.16, 1, .3, 1); }
+
+.as-info { padding: 12px 16px 0; }
+
+.as-name { font-size: 13px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.as-meta { font-size: 12px; color: var(--ink3); margin-top: 4px; display: flex; justify-content: space-between; gap: 8px; font-variant-numeric: tabular-nums; }
+
+.as-ops { display: flex; gap: 8px; padding: 12px 16px 16px; }
+
+.as-btn { flex: 1; height: 28px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid var(--line-strong); background: transparent; border-radius: var(--r-btn); font-family: inherit; font-size: 12px; font-weight: 500; cursor: pointer; color: var(--ink2); }
+
+.as-btn:hover { border-color: var(--brand); color: var(--brand); background: var(--brand-soft); }
+
+.as-btn.del:hover { border-color: var(--bad); color: var(--bad); background: var(--bad-bg); }
+
+/* 破图占位: 虚线框/--bg-deep 底/居中文案 由 theme-light.css 的 .img-fallback 提供(不重复定义),
+
+   这里只补 图标+文案+重试 的行距与图标色(8px 栅格) */
+
+html.theme-light .as-thumb .img-fallback { gap: 8px; padding: 8px; }
+
+html.theme-light .as-thumb .img-fallback .ic { color: var(--ink3); }
+
+html.theme-light .as-thumb .img-fallback .if-btn { margin-top: 4px; }
+
+
+
+/* 5) 大图预览遮罩 */
+
+#pv-mask { display: none; position: fixed; inset: 0; background: rgba(8, 8, 10, .78); z-index: 200; align-items: center; justify-content: center; cursor: zoom-out; }
+
+#pv-mask img { max-width: 92vw; max-height: 90vh; border-radius: var(--r); box-shadow: var(--shadow-lg); }
+
+</style>
+
+</head>
+
+<body class="cl" data-page="assets">
+
+
+
+<header class="topbar" id="topbar">
+
+  <div class="tb-brand"><span class="tb-logo">G</span><span class="tb-name">GEO 优化系统</span><span class="tb-env" id="tb-env">客户工作台</span></div>
+
+  <div class="tb-right">
+
+    <span class="tb-chip" id="model-tag">模型 · —</span>
+
+    <span class="tb-chip" id="run-tag">空闲</span>
+
+    <div class="tb-user" id="tb-user-btn"><span class="tb-av" id="tb-av">客</span><span class="tb-uname" id="tb-uname">—</span><i class="ic" data-ic="chevronDown" data-sz="16"></i></div>
+
+  </div>
+
+  <div class="tb-menu" id="tb-menu"><button onclick="doLogout()"><i class="ic" data-ic="logout"></i>退出登录</button></div>
+
+</header>
+
+
+
+<div class="cl-app">
+
+  <aside class="cl-side" id="sidebar"></aside>
+
+  <main class="cl-main">
+
+    <nav class="crumb" id="crumb"></nav>
+
+
+
+    <!-- ===== 页头: 素材摘要 + 上传入口 ===== -->
+
+    <div class="phead">
+
+        <div class="phead-l">
+
+            <div class="phead-eyebrow">内容生产 · 素材</div>
+
+            <div class="phead-h1">图片素材库</div>
+
+            <div class="phead-sub">文章配图自动随机取用 · 素材按客户完全隔离 · 上传即获得公网链接</div>
+
+            <div class="phead-chips">
+
+                <span class="phead-chip"><i class="ic" data-ic="image" data-sz="16"></i>素材 <b id="pc-count">-</b> 张</span>
+
+                <span class="phead-chip"><i class="ic" data-ic="archive" data-sz="16"></i>占用 <b id="pc-size">-</b></span>
+
+                <span class="phead-chip"><i class="ic" data-ic="clock" data-sz="16"></i>最近上传 <b id="pc-latest">-</b></span>
+
+            </div>
+
+        </div>
+
+        <div class="phead-r">
+
+            <div class="pr-l">素材管理</div>
+
+            <button class="btn" onclick="pick()"><i class="ic" data-ic="plus"></i>上传素材</button>
+
+        </div>
+
+    </div>
+
+
+
+    <!-- ===== KPI: 总数 / 占用 / 平均单张 / 最近上传 ===== -->
+
+    <div class="kpi-grid">
+
+        <div class="kpi">
+
+            <div class="kpi-l">素材总数 <span class="kpi-x"><i class="ic" data-ic="image" data-sz="20"></i></span></div>
+
+            <div class="kpi-r"><span class="kpi-v" id="k-count">-</span><span class="kpi-u">张</span></div>
+
+            <div class="kpi-l">文章配图随机取用池</div>
+
+        </div>
+
+        <div class="kpi">
+
+            <div class="kpi-l">占用空间 <span class="kpi-x"><i class="ic" data-ic="archive" data-sz="20"></i></span></div>
+
+            <div class="kpi-r"><span class="kpi-v" id="k-size">-</span><span class="kpi-u">MB</span></div>
+
+            <div class="viz-bar thin"><span class="sg brand" id="k-size-bar" style="width:8%"></span></div>
+
+            <div class="kpi-l" id="k-size-sub">云端存储</div>
+
+        </div>
+
+        <div class="kpi">
+
+            <div class="kpi-l">平均单张 <span class="kpi-x"><i class="ic" data-ic="file" data-sz="20"></i></span></div>
+
+            <div class="kpi-r"><span class="kpi-v" id="k-avg">-</span><span class="kpi-u">KB</span></div>
+
+            <div class="kpi-l">建议 &lt;500KB 保证发布速度</div>
+
+        </div>
+
+        <div class="kpi">
+
+            <div class="kpi-l">最近上传 <span class="kpi-x"><i class="ic" data-ic="clock" data-sz="20"></i></span></div>
+
+            <div class="kpi-r"><span class="kpi-v" id="k-latest" style="font-size:16px">-</span></div>
+
+            <div class="kpi-l" id="k-latest-sub">保持素材常新</div>
+
+        </div>
+
+    </div>
+
+
+
+    <!-- ===== 上传素材 ===== -->
+
+    <section class="sec">
+
+        <div class="sec-h">
+
+            <span class="sec-ico"><i class="ic" data-ic="image" data-sz="20"></i></span>
+
+            <div class="sec-t"><b>上传素材</b><span>点击选择 或 拖拽图片到下方区域 · 上传即获得公网链接</span></div>
+
+            <div class="sec-x"><span class="pill gray">jpg / png / webp / gif</span></div>
+
+        </div>
+
+        <div class="sec-b">
+
+            <div class="as-drop" id="drop" onclick="pick()">
+
+                <div class="ad-ic"><i class="ic" data-ic="plus" data-sz="20"></i></div>
+
+                <div class="ad-t">点击选择图片 或 拖拽到此处</div>
+
+                <div class="ad-s">上传后自动获得公网链接，文章配图直接可用 · 支持多选</div>
+
+            </div>
+
+            <div id="uptip">上传中…（每张图片会上传到云端获取公网链接，请稍候）</div>
+
+        </div>
+
+    </section>
+
+    <input type="file" id="fpick" multiple accept=".jpg,.jpeg,.png,.webp,.gif" style="display:none" onchange="upload(this)">
+
+
+
+    <!-- ===== 素材列表 ===== -->
+
+    <section class="sec">
+
+        <div class="sec-h">
+
+            <span class="sec-ico"><i class="ic" data-ic="grid" data-sz="20"></i></span>
+
+            <div class="sec-t"><b>素材列表</b><span>点击图片可放大预览 · 复制链接可直接用于外部</span></div>
+
+            <div class="sec-x"><span class="pill gray" id="total-badge">0 张</span></div>
+
+        </div>
+
+        <div class="sec-b">
+
+            <div class="as-grid icard-grid cols" id="grid"></div>
+
+            <div class="as-empty" id="empty" style="display:none"></div>
+
+        </div>
+
+    </section>
+
+
+
+  </main>
+
+</div>
+
+<div id="pv-mask" onclick="this.style.display='none'"><img id="pv-img" src=""></div>
+
+<script src="/static/icons.js?v={{ asset_ver }}"></script>
+
+<script src="/static/layout.js?v={{ asset_ver }}"></script>
+
+<script>
+
+let ASSETS = [];
+
+
+
+function pick() { document.getElementById('fpick').click(); }
+
+
+
+async function load() {
+
+    const d = await (await fetch('/api/my-assets')).json();
+
+    ASSETS = d.assets || [];
+
+    render();
+
+}
+
+
+
+function render() {
+
+    document.getElementById('total-badge').textContent = ASSETS.length + ' 张';
+
+    const g = document.getElementById('grid');
+
+    const empty = document.getElementById('empty');
+
+    // KPI 汇总
+
+    const totalKB = ASSETS.reduce((n, a) => n + (a.size || 0), 0) / 1024;
+
+    const mb = totalKB / 1024;
+
+    document.getElementById('k-count').textContent = ASSETS.length;
+
+    document.getElementById('k-size').textContent = mb >= 1 ? mb.toFixed(1) : (totalKB / 1024).toFixed(2);
+
+    document.getElementById('k-avg').textContent = ASSETS.length ? Math.round(totalKB / ASSETS.length) : '-';
+
+    const latest = ASSETS.map(a => a.time || '').sort().slice(-1)[0] || '';
+
+    document.getElementById('k-latest').textContent = latest ? latest.slice(5, 16) : '暂无';
+
+    document.getElementById('k-latest-sub').textContent = latest ? '保持素材常新' : '尚未上传素材';
+
+    document.getElementById('pc-count').textContent = ASSETS.length;
+
+    document.getElementById('pc-size').textContent = mb >= 1 ? mb.toFixed(1) + ' MB' : Math.round(totalKB) + ' KB';
+
+    document.getElementById('pc-latest').textContent = latest ? latest.slice(5, 10) : '暂无';
+
+    const sb = document.getElementById('k-size-bar');
+
+    if (sb) sb.style.width = Math.min(100, Math.max(6, Math.round(mb / 50 * 100))) + '%';
+
+    document.getElementById('k-size-sub').textContent = mb >= 1 ? '云端存储 · ' + mb.toFixed(1) + ' MB' : '云端存储';
+
+    if (!ASSETS.length) {
+
+        g.innerHTML = '';
+
+        empty.style.display = 'block';
+
+        empty.innerHTML = '<div class="empty"><div class="e-ic"><i class="ic" data-ic="image" data-sz="24"></i></div><div class="e-t">暂无素材</div><div class="e-s">上传几张图片开始吧 · 生成文章时会自动随机取用</div></div>';
+
+        if (window.ICONS) ICONS.mount(empty);
+
+        return;
+
+    }
+
+    empty.style.display = 'none';
+
+    g.innerHTML = ASSETS.map((a, i) => `
+
+        <div class="icard as-card">
+
+            <div class="as-thumb" onclick="pv('${a.url}')" title="点击放大查看"><img src="${a.url}" loading="lazy" alt="" onerror="imgFallback(this)"></div>
+
+            <div class="as-info">
+
+                <div class="as-name" title="${esc(a.name)}">素材 ${i + 1} · ${esc((a.name || '').slice(0, 14))}</div>
+
+                <div class="as-meta"><span>${(a.size / 1024).toFixed(0)} KB</span><span>${(a.time || '').slice(5, 16)}</span></div>
+
+            </div>
+
+            <div class="as-ops">
+
+                <button class="as-btn" onclick="copyUrl('${a.url}')"><i class="ic" data-ic="link" data-sz="16"></i>复制链接</button>
+
+                <button class="as-btn del" onclick="del('${a.id}', '${esc(a.name)}')"><i class="ic" data-ic="trash" data-sz="16"></i>删除</button>
+
+            </div>
+
+        </div>`).join('');
+
+    if (window.ICONS) ICONS.mount(g);
+
+}
+
+
+
+async function upload(inp) {
+
+    const files = [...inp.files];
+
+    if (!files.length) return;
+
+    document.getElementById('uptip').style.display = 'block';
+
+    const fd = new FormData();
+
+    files.forEach(f => fd.append('files', f));
+
+    try {
+
+        const r = await fetch('/api/my-assets', { method: 'POST', body: fd });
+
+        let d;
+
+        try { d = await r.json(); } catch (e) { d = null; }
+
+        if (r.ok && d && d.ok) {
+
+            let msg = `成功上传 ${d.added} 张（素材库共 ${d.total} 张）`;
+
+            if (d.errors && d.errors.length) msg += '\n' + d.errors.join('\n');
+
+            alert(msg);
+
+            load();
+
+        } else alert('上传失败: ' + ((d && d.error) || `服务器错误(${r.status})`));
+
+    } catch (e) { alert('网络异常: ' + e.message); }
+
+    document.getElementById('uptip').style.display = 'none';
+
+    inp.value = '';
+
+}
+
+
+
+async function del(id, name) {
+
+    if (!confirm(`删除素材「${name}」？已发布文章不受影响。`)) return;
+
+    const r = await fetch('/api/my-assets/delete', { method: 'POST',
+
+        headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
+
+    const d = await r.json();
+
+    if (d.ok) load(); else alert(d.error || '删除失败');
+
+}
+
+
+
+function copyUrl(u) {
+
+    navigator.clipboard.writeText(u).then(() => alert('链接已复制'), () => prompt('手动复制:', u));
+
+}
+
+function pv(u) { document.getElementById('pv-img').src = u; document.getElementById('pv-mask').style.display = 'flex'; }
+
+
+
+// 拖拽上传
+
+const drop = document.getElementById('drop');
+
+['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('on'); }));
+
+['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('on'); }));
+
+drop.addEventListener('drop', e => {
+
+    const dt = e.dataTransfer;
+
+    const inp = document.getElementById('fpick');
+
+    if (dt.files.length) { inp.files = dt.files; upload(inp); }
+
+});
+
+
+
+// 破图占位: 图标(20) + 文案 + 重试(?t= 强制回源), 形态复用 theme-light.css 的 .img-fallback
+
+function imgFallback(el) {
+
+    const url = el.getAttribute('src') || '';
+
+    const d = document.createElement('div');
+
+    d.className = 'img-fallback';
+
+    d.innerHTML = '<i class="ic" data-ic="image" data-sz="20"></i>'
+
+        + '<span class="if-t">封面加载失败</span>'
+
+        + '<button type="button" class="btn gray sm if-btn"><i class="ic" data-ic="refresh" data-sz="16"></i>重试</button>';
+
+    const btn = d.querySelector('.if-btn');
+
+    if (btn) btn.addEventListener('click', function (ev) {
+
+        ev.stopPropagation();   // 不触发 .as-thumb 的大图预览
+
+        const img = document.createElement('img');
+
+        img.loading = 'lazy'; img.alt = '';
+
+        img.onerror = function () { imgFallback(img); };
+
+        img.src = url + (url.indexOf('?') >= 0 ? '&' : '?') + 't=' + Date.now();
+
+        d.replaceWith(img);
+
+    });
+
+    el.replaceWith(d);
+
+    if (window.ICONS) ICONS.mount(d);
+
+}
+
+
+
+function esc(s) { return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'); }
+
+window.addEventListener('load', load);
+
+</script>
+
+</body>
+
+</html>
+

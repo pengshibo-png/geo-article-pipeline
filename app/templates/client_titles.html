@@ -1,0 +1,1618 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN" class="theme-light">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>选题库 · GEO 优化系统</title>
+
+<link rel="stylesheet" href="/static/client_style.css?v={{ asset_ver }}">
+
+<link rel="stylesheet" href="/static/ds.css?v={{ asset_ver }}">
+
+<link rel="stylesheet" href="/static/theme-light.css?v={{ asset_ver }}">
+
+<style>
+
+/* ============================================================
+
+   选题库 · 共用页(运营端 /titles + 客户工作台 /titles)
+
+   theme-light.css 已提供 顶栏/面包屑/页头/KPI/区块/表格/工具条/分页/按钮/标签/空态 全套,
+
+   此处只保留三类必要规则: 外壳补丁、主题层未覆盖的宿主修正、本页专属组件(进度面板/配比卡/计划表单)
+
+   约束: 只用 var(--*) token / 圆角 ≤ 8px / 无渐变 · 无发光 · 无玻璃拟态 / 字号 12·13·14·20·24
+
+   ============================================================ */
+
+
+
+/* 1) 外壳栅格: theme-light 只给了列宽, display 由本页补(与 dash/settings 一致) */
+
+.cl-app { display: grid; }
+
+.phead-r .pr-l { white-space: nowrap; }
+
+
+
+/* 2) 表格嵌在区块内, 不再套第二层边框; 空态/错误态整行去掉单元格内边距 */
+
+html.theme-light .sec-b.flush > .tbl-wrap { border: none; border-radius: 0; }
+
+html.theme-light table.tbl td.empty-cell { padding: 0; border-bottom: none; }
+
+/* 宿主 client_style.css 里 select{width:100%} 会把工具条下拉撑满 → 收回内容宽 */
+
+html.theme-light .toolbar select.inp { width: auto; min-width: 116px; }
+
+html.theme-light .toolbar .search-wrap .inp { width: 220px; }
+
+html.theme-light .toolbar select option { background: var(--card); color: var(--ink); }
+
+/* 空态/错误态引导按钮: 表格行内"文字按钮"规则会把边框刷成透明, 这里还原成描边次级按钮 */
+
+html.theme-light body table.tbl td.empty-cell .empty .btn:not(.plain):not(.text):not([disabled]) {
+
+    background: transparent !important;
+
+    border: 1px solid var(--line-strong) !important;
+
+    color: var(--ink2) !important;
+
+}
+
+html.theme-light body table.tbl td.empty-cell .empty .btn:not(.plain):not(.text):not([disabled]):hover {
+
+    background: transparent !important;
+
+    border-color: var(--brand) !important;
+
+    color: var(--brand) !important;
+
+}
+
+/* 错误态 = 红色提示条 + 重试按钮: 形态交给主题层(.empty.err), 只补条内间距与图标规格 */
+
+html.theme-light body .empty.err { gap: 12px !important; padding: 12px 16px !important; }
+
+html.theme-light body .empty.err .e-ic { margin: 0; }
+
+html.theme-light body .empty.err .e-ic svg, html.theme-light body .empty.err .e-ic .svg-ic {
+
+    width: 20px !important; height: 20px !important;
+
+}
+
+html.theme-light body .empty.err .btn { margin-top: 0; }
+
+/* KPI 角标图标: .ic 槽位固定 16px 会挤扁 20px 图标, 这里统一到 20 */
+
+html.theme-light body .kpi-x .ic { width: 20px; height: 20px; }
+
+html.theme-light body .kpi-x .ic svg, html.theme-light body .kpi-x .ic .svg-ic { width: 20px !important; height: 20px !important; flex: none; }
+
+/* KPI 卡可点筛选(来源) + 次要数字 */
+
+.kpi.tk-pick { cursor: pointer; }
+
+.kpi .kpi-l b { color: var(--ink2); font-variant-numeric: tabular-nums; }
+
+.kpi .viz-bar { margin-top: 12px; }
+
+/* 进度条填充去渐变: ds.css 的 .sg.* 仍是线性渐变, 这里改纯 token 色 */
+
+html.theme-light .viz-bar .sg.brand { background: var(--brand); }
+
+html.theme-light .viz-bar .sg.blue { background: var(--accent); }
+
+html.theme-light .viz-bar .sg.warn { background: var(--warn); }
+
+html.theme-light .viz-bar .sg.ok { background: var(--ok); }
+
+
+
+/* 3) 生成进度 / 手动添加面板(页内组件) */
+
+.tk-panels { padding: 0 16px; }
+
+.tk-panel { margin-top: 16px; background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 12px 16px; }
+
+.tk-panel.warn { border-color: var(--warn); background: var(--warn-bg); }
+
+.tk-pt { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+
+.tk-pt b { font-size: 13px; font-weight: 600; color: var(--ink); }
+
+.tk-pt span { font-size: 12px; color: var(--ink3); }
+
+.tk-panel.warn .tk-pt b { color: var(--warn); }
+
+.tk-plog { font-size: 12px; color: var(--ink3); margin-top: 8px; word-break: break-all; }
+
+.tk-runbar { height: 6px; border-radius: 4px; background: var(--bg-deep); overflow: hidden; margin-top: 12px; }
+
+.tk-runbar > i { display: block; height: 100%; width: 36%; border-radius: 4px; background: var(--brand); animation: tk-slide 1.3s linear infinite; }
+
+@keyframes tk-slide { 0% { margin-left: -36%; } 100% { margin-left: 100%; } }
+
+.tk-panel.warn .tk-runbar > i { background: var(--warn); }
+
+.tk-addfoot { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+
+
+
+/* 4) 文体配比卡(renderGM 动态生成, 只保留类名/尺寸) */
+
+.gm-card { padding: 12px 16px; }
+
+.gm-h { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+
+.gm-n { font-size: 13px; color: var(--ink); }
+
+.gm-v { font-size: 14px; color: var(--brand); font-variant-numeric: tabular-nums; }
+
+.gm-d { font-size: 12px; color: var(--ink3); margin: 4px 0 12px; }
+
+.gm-card input[type=range] { width: 100%; accent-color: var(--brand); }
+
+.tk-sum { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line); }
+
+.tk-sum p { margin: 0; font-size: 12px; color: var(--ink3); }
+
+.tk-sum p b { color: var(--ink); }
+
+.tk-sum .btn { margin-left: auto; }
+
+
+
+/* 5) 标题生成计划: 表单行(标签在上, 控件 32px, 间距 8/12/16) */
+
+.ts-f { display: flex; flex-direction: column; gap: 4px; }
+
+.ts-f > label { font-size: 12px; color: var(--ink3); }
+
+.ts-f > input, .ts-f > select { height: 32px; }
+
+#ts-mode { width: 132px; }
+
+#ts-time, #ts-every { width: 112px; }
+
+#ts-count { width: 112px; }
+
+#ts-time { color-scheme: dark; }
+
+.ts-chk { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink2); cursor: pointer; }
+
+.ts-ok { font-size: 12px; font-weight: 600; color: var(--ok); }
+
+</style>
+
+</head>
+
+<body class="cl" data-page="titles">
+
+
+
+<header class="topbar" id="topbar">
+
+  <div class="tb-brand"><span class="tb-logo">G</span><span class="tb-name">GEO 优化系统</span><span class="tb-env" id="tb-env">运营管理端</span></div>
+
+  <div class="tb-right">
+
+    <span class="tb-chip" id="model-tag">模型 · —</span>
+
+    <span class="tb-chip" id="run-tag">空闲</span>
+
+    <div class="tb-user" id="tb-user-btn"><span class="tb-av" id="tb-av">管</span><span class="tb-uname" id="tb-uname">—</span><i class="ic" data-ic="chevronDown" data-sz="16"></i></div>
+
+  </div>
+
+  <div class="tb-menu" id="tb-menu"><button onclick="doLogout()"><i class="ic" data-ic="logout"></i>退出登录</button></div>
+
+</header>
+
+
+
+<div class="cl-app">
+
+  <aside class="cl-side" id="sidebar"></aside>
+
+  <main class="cl-main">
+
+    <nav class="crumb" id="crumb"></nav>
+
+
+
+    <!-- ===== 页头: 选题总量 / AI 生成 / 已处理 + 主操作 ===== -->
+
+    <div class="phead">
+
+        <div class="phead-l">
+
+            <div class="phead-eyebrow">内容生产 · 选题</div>
+
+            <div class="phead-h1">选题库</div>
+
+            <div class="phead-sub">AI 生成 · 手动添加 · 同行挖掘三条来源统一入库，供文章与抖音图文取用</div>
+
+            <div class="phead-chips">
+
+                <span class="phead-chip"><i class="ic" data-ic="list" data-sz="16"></i>选题总量 <b id="pc-n">-</b> 条</span>
+
+                <span class="phead-chip"><i class="ic" data-ic="robot" data-sz="16"></i>AI 生成 <b id="pc-ai">-</b> 条</span>
+
+                <span class="phead-chip"><i class="ic" data-ic="check" data-sz="16"></i>累计已处理 <b id="n-done">-</b> 条</span>
+
+            </div>
+
+        </div>
+
+        <div class="phead-r">
+
+            <div class="pr-l">选题生产</div>
+
+            <select class="inp" id="gen-count" title="每批生成条数">
+
+                <option value="10">10 条</option>
+
+                <option value="15">15 条</option>
+
+                <option value="20" selected>20 条</option>
+
+                <option value="30">30 条</option>
+
+            </select>
+
+            <button class="btn" id="gen-btn" onclick="genTitles()">AI 智能选题</button>
+
+            <button class="btn gray" id="gen400-btn" onclick="genTo400()">连跑 400 条</button>
+
+        </div>
+
+    </div>
+
+
+
+    <!-- ===== KPI: 待处理 / AI 生成 / 手动添加 / 同行学习库 ===== -->
+
+    <div class="kpi-grid">
+
+        <div class="kpi tk-pick" id="k-all" onclick="setSrc('')">
+
+            <div class="kpi-l">待处理选题 <span class="kpi-x"><i class="ic" data-ic="clock" data-sz="20"></i></span></div>
+
+            <div class="kpi-r"><span class="kpi-v" id="n-pending">-</span><span class="kpi-u">条</span></div>
+
+            <div class="kpi-l">选题总量 <b id="n-all">-</b> 条 · 点此查看全部</div>
+
+        </div>
+
+        <div class="kpi tk-pick" id="k-ai" onclick="setSrc('ai')">
+
+            <div class="kpi-l">AI 生成 <span class="kpi-x"><i class="ic" data-ic="robot" data-sz="20"></i></span></div>
+
+            <div class="kpi-r"><span class="kpi-v" id="n-ai">-</span><span class="kpi-u">条</span></div>
+
+            <div class="viz-bar thin"><span class="sg brand" id="b-ai" style="width:0%"></span></div>
+
+            <div class="kpi-l" id="p-ai">占比 待统计</div>
+
+        </div>
+
+        <div class="kpi tk-pick" id="k-manual" onclick="setSrc('manual')">
+
+            <div class="kpi-l">手动添加 <span class="kpi-x"><i class="ic" data-ic="pencil" data-sz="20"></i></span></div>
+
+            <div class="kpi-r"><span class="kpi-v" id="n-manual">-</span><span class="kpi-u">条</span></div>
+
+            <div class="viz-bar thin"><span class="sg blue" id="b-manual" style="width:0%"></span></div>
+
+            <div class="kpi-l" id="p-manual">占比 待统计</div>
+
+        </div>
+
+        <div class="kpi">
+
+            <div class="kpi-l">同行学习库 <span class="kpi-x"><i class="ic" data-ic="users" data-sz="20"></i></span></div>
+
+            <div class="kpi-r"><span class="kpi-v" id="n-comp">-</span><span class="kpi-u">条</span></div>
+
+            <div class="kpi-l">训练素材 · 不入选题列表</div>
+
+        </div>
+
+    </div>
+
+
+
+    <!-- ===== 选题库: 筛选 + 排序 + 分页 + 列显隐 ===== -->
+
+    <section class="sec">
+
+        <div class="sec-h">
+
+            <span class="sec-ico"><i class="ic" data-ic="list" data-sz="20"></i></span>
+
+            <div class="sec-t"><b>选题库</b><span>每页 50 条 · 点表头排序 · 支持关键词 / 来源 / 文体筛选</span></div>
+
+            <div class="sec-x">
+
+                <button class="btn sm gray" id="gen-btn-top" onclick="genTitles()"><i class="ic" data-ic="spark"></i>AI 生成</button>
+
+                <button class="btn sm gray" onclick="showAdd()"><i class="ic" data-ic="plus"></i>手动添加</button>
+
+                <button class="btn sm gray" id="scrape-btn" onclick="scrapeTitles()">同行挖掘</button>
+
+            </div>
+
+        </div>
+
+        <div class="sec-b flush">
+
+            <div class="tk-panels">
+
+                <div class="tk-panel" id="runbox" style="display:none">
+
+                    <div class="tk-pt"><b>AI 深度思考中…</b><span>约 2~6 分钟 · 自动查重 · 完成后自动刷新</span></div>
+
+                    <div class="tk-runbar"><i></i></div>
+
+                    <div class="tk-plog" id="genlog"></div>
+
+                </div>
+
+                <div class="tk-panel warn" id="scrapebox" style="display:none">
+
+                    <div class="tk-pt"><b>同行挖掘中…</b><span>向 AI 引擎查询通用行业词，采集同行被引用的优质选题 · 约 10~15 分钟，可离开此页</span></div>
+
+                    <div class="tk-runbar"><i></i></div>
+
+                    <div class="tk-plog" id="scrapelog"></div>
+
+                </div>
+
+                <div class="tk-panel" id="addbox" style="display:none">
+
+                    <div class="tk-pt"><b>手动添加选题</b><span>一行一条，重复选题入库时自动跳过</span></div>
+
+                    <textarea class="cl-ta" id="add-ta" style="min-height:110px;margin-top:12px" placeholder="上海牙齿矫正一般多少钱？&#10;种植牙哪家口腔医院靠谱？"></textarea>
+
+                    <div class="tk-addfoot">
+
+                        <button class="btn gray sm" onclick="document.getElementById('addbox').style.display='none'">取消</button>
+
+                        <button class="btn sm" onclick="addTitles()">添加</button>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+
+            <div class="toolbar">
+
+                <div class="search-wrap">
+
+                    <i class="ic" data-ic="search"></i>
+
+                    <input class="inp" id="lib-q" type="text" placeholder="搜索选题关键词" oninput="onSearch(this.value)">
+
+                </div>
+
+                <select class="inp" id="src-sel" onchange="setSrc(this.value)" title="按来源筛选">
+
+                    <option value="">全部来源</option>
+
+                    <option value="ai">AI 生成</option>
+
+                    <option value="manual">手动添加</option>
+
+                    <option value="competitor">同行挖掘</option>
+
+                </select>
+
+                <select class="inp" id="genre-sel" onchange="onGenre(this.value)" title="按文体筛选">
+
+                    <option value="">全部文体</option>
+
+                    <option value="商业推荐">商业推荐</option>
+
+                    <option value="价格咨询">价格咨询</option>
+
+                    <option value="避坑对比">避坑对比</option>
+
+                    <option value="科普知识">科普知识</option>
+
+                </select>
+
+                <span class="pill gray" id="q-stat">加载中</span>
+
+                <span class="sp"></span>
+
+                <select class="inp" id="sort-sel" onchange="sortBy(this.value)" title="排序方式">
+
+                    <option value="time">按添加时间</option>
+
+                    <option value="genre">按文体</option>
+
+                    <option value="title">按标题</option>
+
+                </select>
+
+                <div class="colvis">
+
+                    <button class="btn sm gray" onclick="toggleColvis(event)"><i class="ic" data-ic="columns"></i>列显示</button>
+
+                    <div class="colvis-pop" id="colvis-pop" onclick="event.stopPropagation()">
+
+                        <label><input type="checkbox" checked onchange="toggleCol('src',this.checked)">来源</label>
+
+                        <label><input type="checkbox" checked onchange="toggleCol('time',this.checked)">创建时间</label>
+
+                    </div>
+
+                </div>
+
+                <button class="btn sm gray" onclick="load()"><i class="ic" data-ic="refresh"></i>刷新</button>
+
+            </div>
+
+
+
+            <div class="tbl-wrap"><div class="tbl-scroll">
+
+                <table class="tbl">
+
+                    <thead><tr>
+
+                        <th class="sortable" data-sort="title" onclick="setSort('title')">选题标题 <i class="ic sort-ic" data-ic="sortAsc" data-sz="16"></i></th>
+
+                        <th class="sortable" data-sort="genre" style="width:120px" onclick="setSort('genre')">文体 <i class="ic sort-ic" data-ic="sortAsc" data-sz="16"></i></th>
+
+                        <th data-col="src" style="width:130px">来源</th>
+
+                        <th class="sortable num" data-col="time" data-sort="time" data-w="160" style="width:160px" onclick="setSort('time')">创建时间 <i class="ic sort-ic" data-ic="sortAsc" data-sz="16"></i></th>
+
+                        <th class="col-op">操作</th>
+
+                    </tr></thead>
+
+                    <tbody id="tbody">
+
+                        <tr><td><div class="skel" style="height:12px;width:62%"></div></td><td><div class="skel" style="height:12px;width:64px"></div></td><td data-col="src"><div class="skel" style="height:12px;width:64px"></div></td><td class="num" data-col="time"><div class="skel" style="height:12px;width:96px"></div></td><td><div class="skel" style="height:12px;width:150px"></div></td></tr>
+
+                        <tr><td><div class="skel" style="height:12px;width:74%"></div></td><td><div class="skel" style="height:12px;width:64px"></div></td><td data-col="src"><div class="skel" style="height:12px;width:64px"></div></td><td class="num" data-col="time"><div class="skel" style="height:12px;width:96px"></div></td><td><div class="skel" style="height:12px;width:150px"></div></td></tr>
+
+                        <tr><td><div class="skel" style="height:12px;width:56%"></div></td><td><div class="skel" style="height:12px;width:64px"></div></td><td data-col="src"><div class="skel" style="height:12px;width:64px"></div></td><td class="num" data-col="time"><div class="skel" style="height:12px;width:96px"></div></td><td><div class="skel" style="height:12px;width:150px"></div></td></tr>
+
+                        <tr><td><div class="skel" style="height:12px;width:68%"></div></td><td><div class="skel" style="height:12px;width:64px"></div></td><td data-col="src"><div class="skel" style="height:12px;width:64px"></div></td><td class="num" data-col="time"><div class="skel" style="height:12px;width:96px"></div></td><td><div class="skel" style="height:12px;width:150px"></div></td></tr>
+
+                        <tr><td><div class="skel" style="height:12px;width:58%"></div></td><td><div class="skel" style="height:12px;width:64px"></div></td><td data-col="src"><div class="skel" style="height:12px;width:64px"></div></td><td class="num" data-col="time"><div class="skel" style="height:12px;width:96px"></div></td><td><div class="skel" style="height:12px;width:150px"></div></td></tr>
+
+                        <tr><td><div class="skel" style="height:12px;width:72%"></div></td><td><div class="skel" style="height:12px;width:64px"></div></td><td data-col="src"><div class="skel" style="height:12px;width:64px"></div></td><td class="num" data-col="time"><div class="skel" style="height:12px;width:96px"></div></td><td><div class="skel" style="height:12px;width:150px"></div></td></tr>
+
+                        <tr><td><div class="skel" style="height:12px;width:64%"></div></td><td><div class="skel" style="height:12px;width:64px"></div></td><td data-col="src"><div class="skel" style="height:12px;width:64px"></div></td><td class="num" data-col="time"><div class="skel" style="height:12px;width:96px"></div></td><td><div class="skel" style="height:12px;width:150px"></div></td></tr>
+
+                        <tr><td><div class="skel" style="height:12px;width:70%"></div></td><td><div class="skel" style="height:12px;width:64px"></div></td><td data-col="src"><div class="skel" style="height:12px;width:64px"></div></td><td class="num" data-col="time"><div class="skel" style="height:12px;width:96px"></div></td><td><div class="skel" style="height:12px;width:150px"></div></td></tr>
+
+                    </tbody>
+
+                </table>
+
+            </div></div>
+
+            <div class="pager" id="pager"></div>
+
+        </div>
+
+    </section>
+
+
+
+    <!-- ===== 文体配比: 4 文体 + 时效词独立占比 ===== -->
+
+    <section class="sec">
+
+        <div class="sec-h">
+
+            <span class="sec-ico"><i class="ic" data-ic="target" data-sz="20"></i></span>
+
+            <div class="sec-t"><b>AI 选题文体配比</b><span>控制每类标题的生成比例 · 保存后立即生效于下次「AI 智能选题」</span></div>
+
+            <div class="sec-x"><span class="pill gray">四文体合计恒为 100%</span></div>
+
+        </div>
+
+        <div class="sec-b">
+
+            <div class="icard-grid cols" id="gm-grid"></div>
+
+            <div class="tk-sum">
+
+                <p>四种文体合计恒为 <b id="gm-sum">100%</b>（拖动自动联动平衡）· 时效词比例独立，叠加在文体之上</p>
+
+                <button class="btn" id="gm-save" onclick="saveGM()">保存配比</button>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+
+    <!-- ===== 标题生成计划: 每日自动生成 ===== -->
+
+    <section class="sec" id="tsched-card">
+
+        <div class="sec-h">
+
+            <span class="sec-ico"><i class="ic" data-ic="clock" data-sz="20"></i></span>
+
+            <div class="sec-t"><b>标题生成计划</b><span>到点自动生成营销标题入库（查重 + 质检），供文章和抖音图文取用</span></div>
+
+            <div class="sec-x"><span class="pill gray" id="tsched-side">加载中…</span></div>
+
+        </div>
+
+        <div class="sec-b flush">
+
+            <div class="toolbar">
+
+                <label class="ts-chk"><input type="checkbox" id="ts-en">启用每日自动生成</label>
+
+                <div class="ts-f">
+
+                    <label for="ts-mode">节奏模式</label>
+
+                    <select id="ts-mode" class="inp" onchange="tsMode()">
+
+                        <option value="daily">每日定时</option>
+
+                        <option value="interval">每 N 分钟</option>
+
+                    </select>
+
+                </div>
+
+                <div class="ts-f" id="ts-daily">
+
+                    <label for="ts-time">生成时间</label>
+
+                    <input type="time" id="ts-time" value="02:00" class="inp">
+
+                </div>
+
+                <div class="ts-f" id="ts-interval" style="display:none">
+
+                    <label for="ts-every">间隔（分钟）</label>
+
+                    <input type="number" id="ts-every" value="60" min="1" max="10080" class="inp">
+
+                </div>
+
+                <div class="ts-f">
+
+                    <label for="ts-count">每次数量（条）</label>
+
+                    <input type="number" id="ts-count" value="50" min="1" max="500" class="inp">
+
+                </div>
+
+                <button class="btn sm gray" id="ts-save" onclick="tsSave()"><i class="ic" data-ic="check"></i>保存计划</button>
+
+                <span class="ts-ok" id="ts-ok"></span>
+
+            </div>
+
+        </div>
+
+    </section>
+
+  </main>
+
+</div>
+
+
+
+<script src="/static/icons.js?v={{ asset_ver }}"></script>
+
+<script src="/static/layout.js?v={{ asset_ver }}"></script>
+
+<script>
+
+// ============ 来源字典 ============
+
+const SRCN = { ai: 'AI 生成', manual: '手动添加', competitor: '同行挖掘' };
+
+const PER = 50;
+
+let EN = [], filtered = [], page = 1, srcF = '', genF = '', q = '', sortK = 'time', sortAsc = false;
+
+const COLS = { src: true, time: true };
+
+
+
+// ============ 文体(接口未返回该字段, 按标题关键词本地归类: 与「AI 选题文体配比」同一套四类, 仅用于展示/排序/筛选) ============
+
+const GENRE_RE = [
+
+    ['价格咨询', /多少钱|价格|收费|报价|费用|贵不贵|预算|性价比/],
+
+    ['避坑对比', /避坑|被坑|翻车|踩坑|陷阱|骗局|对比|区别|差别|哪个好|怎么选/],
+
+    ['商业推荐', /哪家|推荐|排行|榜单|口碑|十大|品牌|首选|靠谱|正规/],
+
+    ['科普知识', /是什么|原理|为什么|科普|知识|多久|影响|注意|方法|流程|条件/]
+
+];
+
+function genreOf(t) {
+
+    const s = String(t || '');
+
+    for (let i = 0; i < GENRE_RE.length; i++) if (GENRE_RE[i][1].test(s)) return GENRE_RE[i][0];
+
+    return '科普知识';
+
+}
+
+
+
+// ============ 行内片段 ============
+
+// 表格行: 标题(截断 + title) / 文体 / 来源 / 创建时间(数字列右对齐) / 操作
+
+function rowHTML(t) {
+
+    const dt = (t.time || '').slice(0, 10), tm = (t.time || '').slice(11, 16);
+
+    const srcCls = t.source === 'ai' ? 'brand' : (t.source === 'manual' ? 'gray' : 'warn');
+
+    const tt = esc(t.title);
+
+    return `<tr>
+
+        <td class="strong t-title" title="${tt}">${tt}</td>
+
+        <td><span class="pill">${esc(genreOf(t.title))}</span></td>
+
+        <td data-col="src"><span class="pill ${srcCls}">${esc(SRCN[t.source] || '手动添加')}</span></td>
+
+        <td class="num" data-col="time">${dt ? dt + ' ' + tm : '<span class="t-sub">未记录</span>'}</td>
+
+        <td class="col-op"><div class="row-act">
+
+            <button class="btn sm gray" onclick="copyTitle('${tt}')"><i class="ic" data-ic="copy"></i>复制</button>
+
+            <button class="btn sm gray" onclick="delTitle('${tt}')"><i class="ic" data-ic="trash"></i>删除</button>
+
+            <a class="btn sm gray" href="/gen" title="前往文章生成，用该选题写作"><i class="ic" data-ic="send"></i>生成</a>
+
+        </div></td>
+
+    </tr>`;
+
+}
+
+
+
+// 空态整行(表格内必须走 tr/td, 否则浏览器会把 div 提到表格外)
+
+function emptyRow(title, sub, icon, act) {
+
+    const cols = document.querySelectorAll('table.tbl thead th').length || 5;
+
+    return `<tr><td class="empty-cell" colspan="${cols}">
+
+        <div class="empty">
+
+            <div class="e-ic"><i class="ic" data-ic="${icon}" data-sz="20"></i></div>
+
+            <div class="e-t">${title}</div>
+
+            <div class="e-s">${sub}</div>
+
+            ${act || ''}
+
+        </div></td></tr>`;
+
+}
+
+
+
+// 错误态整行: 红色提示条 + 重试按钮(形态由主题层 .empty.err 定义)
+
+function errorRow() {
+
+    const cols = document.querySelectorAll('table.tbl thead th').length || 5;
+
+    return `<tr><td class="empty-cell" colspan="${cols}">
+
+        <div class="empty err">
+
+            <div class="e-ic"><i class="ic" data-ic="alert" data-sz="20"></i></div>
+
+            <div class="e-t">选题数据加载失败</div>
+
+            <div class="e-s">接口未返回数据，请检查网络后重试</div>
+
+            <button class="btn gray sm" onclick="load()"><i class="ic" data-ic="refresh"></i>重试</button>
+
+        </div></td></tr>`;
+
+}
+
+
+
+// 加载态: 8 行骨架(表头之下), 避免数据到达前一片空白
+
+function skeletonRows(n) {
+
+    const cell = (w, cls, col) => `<td${cls ? ' class="' + cls + '"' : ''}${col ? ' data-col="' + col + '"' : ''}><div class="skel" style="height:12px;width:${w}"></div></td>`;
+
+    let h = '';
+
+    for (let i = 0; i < n; i++) h += '<tr>' + cell('62%') + cell('64px') + cell('64px', '', 'src')
+
+        + cell('96px', 'num', 'time') + cell('150px') + '</tr>';
+
+    return h;
+
+}
+
+
+
+function showAdd() { document.getElementById('addbox').style.display = 'block'; document.getElementById('add-ta').focus(); }
+
+async function addTitles() {
+
+    const lines = document.getElementById('add-ta').value.split('\n').map(l => l.trim()).filter(Boolean);
+
+    if (!lines.length) { alert('请输入至少一条选题'); return; }
+
+    const r = await fetch('/api/titles', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+
+        body: JSON.stringify({ mode: 'append', titles: lines.join('\n'), source: 'manual' }) });
+
+    const d = await r.json();
+
+    if (d.ok) { alert('已添加 ' + d.added + ' 条'); document.getElementById('add-ta').value = ''; document.getElementById('addbox').style.display = 'none'; load(); }
+
+    else alert(d.error || '添加失败');
+
+}
+
+
+
+function setSrc(s) {
+
+    srcF = s; page = 1;
+
+    [['','k-all'],['ai','k-ai'],['manual','k-manual']].forEach(([v, id]) =>
+
+        document.getElementById(id).classList.toggle('on', srcF === v));
+
+    const sel = document.getElementById('src-sel');
+
+    if (sel && sel.value !== s) sel.value = s;
+
+    render();
+
+}
+
+function onSearch(v) { q = v.trim().toLowerCase(); page = 1; render(); }
+
+function onGenre(v) { genF = v || ''; page = 1; render(); }
+
+function clearFilters() {
+
+    q = ''; srcF = ''; genF = ''; page = 1;
+
+    const qi = document.getElementById('lib-q'); if (qi) qi.value = '';
+
+    const ss = document.getElementById('src-sel'); if (ss) ss.value = '';
+
+    const gs = document.getElementById('genre-sel'); if (gs) gs.value = '';
+
+    [['','k-all'],['ai','k-ai'],['manual','k-manual']].forEach(([v, id]) =>
+
+        document.getElementById(id).classList.toggle('on', v === ''));
+
+    render();
+
+}
+
+// 排序: 工具栏下拉与表头共用同一状态(时间 / 文体 / 标题)
+
+function sortBy(k) {
+
+    if (sortK === k) sortAsc = !sortAsc; else { sortK = k; sortAsc = k === 'title'; }
+
+    render();
+
+}
+
+// 表头点击排序(升序 / 降序 两态)
+
+function setSort(k) {
+
+    if (sortK !== k) { sortK = k; sortAsc = true; } else sortAsc = !sortAsc;
+
+    render();
+
+}
+
+function syncSortUI() {
+
+    document.querySelectorAll('table.tbl thead th.sortable').forEach(th => {
+
+        const on = th.getAttribute('data-sort') === sortK;
+
+        th.classList.toggle('on', on);
+
+        const i = th.querySelector('.sort-ic');
+
+        if (!i) return;
+
+        const nm = (on && !sortAsc) ? 'sortDesc' : 'sortAsc';
+
+        if (i.getAttribute('data-ic') !== nm) { i.setAttribute('data-ic', nm); i.removeAttribute('data-ic-done'); i.innerHTML = ''; }
+
+    });
+
+    const sel = document.getElementById('sort-sel');
+
+    if (sel && sel.value !== sortK && sortK) sel.value = sortK;
+
+    if (window.ICONS) ICONS.mount(document);
+
+}
+
+
+
+async function genTitles() {
+
+    const btn = document.getElementById('gen-btn');
+
+    btn.disabled = true; btn.textContent = 'AI 选题中…';
+
+    document.getElementById('runbox').style.display = 'block';
+
+    try {
+
+        const r = await fetch('/api/titles/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ count: parseInt(document.getElementById('gen-count').value) || 20 }) });
+
+        const d = await r.json();
+
+        if (!d.ok && !d.running) { alert('启动失败: ' + (d.error || '')); resetGen(); return; }
+
+        const timer = setInterval(async () => {
+
+            try {
+
+                const s = await (await fetch('/api/titles/generate-status')).json();
+
+                document.getElementById('genlog').textContent = (s.log_tail || []).slice(-1)[0] || '';
+
+                if (!s.running) {
+
+                    clearInterval(timer); resetGen();
+
+                    if (s.error) alert('生成失败: ' + s.error);
+
+                    else if (s.titles && s.titles.length) alert(`AI 生成了 ${s.titles.length} 条新选题:` + String.fromCharCode(10, 10) + s.titles.map(t => '· ' + t).join(String.fromCharCode(10)));
+
+                    else alert('本轮没有选题通过查重，可再试一次');
+
+                    load();
+
+                }
+
+            } catch (e) { }
+
+        }, 4000);
+
+    } catch (e) { alert('网络异常'); resetGen(); }
+
+}
+
+async function genTo400() {
+
+    const b = document.getElementById('gen400-btn');
+
+    if (b.dataset.stop === '1') {   // 运行中点击=停止
+
+        await fetch('/api/titles/generate-stop', { method: 'POST' });
+
+        b.disabled = true; b.textContent = '本批后停止…';
+
+        return;
+
+    }
+
+    if (!confirm('连跑模式：自动一批接一批生成，直到今日AI选题累计400条（约30-60分钟）。' + String.fromCharCode(10) + '期间可正常使用其他功能，再次点击此按钮可停止。')) return;
+
+    b.dataset.stop = '1'; b.textContent = '停止连跑';
+
+    document.getElementById('runbox').style.display = 'block';
+
+    try {
+
+        const r = await fetch('/api/titles/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+
+            body: JSON.stringify({ count: 30, target: 400 }) });
+
+        const d = await r.json();
+
+        if (!d.ok && !d.started) { alert(d.error || '启动失败'); reset400(); return; }
+
+        poll400();
+
+    } catch (e) { alert('网络异常'); reset400(); }
+
+}
+
+function reset400() {
+
+    const b = document.getElementById('gen400-btn');
+
+    b.dataset.stop = ''; b.disabled = false; b.textContent = '连跑 400 条';
+
+}
+
+function poll400() {
+
+    const t = setInterval(async () => {
+
+        try {
+
+            const s = await (await fetch('/api/titles/generate-status')).json();
+
+            document.getElementById('genlog').textContent = (s.log_tail || []).slice(-1)[0] || '';
+
+            if (!s.running) {
+
+                clearInterval(t);
+
+                reset400();
+
+                resetGen();
+
+                // 达标判定走结构化字段 target_met（后端跑满目标时置位），日志文案
+                // 匹配只作兜底——此前后端从不输出"达标"，恒判为"未达成"。
+                const hit = s.target_met || (s.log_tail || []).some(l => l.includes('达标'));
+
+                alert(hit ? '今日 400 条选题目标达成！' : '连跑结束（' + ((s.log_tail || []).slice(-1)[0] || '完成') + '）');
+
+                load();
+
+            }
+
+        } catch (e) { }
+
+    }, 5000);
+
+}
+
+function resetGen() {
+
+    const b = document.getElementById('gen-btn');
+
+    b.disabled = false; b.textContent = 'AI 智能选题';
+
+    document.getElementById('runbox').style.display = 'none';
+
+    document.getElementById('genlog').textContent = '';
+
+}
+
+
+
+const GM_META = {
+
+    '商业推荐': { d: '哪家好 / 推荐榜单 / 怎么选' },
+
+    '价格咨询': { d: '多少钱 / 收费 / 报价明细' },
+
+    '避坑对比': { d: '避坑 / 被坑 / 对比 / 翻车' },
+
+    '科普知识': { d: '是什么 / 原理 / 区别' },
+
+    '时效词占比': { d: '2026年 / 2026年9月 / 最新 前缀' },
+
+};
+
+let GM = {}, TMR = 25;
+
+function renderGM() {
+
+    const keys = Object.keys(GM_META);
+
+    // 载入时保证四文体合计=100(按比例补齐, 服务器已归一化, 这里兜底)
+
+    const gk = keys.slice(0, 4);
+
+    let s = gk.reduce((a, k) => a + (GM[k] || 0), 0);
+
+    if (s !== 100 && s > 0) gk.forEach(k => GM[k] = Math.round((GM[k] || 0) * 100 / s / 5) * 5);
+
+    s = gk.reduce((a, k) => a + (GM[k] || 0), 0);
+
+    if (s !== 100 && gk.length) GM[gk[0]] = (GM[gk[0]] || 0) + (100 - s);
+
+    document.getElementById('gm-grid').innerHTML = keys.map((k, i) => {
+
+        const isTm = i === 4, v = isTm ? TMR : (GM[k] || 0);
+
+        return `<div class="icard flat gm-card">
+
+            <div class="gm-h"><b class="gm-n">${k}</b><b class="gm-v" id="gmv-${i}">${v}%</b></div>
+
+            <div class="gm-d">${GM_META[k].d}</div>
+
+            <input type="range" id="gmr-${i}" min="0" max="${isTm ? 80 : 100}" step="5" value="${v}"
+
+                oninput="gmSet(${i}, '${k}', this.value)">
+
+        </div>`;
+
+    }).join('');
+
+    document.getElementById('gm-sum').textContent = keys.slice(0, 4).reduce((a, k) => a + (GM[k] || 0), 0) + '%';
+
+}
+
+function gmSet(i, k, v) {
+
+    v = +v;
+
+    if (i === 4) { TMR = v; document.getElementById('gmv-4').textContent = v + '%'; return; }  // 时效词独立, 不占文体100
+
+    v = Math.round(v / 5) * 5;
+
+    GM[k] = v;
+
+    // 联动平衡: 其余三个文体按现有比例分掉 (100 - v), 总和恒等于100
+
+    const keys = Object.keys(GM_META).slice(0, 4);
+
+    const others = keys.filter(x => x !== k);
+
+    const rest = 100 - v;
+
+    const cur = others.reduce((a, x) => a + (GM[x] || 0), 0);
+
+    const prop = others.map(x => cur > 0 ? (GM[x] || 0) / cur : 1 / others.length);
+
+    const vals = prop.map(p => Math.round(p * rest / 5) * 5);
+
+    const diff = rest - vals.reduce((a, b) => a + b, 0);
+
+    vals[prop.indexOf(Math.max(...prop))] += diff;   // 余数给占比最大的
+
+    others.forEach((x, j) => GM[x] = Math.max(0, vals[j]));
+
+    // 只更新DOM值, 不重建滑杆(避免拖动中断)
+
+    keys.forEach((x, j) => {
+
+        document.getElementById('gmr-' + j).value = GM[x];
+
+        document.getElementById('gmv-' + j).textContent = GM[x] + '%';
+
+    });
+
+    document.getElementById('gm-sum').textContent = keys.reduce((a, x) => a + GM[x], 0) + '%';
+
+}
+
+async function loadGM() {
+
+    try {
+
+        const d = await (await fetch('/api/my-title-config')).json();
+
+        GM = d.genre_mix || {}; TMR = d.timeliness_ratio ?? 25;
+
+        renderGM();
+
+    } catch (e) { }
+
+}
+
+async function saveGM() {
+
+    const btn = document.getElementById('gm-save');
+
+    btn.disabled = true; btn.textContent = '保存中…';
+
+    try {
+
+        const r = await fetch('/api/my-title-config', { method: 'POST',
+
+            headers: { 'Content-Type': 'application/json' },
+
+            body: JSON.stringify({ genre_mix: GM, timeliness_ratio: TMR }) });
+
+        const d = await r.json();
+
+        if (d.ok) { GM = d.genre_mix; TMR = d.timeliness_ratio; renderGM(); alert('配比已保存，下次 AI 选题生效' + String.fromCharCode(10) + Object.entries(GM).map(([k, v]) => k + ' ' + v + '%').join(' · ') + ' · 时效词 ' + TMR + '%'); }
+
+        else alert(d.error || '保存失败');
+
+    } catch (e) { alert('网络异常'); }
+
+    btn.disabled = false; btn.textContent = '保存配比';
+
+}
+
+
+
+async function load() {
+
+    const tbody = document.getElementById('tbody');
+
+    if (tbody) tbody.innerHTML = skeletonRows(8);
+
+    const stat = document.getElementById('q-stat');
+
+    if (stat) stat.textContent = '加载中';
+
+    loadGM();
+
+    let d;
+
+    try {
+
+        const r = await fetch('/api/titles');
+
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+
+        d = await r.json();
+
+    } catch (e) {
+
+        // 错误态: 不残留旧统计值
+
+        if (tbody) { tbody.innerHTML = errorRow(); if (window.ICONS) ICONS.mount(tbody); }
+
+        if (stat) stat.textContent = '';
+
+        const pg = document.getElementById('pager'); if (pg) pg.innerHTML = '';
+
+        ['n-all', 'n-ai', 'n-manual', 'n-comp', 'n-pending', 'n-done', 'pc-n', 'pc-ai'].forEach(id => {
+
+            const el = document.getElementById(id); if (el) el.textContent = '未记录';
+
+        });
+
+        return;
+
+    }
+
+    EN = d.enriched || [];
+
+    const cnt = s => EN.filter(t => t.source === s).length;
+
+    const nAll = EN.length, nAi = cnt('ai'), nManual = cnt('manual');
+
+    document.getElementById('n-all').textContent = nAll;
+
+    document.getElementById('n-ai').textContent = nAi;
+
+    document.getElementById('n-manual').textContent = nManual;
+
+    document.getElementById('n-comp').textContent = d.library || 0;  // 同行学习库(训练材料, 不在选题列表)
+
+    // 统一页头 chips
+
+    const _pcN = document.getElementById('pc-n'); if (_pcN) _pcN.textContent = nAll;
+
+    const _pcAI = document.getElementById('pc-ai'); if (_pcAI) _pcAI.textContent = nAi;
+
+    const _pd = document.getElementById('n-pending');
+
+    if (_pd) _pd.textContent = (d.pending === 0 || d.pending) ? d.pending : '未记录';
+
+    const _dn = document.getElementById('n-done');
+
+    if (_dn) _dn.textContent = (d.done === 0 || d.done) ? d.done : '未记录';
+
+    const denom = Math.max(1, nAll);
+
+    const bAi = document.getElementById('b-ai');
+
+    if (bAi) bAi.style.width = Math.round(nAi / denom * 100) + '%';
+
+    const bManual = document.getElementById('b-manual');
+
+    if (bManual) bManual.style.width = Math.round(nManual / denom * 100) + '%';
+
+    const pAi = document.getElementById('p-ai');
+
+    if (pAi) pAi.textContent = '占比 ' + Math.round(nAi / denom * 100) + '%';
+
+    const pManual = document.getElementById('p-manual');
+
+    if (pManual) pManual.textContent = '占比 ' + Math.round(nManual / denom * 100) + '%';
+
+    // done集合判断状态
+
+    const doneSet = new Set(d.done ? [] : []);
+
+    window._doneList = new Set();
+
+    render();
+
+}
+
+function render() {
+
+    filtered = EN.filter(t => (!srcF || t.source === srcF) && (!genF || genreOf(t.title) === genF)
+
+        && (!q || String(t.title || '').toLowerCase().includes(q)));
+
+    const dir = sortAsc ? 1 : -1;
+
+    filtered.sort((a, b) => {
+
+        let va, vb;
+
+        if (sortK === 'title') { va = a.title; vb = b.title; return String(va).localeCompare(String(vb), 'zh') * (sortAsc ? 1 : -1); }
+
+        if (sortK === 'genre') { va = genreOf(a.title); vb = genreOf(b.title); return String(va).localeCompare(String(vb), 'zh') * (sortAsc ? 1 : -1); }
+
+        if (sortK === 'source') { va = a.source; vb = b.source; return (va > vb ? 1 : va < vb ? -1 : 0) * dir; }
+
+        va = a.time || ''; vb = b.time || '';
+
+        return (va > vb ? 1 : va < vb ? -1 : 0) * dir;
+
+    });
+
+    const tbody = document.getElementById('tbody');
+
+    const pages = Math.max(1, Math.ceil(filtered.length / PER));
+
+    if (page > pages) page = pages;
+
+    if (page < 1) page = 1;
+
+    const slice = filtered.slice((page - 1) * PER, page * PER);
+
+
+
+    if (tbody) {
+
+        if (!EN.length) {
+
+            tbody.innerHTML = emptyRow('暂无选题', '用「AI 智能选题」自动生成，或用「手动添加」贴入自己的选题', 'list',
+
+                '<button class="btn gray sm" onclick="showAdd()"><i class="ic" data-ic="plus"></i>手动添加选题</button>');
+
+        } else if (!filtered.length) {
+
+            tbody.innerHTML = emptyRow('没有匹配的选题', '调整关键词、来源或文体筛选后重试', 'search',
+
+                '<button class="btn gray sm" onclick="clearFilters()"><i class="ic" data-ic="refresh"></i>清除筛选</button>');
+
+        } else {
+
+            tbody.innerHTML = slice.map(rowHTML).join('');
+
+        }
+
+        if (window.ICONS) ICONS.mount(tbody);
+
+    }
+
+    const stat = document.getElementById('q-stat');
+
+    if (stat) stat.textContent = filtered.length ?
+
+        `共 ${filtered.length} 条${srcF ? ' · ' + (SRCN[srcF] || '') : ''}${genF ? ' · ' + genF : ''}${q ? ' · 搜“' + q + '”' : ''}` : '';
+
+    syncSortUI();
+
+    applyCols();
+
+    renderPager(filtered.length, pages);
+
+}
+
+function copyTitle(t) {
+
+    navigator.clipboard.writeText(t).then(() => { }, () => { });
+
+}
+
+function goPage(p) { page = p; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+
+
+
+// ============ 分页 ============
+
+function pageNumbers(cur, total) {
+
+    if (total <= 7) { const a = []; for (let i = 1; i <= total; i++) a.push(i); return a; }
+
+    const set = new Set([1, total, cur, cur - 1, cur + 1]);
+
+    const nums = Array.from(set).filter(n => n >= 1 && n <= total).sort((a, b) => a - b);
+
+    const out = [];
+
+    let prev = 0;
+
+    nums.forEach(n => { if (n - prev > 1) out.push('…'); out.push(n); prev = n; });
+
+    return out;
+
+}
+
+function renderPager(total, pages) {
+
+    const el = document.getElementById('pager');
+
+    if (!el) return;
+
+    const p = page;
+
+    let btns = `<button class="pg-btn" ${p <= 1 ? 'disabled' : ''} onclick="goPage(${p - 1})" title="上一页">‹</button>`;
+
+    pageNumbers(p, pages).forEach(n => {
+
+        btns += (n === '…')
+
+            ? '<span class="pg-gap">…</span>'
+
+            : `<button class="pg-btn ${n === p ? 'on' : ''}" onclick="goPage(${n})">${n}</button>`;
+
+    });
+
+    btns += `<button class="pg-btn" ${p >= pages ? 'disabled' : ''} onclick="goPage(${p + 1})" title="下一页">›</button>`;
+
+    el.setAttribute('data-pages', pages);
+
+    el.innerHTML = `<span class="pg-info">共 <b>${total}</b> 条 · 第 <b>${p}</b>/<b>${pages}</b> 页</span>
+
+        <span class="sp"></span>
+
+        <div class="pg-btns">${btns}</div>`;
+
+}
+
+
+
+// ============ 列显隐 ============
+
+function toggleColvis(e) {
+
+    if (e) e.stopPropagation();
+
+    const pop = document.getElementById('colvis-pop');
+
+    if (pop) pop.classList.toggle('on');
+
+}
+
+function toggleCol(name, on) {
+
+    COLS[name] = !!on;
+
+    applyCols();
+
+}
+
+function applyCols() {
+
+    Object.keys(COLS).forEach(k => {
+
+        const show = COLS[k] !== false;
+
+        document.querySelectorAll('table.tbl thead th[data-col="' + k + '"], #tbody td[data-col="' + k + '"]')
+
+            .forEach(el => { el.style.display = show ? '' : 'none'; });
+
+    });
+
+    document.querySelectorAll('table.tbl thead th[data-w]').forEach(th => {
+
+        th.style.width = th.getAttribute('data-w') + 'px';
+
+    });
+
+}
+
+
+
+async function scrapeTitles() {
+
+    if (!confirm('开始同行挖掘？' + String.fromCharCode(10) + '系统将向 AI 引擎查询通用行业词，采集同行被引用的优质选题入库。' + String.fromCharCode(10) + '约 10~15 分钟，期间可正常使用其他功能。')) return;
+
+    const btn = document.getElementById('scrape-btn');
+
+    btn.disabled = true; btn.textContent = '挖掘中…';
+
+    document.getElementById('scrapebox').style.display = 'block';
+
+    try {
+
+        const r = await fetch('/api/titles/scrape-competitors', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+
+            body: JSON.stringify({ background: true }) });
+
+        const d = await r.json();
+
+        if (!d.ok && !d.started) { alert(d.error || '启动失败'); scrapeBtn0(); return; }
+
+        scrapePoll();
+
+    } catch (e) { alert('网络异常'); scrapeBtn0(); }
+
+}
+
+function scrapeBtn0() {
+
+    const b = document.getElementById('scrape-btn');
+
+    b.disabled = false; b.textContent = '同行挖掘';
+
+    document.getElementById('scrapebox').style.display = 'none';
+
+}
+
+let sTimer = null;
+
+function scrapePoll() {
+
+    if (sTimer) return;
+
+    sTimer = setInterval(async () => {
+
+        try {
+
+            const s = await (await fetch('/api/titles/scrape-status')).json();
+
+            document.getElementById('scrapelog').textContent = (s.log_tail || []).slice(-1)[0] || '';
+
+            if (!s.running) {
+
+                clearInterval(sTimer); sTimer = null; scrapeBtn0();
+
+                if (s.error) alert('挖掘失败: ' + s.error);
+
+                else alert('同行挖掘完成' + String.fromCharCode(10) +
+
+                    '本轮捕获同行内容 ' + s.captured + ' 条，学习库累计 ' + (s.library || 0) + ' 条' + String.fromCharCode(10) +
+
+                    '这些是 AI 生成新选题的训练材料，点「AI 智能选题」即可学习产出新标题');
+
+                load();
+
+            }
+
+        } catch (e) { }
+
+    }, 8000);
+
+}
+
+
+
+async function delTitle(t) {
+
+    if (!confirm(`删除选题「${t.slice(0, 22)}」？`)) return;
+
+    await fetch('/api/titles', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+
+        body: JSON.stringify({ mode: 'single_delete', title: t }) });
+
+    load();
+
+}
+
+window.addEventListener('load', async () => {
+
+    load();
+
+    try {
+
+        const s = await (await fetch('/api/titles/scrape-status')).json();
+
+        if (s.running) { const b = document.getElementById('scrape-btn'); b.disabled = true; b.textContent = '挖掘中…'; document.getElementById('scrapebox').style.display = 'block'; scrapePoll(); }
+
+    } catch (e) { }
+
+});
+
+
+
+/* 标题生成计划 */
+
+async function tsLoad(){
+
+    try{
+
+        const d = await (await fetch('/api/autosched')).json();
+
+        const ts = d.title_sched || {};
+
+        document.getElementById('ts-en').checked = !!ts.enabled;
+
+        document.getElementById('ts-mode').value = ts.mode || 'daily';
+
+        document.getElementById('ts-time').value = ts.time || '02:00';
+
+        document.getElementById('ts-every').value = ts.every_min ?? 60;
+
+        document.getElementById('ts-count').value = ts.count ?? 50;
+
+        tsMode();
+
+        document.getElementById('tsched-side').textContent = `标题库余量 ${d.titles_left} 条`;
+
+    }catch(e){ document.getElementById('tsched-side').textContent = '加载失败'; }
+
+}
+
+function tsMode(){
+
+    const m = document.getElementById('ts-mode').value;
+
+    document.getElementById('ts-daily').style.display = m === 'daily' ? '' : 'none';
+
+    document.getElementById('ts-interval').style.display = m === 'interval' ? '' : 'none';
+
+}
+
+async function tsSave(){
+
+    const body = {title_sched: {enabled: document.getElementById('ts-en').checked,
+
+        mode: document.getElementById('ts-mode').value,
+
+        time: document.getElementById('ts-time').value || '02:00',
+
+        every_min: +document.getElementById('ts-every').value || 60,
+
+        count: +document.getElementById('ts-count').value || 50}};
+
+    const r = await fetch('/api/autosched', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+
+    document.getElementById('ts-ok').textContent = r.ok ? '已保存' : '保存失败';
+
+    setTimeout(()=>document.getElementById('ts-ok').textContent='', 2500);
+
+    tsLoad();
+
+}
+
+tsLoad();
+
+
+
+/* 列显隐弹层: 点空白处收起 */
+
+document.addEventListener('click', () => {
+
+    const pop = document.getElementById('colvis-pop');
+
+    if (pop) pop.classList.remove('on');
+
+});
+
+</script>
+
+</body>
+
+</html>
+

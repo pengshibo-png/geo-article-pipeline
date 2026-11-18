@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN" class="theme-light">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>客户画像 · GEO优化系统</title>
+
+<link rel="stylesheet" href="/static/client_style.css?v={{ asset_ver }}">
+
+<link rel="stylesheet" href="/static/ds.css?v={{ asset_ver }}">
+
+<link rel="stylesheet" href="/static/theme-light.css?v={{ asset_ver }}">
+
+<style>
+
+/* ============================================================
+
+   客户画像(客户工作台) · 页内样式(近黑画布 + 铜金品牌色)
+
+   规范: 只用 var(--*) token / 圆角 ≤8px / 无渐变 无发光 无玻璃拟态
+
+   间距全部落在 8px 栅格(8/12/16/20), 字重只用 400/500/600
+
+   ============================================================ */
+
+
+
+/* 1) 外壳栅格: theme-light 只给了列宽, display 由本页补(与 settings 一致) */
+
+.cl-app { display: grid; }
+
+
+
+/* 2) 页头右侧: 说明文字不折行 + KPI 完整度条去渐变 */
+
+.phead-r .pr-l { white-space: nowrap; }
+
+.viz-bar .sg.brand { background: var(--brand); }
+
+.kpi .viz-bar { margin-top: 12px; }
+
+.kpi .kpi-l + .kpi-l { margin-top: 12px; }
+
+
+
+/* 3) 基本信息: 2 列表单网格 */
+
+.au-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+.au-f label { display: block; font-size: 12px; font-weight: 600; color: var(--ink2); margin-bottom: 8px; }
+
+.au-f label small { color: var(--ink3); font-weight: 400; margin-left: 8px; }
+
+.au-info { font-size: 13px; color: var(--ink2); line-height: 1.85; }
+
+.au-info b { color: var(--ink); font-weight: 600; }
+
+
+
+/* 4) 多条要点卡: 标签列表 + 添加行 */
+
+.au-add { display: flex; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line-soft); }
+
+.au-add input { flex: 1; min-width: 0; }
+
+.au-cname { flex: 1; max-width: 260px; font-weight: 600; }
+
+.icard-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.icard-tags:empty { display: none; }
+
+.au-tag .x { width: 16px; height: 16px; border-radius: 50%; background: var(--brand-soft); color: var(--brand); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+
+.au-tag .x:hover { background: var(--bad-bg); color: var(--bad); }
+
+.au-tag .x .ic { width: 10px; height: 10px; }
+
+.au-tag .x .ic svg { width: 10px; height: 10px; }
+
+
+
+/* 5) AI 洞察报告: 限行宽 + 按【小节】分段, 不再是通栏长文墙 */
+
+.au-insight { max-width: 880px; }
+
+.ins-sec { padding: 12px 0; border-bottom: 1px solid var(--line-soft); }
+
+.ins-sec:first-child { padding-top: 0; }
+
+.ins-sec:last-child { border-bottom: none; padding-bottom: 0; }
+
+.ins-h { font-size: 14px; font-weight: 600; color: var(--ink); margin-bottom: 4px; letter-spacing: -.01em; }
+
+.ins-b { font-size: 13px; color: var(--ink2); line-height: 1.85; white-space: pre-wrap; }
+
+
+
+/* 6) 分析进行中: 进度条(token 纯色) */
+
+.au-runbar { height: 8px; border-radius: 4px; background: var(--bg-deep); overflow: hidden; margin: 0 0 12px; }
+
+.au-runbar > i { display: block; height: 100%; width: 36%; border-radius: 4px; background: var(--brand); animation: auslide 1.3s infinite; }
+
+@keyframes auslide { 0% { margin-left: -36%; } 100% { margin-left: 100%; } }
+
+
+
+/* 7) 表单文本域自动增高 + 保存动作条 */
+
+.au-ta { min-height: 42px; max-height: 160px; resize: vertical; line-height: 1.6; padding: 8px 12px; font-family: inherit; }
+
+.au-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+.au-actions .tip { font-size: 12px; color: var(--ink3); }
+
+.au-actions .btns { margin-left: auto; display: flex; gap: 8px; }
+
+@media (max-width: 1120px) {
+
+    .au-grid { grid-template-columns: 1fr; }
+
+}
+
+</style>
+
+</head>
+
+<body class="cl" data-page="audience">
+
+
+
+<header class="topbar" id="topbar">
+
+  <div class="tb-brand"><span class="tb-logo">G</span><span class="tb-name">GEO 优化系统</span><span class="tb-env" id="tb-env">客户工作台</span></div>
+
+  <div class="tb-right">
+
+    <span class="tb-chip" id="model-tag">模型 · 未就绪</span>
+
+    <span class="tb-chip" id="run-tag">空闲</span>
+
+    <div class="tb-user" id="tb-user-btn"><span class="tb-av" id="tb-av">客</span><span class="tb-uname" id="tb-uname">客户</span><i class="ic" data-ic="chevronDown" data-sz="16"></i></div>
+
+  </div>
+
+  <div class="tb-menu" id="tb-menu"><button onclick="doLogout()"><i class="ic" data-ic="logout"></i>退出登录</button></div>
+
+</header>
+
+
+
+<div class="cl-app">
+
+  <aside class="cl-side" id="sidebar"></aside>
+
+  <main class="cl-main">
+
+    <nav class="crumb" id="crumb"></nav>
+
+
+
+    <!-- ===== 页头: 画像摘要 + 分析入口 ===== -->
+
+    <div class="phead">
+
+        <div class="phead-l">
+
+            <div class="phead-eyebrow">内容生产 · 受众洞察</div>
+
+            <div class="phead-h1">客户画像</div>
+
+            <div class="phead-sub">您的客户画像填得越详细，AI 写作越精准 · 洞察结果自动注入每一篇文章</div>
+
+            <div class="phead-chips">
+
+                <span class="phead-chip"><i class="ic" data-ic="list" data-sz="16"></i>已填字段 <b id="pc-filled">-</b></span>
+
+                <span class="phead-chip"><i class="ic" data-ic="target" data-sz="16"></i>画像完整度 <b id="pc-pct">-</b></span>
+
+            </div>
+
+        </div>
+
+        <div class="phead-r">
+
+            <div class="pr-l">画像分析</div>
+
+            <button class="btn" id="analyze-btn-top" onclick="analyze()"><i class="ic" data-ic="spark"></i>保存并 AI 分析</button>
+
+        </div>
+
+    </div>
+
+
+
+    <!-- ===== KPI: 完整度 / 已填字段 / 洞察报告 ===== -->
+
+    <div class="kpi-grid">
+
+        <div class="kpi">
+
+            <div class="kpi-l">画像完整度 <span class="kpi-x"><i class="ic" data-ic="target"></i></span></div>
+
+            <div class="kpi-r"><span class="kpi-v" id="k-pct">-</span><span class="kpi-u">%</span></div>
+
+            <div class="viz-bar thin"><span class="sg brand" id="k-pct-bar" style="width:0%"></span></div>
+
+            <div class="kpi-l">填写越全，AI 越懂您的客户</div>
+
+        </div>
+
+        <div class="kpi">
+
+            <div class="kpi-l">已填字段 <span class="kpi-x"><i class="ic" data-ic="list"></i></span></div>
+
+            <div class="kpi-r"><span class="kpi-v" id="k-filled">-</span><span class="kpi-u">项</span></div>
+
+            <div class="kpi-l">含痛点 / 顾虑 / 场景 / 自定义</div>
+
+        </div>
+
+        <div class="kpi">
+
+            <div class="kpi-l">洞察报告 <span class="kpi-x"><i class="ic" data-ic="spark"></i></span></div>
+
+            <div class="kpi-r"><span class="kpi-v" id="k-report" style="font-size:16px">未生成</span></div>
+
+            <div class="kpi-l">AI 分析后自动注入文章</div>
+
+        </div>
+
+    </div>
+
+
+
+    <!-- 怎么用 -->
+
+    <section class="sec">
+
+        <div class="sec-h">
+
+            <span class="sec-ico"><i class="ic" data-ic="info" data-sz="20"></i></span>
+
+            <div class="sec-t"><b>怎么用</b><span>填基本信息 → 加多条要点 → 生成 AI 洞察</span></div>
+
+            <div class="sec-x"><span class="pill brand">全部内容注入 AI 写作指令</span></div>
+
+        </div>
+
+        <div class="sec-b">
+
+            <div class="au-info">基本信息填一条，痛点 / 顾虑 / 场景 / 地点可<b>添加多条</b>；不够用还能「自定义参数」建自己的字段（如「常见拒绝理由」「咨询高频问题」）。</div>
+
+        </div>
+
+    </section>
+
+
+
+    <!-- 基本信息: 全宽表单卡 -->
+
+    <section class="sec">
+
+        <div class="sec-h">
+
+            <span class="sec-ico"><i class="ic" data-ic="user" data-sz="20"></i></span>
+
+            <div class="sec-t"><b>基本信息</b><span>填得越全，画像越立体</span></div>
+
+            <div class="sec-x"><span class="pill gray">10 项</span></div>
+
+        </div>
+
+        <div class="sec-b">
+
+            <div class="au-grid">
+
+                    <div class="au-f" style="grid-column:1/-1"><label>人群描述 <small>他们是谁、做什么、什么情况下需要您</small></label>
+
+                        <textarea class="cl-input au-ta" rows="2" id="f-who" placeholder="例：30-55 岁业主 / 房东，家里厨卫或屋顶漏水，想尽快找到靠谱师傅上门处理"></textarea></div>
+
+                    <div class="au-f"><label>年龄段</label><input class="cl-input" id="f-age" placeholder="例：35-55 岁为主"></div>
+
+                    <div class="au-f"><label>性别比例</label><input class="cl-input" id="f-gender" placeholder="例：家庭业主为主，男女均有"></div>
+
+                    <div class="au-f"><label>地域范围</label><textarea class="cl-input au-ta" rows="2" id="f-area" placeholder="例：南京为主，鼓楼 / 建邺 / 雨花台等主城区可上门"></textarea></div>
+
+                    <div class="au-f"><label>消费能力</label><textarea class="cl-input au-ta" rows="2" id="f-budget" placeholder="例：单次维修预算 1000-5000 元，看重质保与口碑"></textarea></div>
+
+                    <div class="au-f"><label>职业 / 身份</label><textarea class="cl-input au-ta" rows="2" id="f-job" placeholder="例：私营业主、上班族、退休教师，家住老小区"></textarea></div>
+
+                    <div class="au-f"><label>了解渠道 <small>从哪里找服务？</small></label><textarea class="cl-input au-ta" rows="2" id="f-channel" placeholder="例：抖音 / 小红书搜索、朋友推荐、物业推荐"></textarea></div>
+
+                    <div class="au-f"><label>决策角色 <small>谁出钱谁拍板？</small></label><textarea class="cl-input au-ta" rows="2" id="f-decider" placeholder="例：自己决定，或子女代咨询代付款"></textarea></div>
+
+                    <div class="au-f"><label>信息偏好 <small>爱看什么形式内容？</small></label><textarea class="cl-input au-ta" rows="2" id="f-content" placeholder="例：短视频、真实案例图、价格对比表"></textarea></div>
+
+                    <div class="au-f"><label>消费频次</label><input class="cl-input" id="f-freq" placeholder="例：一次性刚需为主，修好后可能转介绍"></div>
+
+                </div>
+
+        </div>
+
+    </section>
+
+
+
+    <!-- 多条要点: 卡片网格 -->
+
+    <section class="sec">
+
+        <div class="sec-h">
+
+            <span class="sec-ico"><i class="ic" data-ic="list" data-sz="20"></i></span>
+
+            <div class="sec-t"><b>痛点 · 顾虑 · 场景 · 地点</b><span>每类可添加多条，越具体越好</span></div>
+
+            <div class="sec-x"><span class="pill gray">5 类</span></div>
+
+        </div>
+
+        <div class="sec-b">
+
+            <div class="icard-grid cols" id="list-fields"></div>
+
+        </div>
+
+    </section>
+
+
+
+    <!-- 自定义参数: 卡片网格 -->
+
+    <section class="sec">
+
+        <div class="sec-h">
+
+            <span class="sec-ico"><i class="ic" data-ic="grid" data-sz="20"></i></span>
+
+            <div class="sec-t"><b>自定义参数</b><span>建自己的字段（如：咨询高频问题 / 犹豫理由 / 竞品对比点）</span></div>
+
+            <div class="sec-x"><button class="btn sm ghost" onclick="addCustom()"><i class="ic" data-ic="plus"></i>添加自定义参数</button></div>
+
+        </div>
+
+        <div class="sec-b">
+
+            <div class="icard-grid cols" id="custom-fields"></div>
+
+        </div>
+
+    </section>
+
+
+
+    <!-- 保存动作条 -->
+
+    <section class="sec">
+
+        <div class="sec-b">
+
+            <div class="au-actions">
+
+                <span class="tip">提示：长文本框会自动增高，填写内容不会被截断</span>
+
+                <span class="btns">
+
+                    <button class="btn gray" id="save-btn" onclick="saveProfile()"><i class="ic" data-ic="check"></i>仅保存</button>
+
+                    <button class="btn" id="analyze-btn" onclick="analyze()">保存并 AI 分析</button>
+
+                </span>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+
+    <div class="sec" id="runbox" style="display:none">
+
+        <div class="sec-h">
+
+            <span class="sec-ico"><i class="ic" data-ic="clock" data-sz="20"></i></span>
+
+            <div class="sec-t"><b>AI 深度分析中…</b><span>结合品牌资料与完整画像生成写作指导（约 1~3 分钟）</span></div>
+
+        </div>
+
+        <div class="sec-b">
+
+            <div class="au-runbar"><i></i></div>
+
+            <div id="runlog" style="font-size:12px;color:var(--ink3)"></div>
+
+        </div>
+
+    </div>
+
+
+
+    <div class="sec" id="insight-box" style="display:none">
+
+        <div class="sec-h">
+
+            <span class="sec-ico"><i class="ic" data-ic="spark" data-sz="20"></i></span>
+
+            <div class="sec-t"><b>AI 人群洞察报告</b><span>已自动注入每一篇文章</span></div>
+
+            <div class="sec-x"><button class="btn sm ghost" onclick="analyze()"><i class="ic" data-ic="refresh"></i>重新分析</button></div>
+
+        </div>
+
+        <div class="sec-b">
+
+            <div class="au-insight" id="insight"></div>
+
+        </div>
+
+    </div>
+
+
+
+  </main>
+
+</div>
+
+<script src="/static/icons.js?v={{ asset_ver }}"></script>
+
+<script src="/static/layout.js?v={{ asset_ver }}"></script>
+
+<script>
+
+// 画像输入变化时实时刷新顶部 KPI(轻量防抖)
+
+document.addEventListener('input', () => { clearTimeout(window.__caT); window.__caT = setTimeout(() => { try { caRefreshKpi(); } catch (e) { } }, 500); });
+
+window.addEventListener('load', () => setTimeout(() => { try { caRefreshKpi(); } catch (e) { } }, 600));
+
+</script>
+
+<script>
+
+window.addEventListener('load', () => {  // autogrow
+
+  document.querySelectorAll('.au-ta').forEach(t => {
+
+    const grow = () => { t.style.height = 'auto'; t.style.height = Math.min(160, Math.max(42, t.scrollHeight + 2)) + 'px'; };
+
+    t.addEventListener('input', grow); setTimeout(grow, 400);
+
+  });
+
+});
+
+</script>
+
+<script>
+
+const SINGLES = [
+
+    ['who', '人群描述'], ['age', '年龄段'], ['gender', '性别比例'], ['area', '地域范围'],
+
+    ['budget', '消费能力'], ['job', '职业身份'], ['channel', '了解渠道'], ['decider', '决策角色'],
+
+    ['content', '信息偏好'], ['freq', '消费频次'],
+
+];
+
+const LISTS = [
+
+    { key: 'pain', ic: 'alert', label: '核心痛点', hint: '他们最焦虑什么？例：反复漏水总修不好 / 怕被乱报价' },
+
+    { key: 'worry', ic: 'info', label: '决策顾虑', hint: '下单前反复纠结什么？例：资质够不够 / 会不会偷换料' },
+
+    { key: 'scene', ic: 'target', label: '使用场景', hint: '什么情况下需要您？例：雨后房顶渗水 / 卫生间漏水殃及楼下' },
+
+    { key: 'places', ic: 'pin', label: '常见地点', hint: '客户常在哪？例：南京鼓楼区 / 建邺区 / 老小区顶楼居多' },
+
+    { key: 'objection', ic: 'close', label: '犹豫 / 拒绝理由', hint: '为什么最后没选？例：觉得贵 / 想再比较 / 怕修了还漏' },
+
+];
+
+const CUSTOMS = [];  // [{label, items:[]}]
+
+
+
+// ===== 列表字段渲染 =====
+
+function renderLists() {
+
+    document.getElementById('list-fields').innerHTML = LISTS.map(L => `
+
+    <div class="icard flat" data-k="${L.key}">
+
+        <div class="icard-h"><span class="ico"><i class="ic" data-ic="${L.ic}"></i></span><span class="t">${L.label}</span><span class="x"><span class="pill gray" id="cnt-${L.key}">0 条</span></span></div>
+
+        <div class="icard-tags" id="items-${L.key}"></div>
+
+        <div class="au-add">
+
+            <input class="cl-input" id="in-${L.key}" placeholder="${L.hint}" onkeydown="if(event.key==='Enter'){event.preventDefault();addItem('${L.key}');}">
+
+            <button class="btn sm" onclick="addItem('${L.key}')"><i class="ic" data-ic="plus"></i>添加</button>
+
+        </div>
+
+    </div>`).join('');
+
+    if (window.ICONS) ICONS.mount(document.getElementById('list-fields'));
+
+    LISTS.forEach(L => renderItems(L.key));
+
+}
+
+function addItem(k) {
+
+    const inp = document.getElementById('in-' + k);
+
+    const v = inp.value.trim();
+
+    if (!v) return;
+
+    profile.lists[k] = profile.lists[k] || [];
+
+    profile.lists[k].push(v);
+
+    inp.value = '';
+
+    renderItems(k);
+
+    autosave();
+
+}
+
+function delItem(k, i) { profile.lists[k].splice(i, 1); renderItems(k); autosave(); }
+
+function renderItems(k) {
+
+    const arr = (profile.lists || {})[k] || [];
+
+    const el = document.getElementById('items-' + k);
+
+    if (el) {
+
+        el.innerHTML = arr.map((v, i) =>
+
+            `<span class="pill brand au-tag">${esc(v)}<span class="x" onclick="delItem('${k}',${i})"><i class="ic" data-ic="close"></i></span></span>`).join('');
+
+        if (window.ICONS) ICONS.mount(el);
+
+    }
+
+    const cnt = document.getElementById('cnt-' + k);
+
+    if (cnt) cnt.textContent = arr.length + ' 条';
+
+}
+
+
+
+// ===== 自定义参数 =====
+
+function addCustom(label, items) {
+
+    const c = { label: label || '', items: items || [] };
+
+    CUSTOMS.push(c);
+
+    renderCustoms();
+
+}
+
+function delCustom(i) { CUSTOMS.splice(i, 1); renderCustoms(); autosave(); }
+
+function addCItem(i) {
+
+    const inp = document.getElementById('cin-' + i);
+
+    const v = inp.value.trim();
+
+    if (!v) return;
+
+    CUSTOMS[i].items.push(v); inp.value = ''; renderCustoms(); autosave();
+
+}
+
+function delCItem(i, j) { CUSTOMS[i].items.splice(j, 1); renderCustoms(); autosave(); }
+
+/* 重命名参数组也自动存（防抖 600ms，敲字不会每次都发请求） */
+function cLabel(i, v) { CUSTOMS[i].label = v; autosave(); }
+
+function renderCustoms() {
+
+    document.getElementById('custom-fields').innerHTML = CUSTOMS.map((c, i) => `
+
+    <div class="icard flat">
+
+        <div class="icard-h">
+
+            <input class="cl-input au-cname" value="${esc(c.label)}" oninput="cLabel(${i}, this.value)" placeholder="参数名，如：咨询高频问题">
+
+            <span class="x"><button class="btn sm danger" onclick="delCustom(${i})">删除参数</button></span>
+
+        </div>
+
+        <div class="icard-tags">${c.items.map((v, j) => `<span class="pill brand au-tag">${esc(v)}<span class="x" onclick="delCItem(${i},${j})"><i class="ic" data-ic="close"></i></span></span>`).join('')}</div>
+
+        <div class="au-add">
+
+            <input class="cl-input" id="cin-${i}" placeholder="输入一条，回车或点添加" onkeydown="if(event.key==='Enter'){event.preventDefault();addCItem(${i});}">
+
+            <button class="btn sm" onclick="addCItem(${i})"><i class="ic" data-ic="plus"></i>添加</button>
+
+        </div>
+
+    </div>`).join('');
+
+    if (window.ICONS) ICONS.mount(document.getElementById('custom-fields'));
+
+}
+
+
+
+// ===== 数据 =====
+
+let profile = { singles: {}, lists: {} };
+
+function collect() {
+
+    const singles = {};
+
+    SINGLES.forEach(([k]) => { singles[k] = document.getElementById('f-' + k).value.trim(); });
+
+    return { singles, lists: profile.lists || {}, customs: CUSTOMS.map(c => ({ label: c.label, items: c.items })) };
+
+}
+
+function caRefreshKpi() {
+
+    // 统计已填字段(含自定义): 文本类非空即计入
+
+    const inputs = [...document.querySelectorAll('.cl-input, .au-ta')].filter(el => el.id && el.id.startsWith('f-'));
+
+    const filled = inputs.filter(el => String(el.value || '').trim()).length;
+
+    const total = Math.max(1, inputs.length);
+
+    const pct = Math.round(filled / total * 100);
+
+    const el = id => document.getElementById(id);
+
+    if (el('k-filled')) el('k-filled').textContent = filled;
+
+    if (el('k-pct')) el('k-pct').textContent = pct;
+
+    if (el('k-pct-bar')) el('k-pct-bar').style.width = pct + '%';
+
+    if (el('pc-filled')) el('pc-filled').textContent = filled + ' / ' + inputs.length;
+
+    if (el('pc-pct')) el('pc-pct').textContent = pct + '%';
+
+}
+
+async function load() {
+
+    const d = await (await fetch('/api/audience')).json();
+
+    const pf = d.profile || {};
+
+    // 兼容旧扁平结构
+
+    const singles = pf.singles || {};
+
+    ['who','age','gender','area','budget','pain','worry','extra'].forEach(k => { if (typeof pf[k] === 'string' && pf[k]) singles[k] = singles[k] || pf[k]; });
+
+    SINGLES.forEach(([k]) => { const el = document.getElementById('f-' + k); if (el && singles[k]) el.value = singles[k]; });
+
+    const lists = pf.lists || {};
+
+    if (typeof pf.pain === 'string' && pf.pain) lists.pain = [pf.pain];
+
+    if (typeof pf.worry === 'string' && pf.worry) lists.worry = [pf.worry];
+
+    profile = { singles, lists };
+
+    LISTS.forEach(L => renderItems(L.key));
+
+    (pf.customs || []).forEach(c => addCustom(c.label, c.items || []));
+
+    if (d.insight) showInsight(d.insight);
+
+    try {
+
+        const s = await (await fetch('/api/audience/analyze-status')).json();
+
+        if (s.analyzing) { showRun(); poll(); }
+
+    } catch (e) { }
+
+    setTimeout(caRefreshKpi, 120);
+
+    const kb = document.getElementById('k-report');
+
+    if (kb) kb.textContent = document.getElementById('insight-box') && document.getElementById('insight-box').style.display === 'block' ? '已生成' : '未生成';
+
+}
+
+function showInsight(t) {
+
+    document.getElementById('insight-box').style.display = 'block';
+
+    // 按【小节】拆分为分节卡片, 避免通栏长文墙
+
+    const html = String(t || '').split(/\n+(?=【)/).map(seg => {
+
+        const m = seg.match(/^\s*【(.+?)】/);
+
+        if (m) {
+
+            const body = seg.replace(/^\s*【.+?】/, '').trim();
+
+            return '<div class="ins-sec"><div class="ins-h">【' + esc(m[1]) + '】</div><div class="ins-b">' + esc(body) + '</div></div>';
+
+        }
+
+        return '<div class="ins-sec"><div class="ins-b">' + esc(seg.trim()) + '</div></div>';
+
+    }).join('');
+
+    document.getElementById('insight').innerHTML = html;
+
+}
+
+function showRun() { document.getElementById('runbox').style.display = 'block'; }
+
+function btn0() { const b = document.getElementById('analyze-btn'); b.disabled = false; b.textContent = '保存并 AI 分析'; document.getElementById('runbox').style.display = 'none'; }
+
+
+
+function valid(silent) {
+
+    const p = collect();
+
+    const hasSingle = Object.values(p.singles).some(v => v);
+
+    const hasList = Object.values(p.lists).some(a => a && a.length);
+
+    const hasCustom = p.customs.some(c => c.items.length);
+
+    if (!hasSingle && !hasList && !hasCustom) { if (!silent) alert('请至少填写一项画像信息'); return null; }
+
+    return p;
+
+}
+
+/* 添加/删除条目后**自动保存**（防抖 600ms）。
+   以前 addItem/delItem 只改内存+重渲染，落库只有「仅保存/保存并分析」按钮那一个入口 ——
+   用户加完痛点直接切去生成文章，回来就"什么都没有"，实测就是这样丢的（2026-10-19）。 */
+let _auSaveTimer = null;
+
+function autosave(){
+
+    clearTimeout(_auSaveTimer);
+
+    _auSaveTimer = setTimeout(async () => {
+
+        const p = valid(true); if (!p) return;
+
+        try {
+
+            const cur = await (await fetch('/api/audience')).json();
+
+            const r = await fetch('/api/audience', { method: 'POST',
+
+                headers: { 'Content-Type': 'application/json' },
+
+                body: JSON.stringify({ profile: p, insight: cur.insight || '' }) });
+
+            const d = await r.json();
+
+            if (!d.ok) alert('自动保存失败：' + (d.error || ''));
+
+        } catch (e) { alert('自动保存失败，请点「仅保存」重试'); }
+
+    }, 600);
+
+}
+
+
+
+async function saveProfile() {
+
+    const p = valid(); if (!p) return;
+
+    let insight = '';
+
+    try { insight = (await (await fetch('/api/audience')).json()).insight || ''; } catch (e) { }
+
+    const r = await fetch('/api/audience', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+
+        body: JSON.stringify({ profile: p, insight }) });
+
+    const d = await r.json();
+
+    alert(d.ok ? '画像已保存，下一批 AI 文章立即生效' : '保存失败: ' + (d.error || ''));
+
+}
+
+
+
+async function analyze() {
+
+    const p = valid(); if (!p) return;
+
+    const btn = document.getElementById('analyze-btn');
+
+    btn.disabled = true; btn.textContent = '分析中…';
+
+    showRun();
+
+    try {
+
+        const r = await fetch('/api/audience/analyze', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+
+            body: JSON.stringify({ profile: p }) });
+
+        const d = await r.json();
+
+        if (!d.ok) { alert(d.error || '启动失败'); btn0(); return; }
+
+        poll();
+
+    } catch (e) { alert('网络异常'); btn0(); }
+
+}
+
+let timer = null;
+
+function poll() {
+
+    if (timer) return;
+
+    timer = setInterval(async () => {
+
+        try {
+
+            const s = await (await fetch('/api/audience/analyze-status')).json();
+
+            document.getElementById('runlog').textContent = (s.log_tail || []).slice(-1)[0] || '';
+
+            if (!s.analyzing) {
+
+                clearInterval(timer); timer = null; btn0();
+
+                if (s.error) alert('分析失败: ' + s.error);
+
+                else if (s.result) { showInsight(s.result); alert('洞察已生成并自动注入后续文章'); }
+
+            }
+
+        } catch (e) { }
+
+    }, 4000);
+
+}
+
+
+
+window.addEventListener('load', () => { renderLists(); renderCustoms(); load(); });
+
+</script>
+
+</body>
+
+</html>
+

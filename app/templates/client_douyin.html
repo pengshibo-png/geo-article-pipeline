@@ -1,0 +1,3108 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN" class="theme-light">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<title>抖音图文产线</title>
+
+<link rel="stylesheet" href="/static/client_style.css?v={{ asset_ver }}">
+
+<link rel="stylesheet" href="/static/ds.css?v={{ asset_ver }}">
+
+<link rel="stylesheet" href="/static/theme-light.css?v={{ asset_ver }}">
+
+<style>
+
+/* ============================================================
+
+   抖音图文产线 · 页内样式(近黑 #08080A + 铜金 #B08D57)
+
+   规范: 只用 var(--*) token / 圆角 <=8px / 无渐变 无发光 无玻璃拟态
+
+   通用组件(.topbar/.crumb/.phead/.kpi/.sec/.icard/.rec/.btn/.pill)
+
+   全部由 theme-light.css 提供, 此处只留本页必要的补丁
+
+   ============================================================ */
+
+
+
+/* 页签(生成台/作品库/发布与调度/参数设置) */
+
+.dy-tabs{display:inline-flex;gap:4px;background:var(--bg-soft);border:1px solid var(--line);border-radius:var(--r-sm);padding:4px;margin-bottom:16px;flex-wrap:wrap}
+
+.dy-tabs button{display:inline-flex;align-items:center;gap:6px;background:none;border:none;color:var(--ink3);font:500 13px/1 inherit;padding:8px 16px;cursor:pointer;border-radius:var(--r-sm);transition:all .16s}
+
+.dy-tabs button:hover{color:var(--ink)}
+
+.dy-tabs button.on{color:var(--brand);background:var(--brand-soft);font-weight:600}
+
+.tab{display:none}
+
+.tab.on{display:block;animation:fadein .22s}
+
+@keyframes fadein{from{opacity:0;transform:translateY(4px)}}
+
+
+
+/* 表单 */
+
+label.f{display:block;margin:12px 0 4px}
+
+textarea{resize:vertical}
+
+input[type=checkbox]{accent-color:var(--brand);cursor:pointer}
+
+.hint{font-size:12px;color:var(--ink3);margin-top:4px;line-height:1.55}
+
+.hint b{color:var(--ink2)}
+
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+
+@media(max-width:920px){.grid2{grid-template-columns:1fr}}
+
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:12px}
+
+
+
+/* 终端(日志用深色代码块, 走主题终端 token) */
+
+.term{background:var(--term-bg);border:1px solid var(--line);border-radius:var(--r);padding:12px 16px;font:12px/1.75 Consolas,"Courier New",monospace;color:var(--term-text);overflow:auto;white-space:pre-wrap;word-break:break-all}
+
+.term .ok{color:var(--ok)}.term .err{color:var(--bad)}.term .w{color:var(--warn)}
+
+.loghead{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+
+.chip{display:inline-flex;align-items:center;height:24px;padding:0 10px;border-radius:var(--r-tag);font-size:12px;font-weight:500;background:var(--bg-soft);border:1px solid var(--line);color:var(--ink2)}
+
+.chip.run{color:var(--brand);border-color:rgba(176,141,87,.4);background:var(--brand-soft);animation:pulse 1.8s infinite}
+
+.chip.pause{color:var(--warn);border-color:rgba(217,163,74,.35);background:var(--warn-bg)}
+
+/* 主题层 19 节会把 .chip 中性化, 运行/暂停态在这里压回语义色 */
+
+html.theme-light body .chip.run{background:var(--brand-soft)!important;border-color:rgba(176,141,87,.4)!important;color:var(--brand)!important}
+
+html.theme-light body .chip.pause{background:var(--warn-bg)!important;border-color:rgba(217,163,74,.35)!important;color:var(--warn)!important}
+
+@keyframes pulse{50%{opacity:.55}}
+
+
+
+/* KPI 运行态: 品牌色描边 + 数值着色(ds.css 深色期的硬编码色在这里压回 token) */
+
+html.theme-light body .kpi.run{border-color:rgba(176,141,87,.45)!important}
+
+html.theme-light body .kpi.warn{border-color:rgba(217,163,74,.45)!important}
+
+html.theme-light body .kpi.run .kpi-v{color:var(--brand)!important}
+
+html.theme-light body .kpi.warn .kpi-v{color:var(--warn)!important}
+
+/* KPI 进度条填充: ds.css 为渐变, 浅色期按 token 改纯色 */
+
+html.theme-light .viz-bar .sg{background:var(--brand)}
+
+
+
+/* 页头运行徽标: 圆点由 ::before 承担, 不用字形 */
+
+.live{display:none;align-items:center;gap:6px;font-size:12px;line-height:20px;padding:0 8px;border-radius:var(--r-tag);background:var(--brand-soft);border:1px solid rgba(176,141,87,.35);color:var(--brand);font-weight:500;vertical-align:3px}
+
+.live::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;animation:pulse 1.6s infinite}
+
+.live.on{display:inline-flex}
+
+
+
+/* 开关(循环发布) */
+
+.sw{position:relative;display:inline-block;width:40px;height:22px;flex:none}
+
+.sw input{opacity:0;width:0;height:0}
+
+.sw i{position:absolute;inset:0;background:var(--line-strong);border-radius:var(--r);transition:.2s;cursor:pointer}
+
+.sw i::after{content:"";position:absolute;left:2px;top:2px;width:18px;height:18px;border-radius:50%;background:#fff;transition:.2s}
+
+.sw input:checked+i{background:var(--brand)}
+
+.sw input:checked+i::after{left:20px}
+
+.ap-accounts label{display:inline-flex;align-items:center;gap:8px;margin:4px 12px 4px 0;font-size:13px;font-weight:500;background:var(--bg-soft);border:1px solid var(--line);border-radius:var(--r-sm);padding:8px 12px;cursor:pointer;color:var(--ink2)}
+
+.ap-accounts label:has(input:checked){border-color:var(--brand);background:var(--brand-soft);color:var(--brand)}
+
+
+
+/* 作品库: 筛选 chip + 批量条 + 卡片墙 */
+
+.fchip{display:inline-flex;align-items:center;gap:4px;height:28px;padding:0 12px;border-radius:var(--r-tag);border:1px solid var(--line);background:var(--bg-soft);color:var(--ink2);cursor:pointer;font-weight:500;font-size:12px}
+
+.fchip:hover{border-color:var(--brand);color:var(--brand)}
+
+.fchip.on{color:var(--brand);border-color:var(--brand);background:var(--brand-soft);font-weight:600}
+
+.fchip b{margin-left:4px;font-weight:600;font-variant-numeric:tabular-nums}
+
+html.theme-light body .fchip:hover{border-color:var(--brand)!important;color:var(--brand)!important}
+
+html.theme-light body .fchip.on{background:var(--brand-soft)!important;border-color:var(--brand)!important;color:var(--brand)!important}
+
+.batchbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--bg-soft);border:1px solid var(--line);border-radius:var(--r-sm);padding:8px 16px;margin-bottom:12px}
+
+.imgs{display:grid;grid-template-columns:repeat(2,80px);grid-auto-rows:106px;gap:8px;flex:none}
+
+.th{position:relative;border-radius:var(--r-sm);overflow:hidden;border:1px solid var(--line);cursor:zoom-in;background:var(--bg-deep)}
+
+.th img{width:100%;height:100%;object-fit:cover;display:block}
+
+.th .more{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-size:13px;background:rgba(0,0,0,.55)}
+
+.th .rm{position:absolute;top:2px;right:2px;background:rgba(0,0,0,.65);border:none;color:#fff;width:20px;height:20px;border-radius:50%;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center}
+
+
+
+/* 分页(独立于表格分页样式, 卡片墙下方) */
+
+#pager .pager{display:flex;gap:4px;align-items:center;flex-wrap:wrap;margin-top:12px;border-top:none;padding:0}
+
+#pager .pager button{display:inline-flex;align-items:center;gap:4px;height:30px;padding:0 12px;background:var(--card);border:1px solid var(--line-strong);color:var(--ink2);border-radius:var(--r-btn);font-size:12px;font-weight:500;cursor:pointer}
+
+#pager .pager button:hover{border-color:var(--brand);color:var(--brand)}
+
+#pager .pager button.on{background:var(--brand);border-color:var(--brand);color:#141417}
+
+#pager .pager button:disabled{opacity:.4;cursor:default}
+
+.pg-info{font-size:12px;color:var(--ink3);margin-left:8px}
+
+
+
+/* 计划任务: 记录卡网格内的一行四格(collectSch 依赖 input 顺序, 勿改结构) */
+
+.sch-row{display:grid;grid-template-columns:minmax(96px,1fr) 84px auto auto;gap:8px;align-items:center}
+
+@media(max-width:700px){.sch-row{grid-template-columns:1fr 1fr}}
+
+
+
+/* 占位符图例: 记录卡 */
+
+.ph-legend .rec-t{font-family:Consolas,monospace;color:var(--brand);font-size:12px}
+
+.ph-legend .rec-m{align-items:flex-start}
+
+.ph-legend .val{margin-left:auto;color:var(--ink2);font-weight:500;text-align:right;white-space:nowrap}
+
+
+
+/* 归属徽章 */
+
+.own{display:inline-flex;align-items:center;height:18px;padding:0 8px;border-radius:var(--r-tag);font-size:11px;font-weight:500;vertical-align:2px;margin-left:8px}
+
+.own.yes{color:var(--ok);background:var(--ok-bg)}
+
+.own.no{color:var(--ink3);background:var(--bg-soft);border:1px solid var(--line)}
+
+.lab{display:flex;align-items:center;font-size:13px;font-weight:600;color:var(--ink2);margin:16px 0 4px;gap:6px}
+
+
+
+/* 弹窗 */
+
+.mask{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:70}
+
+.mask.on{display:flex}
+
+.modal{background:var(--card);border:1px solid var(--line);border-radius:var(--r);width:460px;max-width:94vw;max-height:90vh;overflow:auto;padding:20px 24px;box-shadow:var(--shadow-lg)}
+
+/* 对冲主题层 14 节把 .modal 当遮罩刷半透明的规则 */
+
+html.theme-light body .mask .modal{background:var(--card)!important}
+
+.modal h3{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:600;margin-bottom:12px;color:var(--ink)}
+
+.modal h3 span{font-weight:400;color:var(--ink3)}
+
+.acct{display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--line);border-radius:var(--r-sm);margin-bottom:8px;background:var(--bg-soft);cursor:pointer}
+
+.acct.sel{border-color:var(--brand);background:var(--brand-soft)}
+
+.acct .nm{flex:1;font-size:13px;font-weight:500;color:var(--ink)}
+
+.acct .st{font-size:12px;font-weight:500}
+
+.acct .st.on{color:var(--ok)} .acct .st.off,.acct .st.fz{color:var(--bad)}
+
+.imgzoom{position:fixed;inset:0;background:rgba(0,0,0,.88);display:none;align-items:center;justify-content:center;z-index:80;cursor:zoom-out}
+
+.imgzoom.on{display:flex}
+
+.imgzoom img{max-width:94vw;max-height:94vh;border-radius:var(--r)}
+
+
+
+/* ===== 卡片化布局适配 (.sec / .icard-grid / .icard / .rec-grid / .rec) ===== */
+
+/* 空态与提示行占满整行 */
+
+#packs > .hint,#packs > .empty{grid-column:1/-1}
+
+/* 内容包卡片: 图片块 / 标签 / 描述 / 页脚 */
+
+#packs{grid-template-columns:repeat(auto-fill,minmax(340px,1fr))}
+
+#packs .icard-h .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+#packs .icard-h .pick{margin:0;flex:none}
+
+#packs .imgs{margin-top:12px}
+
+#packs .icard-b{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-line}
+
+/* 卡片底栏：meta 独占一行，按钮另起一行右对齐。
+   以前 `.meta{flex:1}` + 5 个按钮（发布/定时/编辑/定位/删除）会把 meta 挤到
+   只剩几十像素 → 中文按字换行，整条时间/城市竖着排（用户 2026-10-21 截图）。 */
+#packs .icard-f{align-items:center;flex-wrap:wrap;gap:6px 8px}
+
+#packs .icard-f .meta{flex:1 1 100%;min-width:0;font-size:12px;color:var(--ink3);line-height:1.6}
+
+#packs .icard-f .ops{margin:0 0 0 auto;flex:none;display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}
+
+/* 计划任务行: 记录卡网格 */
+
+#schRows{grid-template-columns:repeat(auto-fill,minmax(380px,1fr))}
+
+/* 循环发布状态: 记录卡 */
+
+#apStatus{line-height:1.8;font-size:12px;color:var(--ink2)}
+
+#apStatus b{color:var(--ink)}
+
+
+
+/* 管理员视角侧栏(client_style 只覆盖客户分支, 页内给 admin 分支同构样式) */
+
+#sidebar .side-brand{padding:6px 10px 16px;border-bottom:1px solid var(--line)}
+
+#sidebar .b-title{font-size:15px;font-weight:600;color:var(--ink)}
+
+#sidebar .b-title .g{color:var(--brand)}
+
+#sidebar .b-sub{font-size:11px;color:var(--ink3);margin-top:2px}
+
+#sidebar .nav-group-title{font-size:11px;font-weight:600;color:var(--ink3);letter-spacing:1px;padding:16px 12px 8px}
+
+#sidebar .nav-item{display:flex;align-items:center;gap:8px;padding:0 12px;height:34px;margin:1px 4px;border-radius:var(--r-sm);color:var(--ink2);text-decoration:none;font-size:13px;font-weight:500}
+
+#sidebar .nav-item:hover{background:var(--bg-deep);color:var(--ink)}
+
+#sidebar .nav-item.active{background:var(--brand-soft);color:var(--brand);font-weight:600}
+
+/* 日志面板空态: 未运行时呈浅色提示卡, 避免两整块黑色空面板压屏 */
+
+.term[data-empty="1"]{background:var(--bg-soft);color:var(--ink3);border:1px dashed var(--line-strong);display:flex;align-items:center;justify-content:center;text-align:center;padding:20px;font-family:inherit;font-size:12px;line-height:1.8}
+
+</style>
+
+</head>
+
+<body class="cl" data-page="douyin">
+
+
+
+<header class="topbar" id="topbar">
+
+  <div class="tb-brand"><span class="tb-logo">G</span><span class="tb-name">GEO 优化系统</span><span class="tb-env" id="tb-env">运营管理端</span></div>
+
+  <div class="tb-right">
+
+    <span class="tb-chip" id="model-tag">模型 · —</span>
+
+    <span class="tb-chip" id="run-tag">空闲</span>
+
+    <div class="tb-user" id="tb-user-btn"><span class="tb-av" id="tb-av">管</span><span class="tb-uname" id="tb-uname">—</span><i class="ic" data-ic="chevronDown" data-sz="16"></i></div>
+
+  </div>
+
+  <div class="tb-menu" id="tb-menu"><button onclick="doLogout()"><i class="ic" data-ic="logout"></i>退出登录</button></div>
+
+</header>
+
+
+
+<div class="cl-app">
+
+<aside class="cl-side" id="sidebar"></aside>
+
+<main class="cl-main">
+
+  <nav class="crumb" id="crumb"></nav>
+
+
+
+  <div class="phead">
+
+    <div class="phead-l">
+
+      <div class="phead-eyebrow">内容生产 · 抖音图文</div>
+
+      <div class="phead-h1">抖音图文产线
+
+        <span class="live" id="runBadge">生成中</span>
+
+        <span class="live" id="pubBadge">发布中</span>
+
+      </div>
+
+      <div class="phead-sub">AI 文案 <i class="ic" data-ic="chevronRight" data-sz="16"></i> 海报图 <i class="ic" data-ic="chevronRight" data-sz="16"></i> 内容包 <i class="ic" data-ic="chevronRight" data-sz="16"></i> 定时循环发布，一条龙产出</div>
+
+      <div class="phead-chips">
+
+        <span class="phead-chip">作品库存 <b id="pc-stock">-</b></span>
+
+        <span class="phead-chip">累计产出 <b id="pc-total">-</b></span>
+
+      </div>
+
+    </div>
+
+    <div class="phead-r">
+
+      <div class="pr-l">图文生产</div>
+
+      <button class="cl-btn" onclick="showTab('gen', document.querySelector('.dy-tabs button'))"><i class="ic" data-ic="spark" data-sz="16"></i>去生成台</button>
+
+    </div>
+
+  </div>
+
+
+
+  <!-- 仪表盘 -->
+
+  <div class="kpi-grid">
+
+    <div class="kpi" id="tGen">
+
+      <div class="kpi-l">生成队列 <span class="kpi-x"><i class="ic" data-ic="spark" data-sz="20"></i></span></div>
+
+      <div class="kpi-r"><span class="kpi-v" id="tvGen" style="font-size:20px">空闲</span></div>
+
+      <div class="kpi-l" style="margin-top:12px;font-size:12px">AI 文案 · 标签 · 海报图</div>
+
+    </div>
+
+    <div class="kpi" id="tPub">
+
+      <div class="kpi-l">发布队列 <span class="kpi-x"><i class="ic" data-ic="send" data-sz="20"></i></span></div>
+
+      <div class="kpi-r"><span class="kpi-v" id="tvPub" style="font-size:20px">空闲</span></div>
+
+      <div class="kpi-l" style="margin-top:12px;font-size:12px">按账号轮换上架</div>
+
+    </div>
+
+    <div class="kpi" id="tAp">
+
+      <div class="kpi-l">循环发布 <span class="kpi-x"><i class="ic" data-ic="refresh" data-sz="20"></i></span></div>
+
+      <div class="kpi-r"><span class="kpi-v" id="tvAp" style="font-size:20px">–</span></div>
+
+      <div class="kpi-l" style="margin-top:12px;font-size:12px">定时自动发库存</div>
+
+    </div>
+
+    <div class="kpi">
+
+      <div class="kpi-l">作品库存 <span class="kpi-x"><i class="ic" data-ic="image" data-sz="20"></i></span></div>
+
+      <div class="kpi-r"><span class="kpi-v" id="tvTodo">–</span><span class="kpi-u">待发 / 累计 <b id="tvTotal">–</b></span></div>
+
+      <div class="viz-bar thin" style="margin-top:12px"><span class="sg brand" id="tvBar" style="width:0%"></span></div>
+
+      <div class="kpi-l" style="margin-top:8px;font-size:12px">库存越足，越能稳定日更</div>
+
+    </div>
+
+  </div>
+
+
+
+  <!-- 标签页 -->
+
+  <div class="dy-tabs">
+
+    <button class="on" onclick="showTab('gen',this)"><i class="ic" data-ic="spark" data-sz="16"></i>生成台</button>
+
+    <button onclick="showTab('lib',this)"><i class="ic" data-ic="grid" data-sz="16"></i>作品库</button>
+
+    <button onclick="showTab('pub',this)"><i class="ic" data-ic="send" data-sz="16"></i>发布与调度</button>
+
+    <button onclick="showTab('cfg',this)"><i class="ic" data-ic="sliders" data-sz="16"></i>参数设置</button>
+
+    <button onclick="showTab('loc',this);loadLoc()">📍 定位管理</button>
+
+  </div>
+
+
+
+  <!-- ============ 生成台 ============ -->
+
+  <div class="tab on" id="tab-gen">
+
+    <section class="sec">
+
+      <div class="sec-h">
+
+        <span class="sec-ico"><i class="ic" data-ic="spark" data-sz="20"></i></span>
+
+        <div class="sec-t"><b>批量生成</b><span>文案 <i class="ic" data-ic="chevronRight" data-sz="16"></i> 标签/素材 <i class="ic" data-ic="chevronRight" data-sz="16"></i> 海报图，一条龙产出内容包</span></div>
+
+        <div class="sec-x"><span class="hint" style="margin:0" id="genInfo"></span></div>
+
+      </div>
+
+      <div class="sec-b">
+
+      <div class="card-toolbar">
+
+        <div style="width:120px"><label class="f" style="margin:0 0 4px">生成数量</label><input type="number" id="genCount" value="5" min="1" max="20"></div>
+
+        <button class="cl-btn" id="btnGen" onclick="doGenerate()"><i class="ic" data-ic="spark" data-sz="16"></i>开始生成</button>
+
+        <button class="cl-btn danger" id="btnStop" style="display:none" onclick="stopGen()"><i class="ic" data-ic="close" data-sz="16"></i>停止队列</button>
+
+      </div>
+
+      <div class="grid2">
+
+        <div>
+
+          <div class="loghead"><span class="chip" id="genChip">生成空闲</span><span class="hint" style="margin:0" id="genChipInfo"></span></div>
+
+          <div class="term" id="term" data-empty="1" style="height:380px">点上方「开始生成」后，这里实时显示生成进度与日志</div>
+
+        </div>
+
+        <div>
+
+          <div class="loghead">
+
+            <span class="chip" id="pubChip">发布空闲</span><span class="hint" style="margin:0" id="pubChipInfo"></span>
+
+            <span style="flex:1"></span>
+
+            <button class="cl-btn ghost sm" id="btnPause" style="display:none" onclick="pausePub()">暂停</button>
+
+            <button class="cl-btn sm" id="btnResume" style="display:none" onclick="resumePub()"><i class="ic" data-ic="play" data-sz="16"></i>继续</button>
+
+          </div>
+
+          <div class="term" id="pubTerm" data-empty="1" style="height:380px">启动循环发布或手动发布后，这里显示逐条发布日志</div>
+
+        </div>
+
+      </div>
+
+      </div>
+
+    </section>
+
+  </div>
+
+
+
+  <!-- ============ 作品库 ============ -->
+
+  <div class="tab" id="tab-lib">
+
+    <section class="sec">
+
+      <div class="sec-h">
+
+        <span class="sec-ico"><i class="ic" data-ic="archive" data-sz="20"></i></span>
+
+        <div class="sec-t"><b>内容包作品库</b><span>按状态筛选 · 卡片可编辑、批量发布与删除</span></div>
+
+        <div class="sec-x"><span class="pill gray" id="packCount">—</span></div>
+
+      </div>
+
+      <div class="sec-b">
+
+        <div class="card-toolbar">
+
+          <span class="fchip on" data-f="todo" onclick="setFilter(this)">待发布 <b id="fcTodo"></b></span>
+
+          <span class="fchip" data-f="done" onclick="setFilter(this)">已发布 <b id="fcDone"></b></span>
+
+          <span class="fchip" data-f="fail" onclick="setFilter(this)">有失败 <b id="fcFail"></b></span>
+
+          <span class="fchip" data-f="sched" onclick="setFilter(this)">已定时 <b id="fcSched"></b></span>
+
+          <span class="fchip" data-f="all" onclick="setFilter(this)">全部 <b id="fcAll"></b></span>
+
+        </div>
+
+        <div class="batchbar">
+
+          <label style="font-size:12px;color:var(--ink3);display:flex;align-items:center;gap:8px;margin:0;font-weight:500">
+
+            <input type="checkbox" id="selAll" onchange="toggleSelAll(this.checked)"> 全选待发布</label>
+
+          <span class="hint" id="selInfo" style="margin:0">已选 0 包</span>
+
+          <span style="flex:1"></span>
+
+          <button class="cl-btn" onclick="openPub(null, true)"><i class="ic" data-ic="send" data-sz="16"></i>批量发布所选</button>
+
+        </div>
+
+        <div class="icard-grid cols" id="packs">加载中…</div>
+
+        <div id="pager"></div>
+
+      </div>
+
+    </section>
+
+  </div>
+
+
+
+  <!-- ============ 发布与调度 ============ -->
+
+  <div class="tab" id="tab-pub">
+
+    <section class="sec">
+
+      <div class="sec-h">
+
+        <span class="sec-ico"><i class="ic" data-ic="refresh" data-sz="20"></i></span>
+
+        <div class="sec-t"><b>循环发布</b><span>每隔 N 分钟自动发一篇库存内容包，多账号轮流分配</span></div>
+
+        <div class="sec-x"><span class="pill gray" id="apStateTxt">未开启</span></div>
+
+      </div>
+
+      <div class="sec-b">
+
+        <div class="card-toolbar">
+
+          <label class="sw"><input type="checkbox" id="apEnabled" onchange="renderApTiles()"><i></i></label>
+
+          <span style="flex:1"></span>
+
+          <div style="width:170px"><label class="f" style="margin:0 0 4px">发布模式</label>
+
+            <select id="apMode" class="cl-input" onchange="dyModeUi()"><option value="interval">循环（每 N 分钟发 1 篇）</option><option value="schedule">定时（每天指定时刻）</option></select></div>
+
+          <div id="apIntervalWrap" style="width:130px"><label class="f" style="margin:0 0 4px">间隔（分钟/篇）</label><input type="number" id="apInterval" min="1" max="1440" value="30"></div>
+
+          <div style="width:180px"><label class="f" style="margin:0 0 4px">取包顺序</label>
+
+            <select id="apOrder"><option value="new">从新到旧（优先最新）</option><option value="old">从旧到新</option></select></div>
+
+          <div style="padding-top:16px"><label style="font-size:13px;display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:500"><input type="checkbox" id="apAutoGen"> 库存不足自动生成</label></div>
+
+        </div>
+
+        <label class="f">发布到这些抖音号（多选，轮流分配，已发过自动跳过，触达平台当日上限自动暂停次日恢复）</label>
+
+        <div id="apAccounts" class="ap-accounts">加载蚁小二抖音账号…</div>
+
+        <div id="apSchWrap" style="display:none;margin-top:14px">
+
+          <label class="f">定时时刻（每天到点自动发布；最多 12 档，同一时刻当天只触发一次）</label>
+
+          <div id="apSchRows"></div>
+
+          <button class="cl-btn ghost sm" style="margin-top:8px" onclick="apAddSlot('09:00',1)">+ 添加时刻</button>
+
+        </div>
+
+        <div class="card-toolbar" style="margin-top:16px;margin-bottom:0">
+
+          <div><div style="font-size:12px;font-weight:500;color:var(--ink3);margin-bottom:4px">图文生成节奏</div>
+
+            <select id="apGenMode" class="cl-input" style="width:150px" onchange="dyGenModeUi()">
+
+              <option value="stock">库存不足自动补</option>
+
+              <option value="interval">每 N 分钟 × M 条</option>
+
+              <option value="off">不自动生成</option>
+
+            </select></div>
+
+          <div id="apGenEveryWrap" style="display:none"><div style="font-size:12px;font-weight:500;color:var(--ink3);margin-bottom:4px">间隔（分钟）</div>
+
+            <input type="number" id="apGenEvery" value="60" min="1" max="10080" class="cl-input" style="width:110px"></div>
+
+          <div id="apGenBatchWrap" style="display:none"><div style="font-size:12px;font-weight:500;color:var(--ink3);margin-bottom:4px">每次条数</div>
+
+            <input type="number" id="apGenBatch" value="5" min="1" max="50" class="cl-input" style="width:100px"></div>
+
+          <span style="flex:1"></span>
+
+          <button class="cl-btn" onclick="saveAutopub()"><i class="ic" data-ic="check" data-sz="16"></i>保存</button>
+
+          <button class="cl-btn ghost" onclick="saveAutopub(true)"><i class="ic" data-ic="play" data-sz="16"></i>保存并立即发一篇</button>
+
+          <span class="hint" id="apSaved" style="margin:0"></span>
+
+        </div>
+
+        <div id="apStatus" class="rec" style="margin-top:16px"></div>
+
+      </div>
+
+    </section>
+
+
+
+    <section class="sec">
+
+      <div class="sec-h">
+
+        <span class="sec-ico"><i class="ic" data-ic="clock" data-sz="20"></i></span>
+
+        <div class="sec-t"><b>生成计划任务</b><span>到点自动批量生成，当日不重复触发</span></div>
+
+        <div class="sec-x">
+
+          <button class="cl-btn ghost sm" onclick="addSchRow()"><i class="ic" data-ic="plus" data-sz="16"></i>添加时间点</button>
+
+          <button class="cl-btn sm" onclick="saveSchedule()"><i class="ic" data-ic="check" data-sz="16"></i>保存计划</button>
+
+        </div>
+
+      </div>
+
+      <div class="sec-b"><div class="rec-grid cols" id="schRows"></div></div>
+
+    </section>
+
+  </div>
+
+
+
+  <!-- ============ 参数设置 ============ -->
+
+  <div class="tab" id="tab-cfg">
+
+    <section class="sec">
+
+      <div class="sec-h">
+
+        <span class="sec-ico"><i class="ic" data-ic="sliders" data-sz="20"></i></span>
+
+        <div class="sec-t"><b>基础参数</b><span>配图数量 · 联系电话 · 推广城市 · 尺寸 · 屏蔽词</span></div>
+
+        <div class="sec-x"><span class="hint" style="margin:0" id="ownTip"></span></div>
+
+      </div>
+
+      <div class="sec-b">
+
+      <div class="row">
+
+        <div><label class="f">配图数量下限</label><input type="number" id="cfgNMin" min="1" max="9"></div>
+
+        <div><label class="f">配图数量上限</label><input type="number" id="cfgNMax" min="1" max="9"></div>
+
+        <div><label class="f">联系电话（空=品牌资料）</label><input type="text" id="cfgPhone" placeholder="自动"></div>
+
+        <div><label class="f">推广城市（逗号分隔，空=业务城市）</label><input type="text" id="cfgCities" placeholder="自动"></div>
+
+        <div><label class="f">服务行内容（空=按城市自动生成）</label><input type="text" id="cfgAddress" placeholder="自动"></div>
+
+        <div><label class="f">生图渠道（图片由哪个模型渠道生成）</label>
+
+          <select id="cfgImgChannel" onchange="onChannelChange()"></select></div>
+
+        <div><label class="f">生图模型（随渠道可选）</label>
+
+          <select id="cfgImgModel"></select></div>
+
+        <div><label class="f">图片尺寸</label>
+
+          <select id="cfgSize">
+
+            <option value="1536x2720">1536×2720（9:16 竖版·推荐）</option>
+
+            <option value="1536x2048">1536×2048（3:4）</option>
+
+            <option value="1024x1024">1024×1024（1:1）</option>
+
+          </select></div>
+
+        <div><label class="f">断言词屏蔽（逗号分隔）</label><input type="text" id="cfgBanned"></div>
+
+      </div>
+
+      </div>
+
+    </section>
+
+    <section class="sec">
+
+      <div class="sec-h">
+
+        <span class="sec-ico"><i class="ic" data-ic="code" data-sz="20"></i></span>
+
+        <div class="sec-t"><b>生成提示词</b><span>每个客户独立保存，互不影响；徽章标识参数归属</span></div>
+
+      </div>
+
+      <div class="sec-b">
+
+      <div class="lab"><i class="ic" data-ic="pencil" data-sz="16"></i>图文文案提示词 <span id="obCopy"></span></div>
+
+      <textarea id="cfgCopyPrompt" style="min-height:170px"></textarea>
+
+      <div class="rec-grid cols ph-legend" id="ph-copy">
+
+        <div class="rec"><div class="rec-h"><span class="rec-t">{brand}</span></div><div class="rec-m"><span>品牌名 — 生成时替换为当前租户品牌</span><span class="val" id="pv-brand">–</span></div></div>
+
+        <div class="rec"><div class="rec-h"><span class="rec-t">{city}</span></div><div class="rec-m"><span>本篇城市 — 从标题提取（带区县），无标题时从推广城市随机</span><span class="val" id="pv-city">–</span></div></div>
+
+        <div class="rec"><div class="rec-h"><span class="rec-t">{phone}</span></div><div class="rec-m"><span>联系电话 — 租户配置的号码</span><span class="val" id="pv-phone">–</span></div></div>
+
+        <div class="rec"><div class="rec-h"><span class="rec-t">{address}</span></div><div class="rec-m"><span>服务行内容 — 会同时用在文案末行和海报地址行</span><span class="val" id="pv-address">–</span></div></div>
+
+        <div class="rec"><div class="rec-h"><span class="rec-t">{brand_data}</span></div><div class="rec-m"><span>品牌资料库全文（资质/价格/门店等，写作事实来源）</span><span class="val" id="pv-bd">–</span></div></div>
+
+        <div class="rec"><div class="rec-h"><span class="rec-t">{banned}</span></div><div class="rec-m"><span>禁用断言词（基础参数里配置，模型禁写）</span><span class="val" id="pv-banned">–</span></div></div>
+
+      </div>
+
+      <div class="lab"><i class="ic" data-ic="spark" data-sz="16"></i>创意一体化指令（标签 + 每张海报素材摘录） <span id="obCreative"></span></div>
+
+      <textarea id="cfgCreative" style="min-height:200px"></textarea>
+
+      <div class="rec-grid cols ph-legend">
+
+        <div class="rec"><div class="rec-h"><span class="rec-t">{n}</span></div><div class="rec-m"><span>本篇配图数量 — 按基础参数的下限~上限随机</span><span class="val" id="pv-n">–</span></div></div>
+
+        <div class="rec"><div class="rec-h"><span class="rec-t">{copy}</span></div><div class="rec-m"><span>本篇图文文案全文 — 模型读它来摘标签和每张海报的素材</span><span class="val">自动填入</span></div></div>
+
+      </div>
+
+      <div class="lab"><i class="ic" data-ic="image" data-sz="16"></i>海报画风提示词（决定成图风格，每条提示词的第一段就是它） <span id="obStyle"></span></div>
+
+      <textarea id="cfgStylePrompt" style="min-height:150px" placeholder="留空 = 使用内置风格（米白/淡绿底·金色品牌名·圆角卡片·线稿插画·信息图）。
+
+填写示例：
+竖版 9:16 国风水墨科普图，宣纸质感米色底（#F3EDE0），墨绿与赭石为主色，
+顶部居中品牌名用隶书体、深墨绿，主标题为宋体大字压在上三分之一，
+正文用 2~4 个宣纸卡片、细墨线描边，角落点缀淡墨玉石/祥云线稿，
+禁止：照片写实、卡通插画、鲜艳渐变、红色促销标签。"></textarea>
+      <div style="font-size:12px;color:#8a93a3;margin:4px 0 10px">
+        提示：黑体主标题、卡片式信息密度、金色描边这几条会显著影响"像不像专业科普图"，建议保留。清空即可恢复内置风格。
+      </div>
+
+      <div class="rec-grid cols ph-legend">
+
+        <div class="rec"><div class="rec-h"><span class="rec-t">{city}</span></div><div class="rec-m"><span>本篇城市</span><span class="val" id="pv-city2">–</span></div></div>
+
+        <div class="rec"><div class="rec-h"><span class="rec-t">{brand}</span></div><div class="rec-m"><span>品牌名</span><span class="val">同上</span></div></div>
+
+        <div class="rec"><div class="rec-h"><span class="rec-t">{phone}</span></div><div class="rec-m"><span>联系电话</span><span class="val">同上</span></div></div>
+
+        <div class="rec"><div class="rec-h"><span class="rec-t">{service}</span></div><div class="rec-m"><span>从文案识别的主服务名（如：卫生间防水补漏）</span><span class="val">自动识别</span></div></div>
+
+        <div class="rec"><div class="rec-h"><span class="rec-t">{price_lines}</span></div><div class="rec-m"><span>品牌资料里的价格行（如：屋顶补漏 80-260元/㎡）</span><span class="val">自动提取</span></div></div>
+
+      </div>
+
+      <div style="margin-top:16px;display:flex;gap:8px;align-items:center">
+
+        <button class="cl-btn" onclick="saveConfig()"><i class="ic" data-ic="check" data-sz="16"></i>保存设置</button>
+
+        <span class="hint" id="cfgSaved" style="margin:0"></span>
+
+        <span class="hint" style="margin:0 0 0 auto">品牌名/资料取自「品牌资料」页 · 多租户完全隔离</span>
+
+      </div>
+
+      </div>
+
+    </section>
+
+  </div>
+
+  <!-- ============ 定位管理 ============ -->
+
+  <div class="tab" id="tab-loc">
+
+    <section class="sec">
+
+      <div class="sec-h">
+
+        <span class="sec-ico"><i class="ic" data-ic="target" data-sz="20"></i></span>
+
+        <div class="sec-t"><b>发布定位（按账号自动分配）</b><span>一包多号时每个号的定位不同；同号换区、同区换地址</span></div>
+
+        <div class="sec-x">
+
+          <span class="hint" id="locMeta" style="margin:0 12px 0 0"></span>
+
+          <button class="cl-btn sm" id="btnLocRefresh" onclick="refreshLoc()">刷新定位池</button>
+
+        </div>
+
+      </div>
+
+      <div class="sec-b">
+
+        <div class="hint" style="margin:0 0 14px">
+
+          规则：① 同一批发布内，每个账号的定位（地址）不重复；② 同一账号下一次发布自动换地区；③ 同一地区再次使用时换地址。
+
+          某地区地址用尽会换到还有余量的地区；全部用尽后循环复用。无可用地址时照常发布、只是不加定位。
+
+        </div>
+
+        <div id="locStatus" style="display:flex;gap:28px;flex-wrap:wrap"></div>
+
+      </div>
+
+    </section>
+
+    <section class="sec">
+
+      <div class="sec-h">
+
+        <div class="sec-t"><b>地区与地址</b><span>置灰划掉 = 本轮已用过</span></div>
+
+        <div class="sec-x"><span class="hint" id="locRegionMeta" style="margin:0"></span></div>
+
+      </div>
+
+      <div class="sec-b"><div id="locRegions"></div></div>
+
+    </section>
+
+    <section class="sec">
+
+      <div class="sec-h">
+
+        <div class="sec-t"><b>未取到的区县</b><span>接口失败 / 当地无 POI —— 这些地区发布时不会加定位</span></div>
+
+        <div class="sec-x"><span class="hint" id="locMissMeta" style="margin:0"></span></div>
+
+      </div>
+
+      <div class="sec-b"><div id="locMissing"></div></div>
+
+    </section>
+
+    <section class="sec">
+
+      <div class="sec-h">
+
+        <div class="sec-t"><b>账号定位历史</b><span>每个账号上次发到的地区（下次会自动换）</span></div>
+
+      </div>
+
+      <div class="sec-b"><div id="locAccounts"></div></div>
+
+    </section>
+
+  </div>
+
+</main>
+
+</div>
+
+
+
+<div class="imgzoom" id="imgzoom" onclick="this.classList.remove('on')"><img src=""></div>
+
+
+
+<!-- 编辑弹窗 -->
+
+<div class="mask" id="editMask">
+
+  <div class="modal" style="width:600px">
+
+    <h3><i class="ic" data-ic="pencil" data-sz="16"></i>编辑内容包 <span id="edPackName"></span></h3>
+
+    <label class="f">标题</label>
+
+    <input type="text" id="edTitle" maxlength="80">
+
+    <label class="f">文案（多行）</label>
+
+    <textarea id="edDesc" style="min-height:180px"></textarea>
+
+    <label class="f">话题标签（逗号分隔，≤10个）</label>
+
+    <input type="text" id="edTags">
+
+    <label class="f">定时发布（到点自动发到所有可用号，一次性；留空 = 不定时）</label>
+
+    <div style="display:flex;gap:8px">
+
+      <input type="text" id="edAt" placeholder="点右侧「选择时间」，不用手填" autocomplete="off" style="flex:1">
+
+      <button class="cl-btn ghost sm" onclick="openTimePicker(ED.id, $('edAt').value, 'edit')">选择时间</button>
+
+    </div>
+
+    <div style="font-size:11px;color:var(--ink3);margin-top:4px">格式 2026-10-20 12:25（本地时间）。应用需在到点时开着；迟到 3 小时内会补发，更久则记为「已错过」。</div>
+
+    <label class="f">配图（点移除按钮删图，至少保留1张）</label>
+
+    <div id="edImgs" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px"></div>
+
+    <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end">
+
+      <button class="cl-btn ghost" onclick="closeEdit()">取消</button>
+
+      <button class="cl-btn" onclick="saveEdit()"><i class="ic" data-ic="check" data-sz="16"></i>保存修改</button>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+
+<!-- 发布弹窗 -->
+
+<div class="mask" id="pubMask">
+
+  <div class="modal">
+
+    <h3><i class="ic" data-ic="send" data-sz="16"></i>发布内容包 <span id="pubPackName"></span></h3>
+
+    <div class="hint" style="margin-bottom:8px">勾选账号（可多选）；分发方式决定这一批怎么落到号上：</div>
+
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+
+      <select id="pubMode" class="cl-input" style="max-width:300px" onchange="pubModeChanged()">
+
+        <option value="each">一包发到所有勾选的号（每号各一份）</option>
+
+        <option value="rotate">一包只发一个号（多包多号轮流摊开）</option>
+
+      </select>
+
+      <span id="pubModeHint" class="hint" style="margin:0"></span>
+
+    </div>
+
+    <div id="pubAssign" class="hint" style="margin-bottom:8px;color:var(--brand);font-weight:600"></div>
+
+    <div id="acctList" class="hint">加载蚁小二抖音账号…</div>
+
+    <div class="hint" style="margin:14px 0 6px">发布定位（自动分配，可逐个号改；只列池内地址）</div>
+
+    <div id="pubLoc" style="display:flex;flex-direction:column;gap:6px;max-height:210px;overflow:auto"></div>
+
+    <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end">
+
+      <button class="cl-btn ghost" onclick="closePub()">取消</button>
+
+      <button class="cl-btn" id="btnDoPub" onclick="confirmPub()">发布到所选账号</button>
+
+    </div>
+
+  </div>
+
+</div>
+
+<!-- 定位预设弹窗（作品库 → 定位） -->
+
+<div class="mask" id="locPresetMask">
+
+  <div class="modal" style="width:760px">
+
+    <h3><i class="ic" data-ic="target" data-sz="16"></i>定位预设 <span id="locPresetPack"></span></h3>
+
+    <div class="hint" style="margin-bottom:8px">给这条作品预设每个账号的定位；留「自动」= 发布时按规则自动分配。</div>
+
+    <div id="locPresetRows" style="max-height:360px;overflow:auto"></div>
+
+    <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end">
+
+      <button class="cl-btn ghost" onclick="closeLocPreset()">取消</button>
+
+      <button class="cl-btn" onclick="saveLocPreset()">保存预设</button>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+
+<style>
+
+.wheel-wrap{display:flex;gap:8px;height:220px;position:relative;overflow:hidden;padding:0 6px}
+
+.wheel{flex:1;height:220px;overflow-y:auto;scroll-snap-type:y mandatory;text-align:center;scrollbar-width:none;-ms-overflow-style:none}
+
+.wheel::-webkit-scrollbar{display:none}
+
+.wheel .opt{height:44px;line-height:44px;scroll-snap-align:center;color:var(--ink3);font-size:15px}
+
+.wheel .opt.on{color:var(--ink);font-weight:700;font-size:17px}
+
+.wheel-line{position:absolute;left:0;right:0;top:88px;height:44px;pointer-events:none;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--brand-soft);opacity:.4}
+
+</style>
+
+<div class="mask" id="timeMask">
+
+  <div class="modal" style="width:460px">
+
+    <h3>⏰ 定时发布</h3>
+
+    <div class="hint" style="margin-bottom:10px">上下滑动选择 <b>月 / 日 / 时 / 分</b>；到点自动发到全部可用号（一次性）。选中的时刻如果早于现在，会自动算到明年。</div>
+
+    <div class="wheel-wrap">
+
+      <div class="wheel-line"></div>
+
+      <div class="wheel" id="wMon" onscroll="wheelScroll('mon',this)"></div>
+
+      <div class="wheel" id="wDay" onscroll="wheelScroll('day',this)"></div>
+
+      <div class="wheel" id="wHour" onscroll="wheelScroll('hour',this)"></div>
+
+      <div class="wheel" id="wMin" onscroll="wheelScroll('min',this)"></div>
+
+    </div>
+
+    <div class="hint" id="timePreview" style="text-align:center;margin-top:12px;font-weight:700;font-size:16px"></div>
+
+    <div style="display:flex;gap:8px;margin-top:18px;justify-content:flex-end">
+
+      <button class="cl-btn ghost" onclick="closeTimePicker()">取消</button>
+
+      <button class="cl-btn ghost" onclick="clearTimePick()">清除定时</button>
+
+      <button class="cl-btn" onclick="confirmTimePick()">确定</button>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+
+<script src="/static/icons.js?v={{ asset_ver }}"></script>
+
+<script src="/static/layout.js?v={{ asset_ver }}"></script>
+
+<script>
+
+const $ = id => document.getElementById(id);
+
+let CFG = null, OWN = new Set(), FILTER = 'todo';
+
+
+
+function showTab(name, btn){
+
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+
+  $('tab-'+name).classList.add('on');
+
+  document.querySelectorAll('.dy-tabs button').forEach(b=>b.classList.remove('on'));
+
+  btn.classList.add('on');
+
+}
+
+function ownBadge(key){
+
+  return OWN.has(key)
+
+    ? '<span class="own yes">租户专属</span>'
+
+    : '<span class="own no">全局默认</span>';
+
+}
+
+
+
+/* ================= 配置 ================= */
+
+async function loadConfig(){
+
+  const r = await fetch('/api/douyin/config');
+
+  CFG = await r.json();
+
+  OWN = new Set(CFG._own || []);
+
+  $('cfgCreative').value = CFG.creative_prompt||'';
+
+  $('cfgStylePrompt').value = CFG.style_prompt || '';
+
+  $('cfgCopyPrompt').value = CFG.copy_prompt||'';
+
+  $('cfgNMin').value = CFG.image_count_min??4;
+
+  $('cfgNMax').value = CFG.image_count_max??6;
+
+  $('cfgPhone').value = CFG.phone||'';
+
+  $('cfgCities').value = (CFG.cities||[]).join(',');
+
+  $('cfgAddress').value = CFG.address||'';
+
+  $('cfgBanned').value = (CFG.banned_words||[]).join(',');
+
+  loadImgProviders();
+
+  $('cfgSize').value = CFG.image_size||'1536x2720';
+
+  renderSch(CFG.schedule||[]);
+
+  $('obCopy').innerHTML = ownBadge('copy_prompt');
+
+  $('obCreative').innerHTML = ownBadge('creative_prompt');
+
+  $('obStyle').innerHTML = ownBadge('style_prompt');
+
+  const rsv = CFG._resolved||{};
+
+  // 占位符图例填真实值
+
+  const setv = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+
+  setv('pv-brand', rsv.brand || '–');
+
+  setv('pv-phone', rsv.phone || '–');
+
+  const cityPool = ((CFG.cities && CFG.cities.length) ? CFG.cities : (rsv.cities || []));
+
+  const cityEx = cityPool[0] || '城市';
+
+  setv('pv-city', cityPool.length ? '如: ' + cityEx + (cityPool.length > 1 ? `（共${cityPool.length}个轮换）` : '') : '–');
+
+  setv('pv-city2', cityEx);
+
+  /* {address} 的真实取值以**服务端算出来的**为准（保存后 _resolved.address 会带回来，
+     与生成时逐包替换用的是同一个函数）；拿不到时才用本页兜底公式。 */
+  setv('pv-address', (rsv.address || CFG.address)
+    || `${cityEx}·全国${Math.max(1, new Set(cityPool.map(c => c.split('市')[0])).size)}城就近上门`);
+
+  setv('pv-bd', `品牌资料库全文 (${(CFG._brand_data_len || (rsv.brand_data || '').length)} 字)`);
+
+  setv('pv-banned', (CFG.banned_words||[]).slice(0,4).join('、') || '未配置');
+
+  setv('pv-n', `${CFG.image_count_min ?? 4} ~ ${CFG.image_count_max ?? 6} 张`);
+
+  if(rsv.brand) $('ownTip').textContent = `当前租户品牌：${rsv.brand} · 提示词与参数按租户独立`;
+
+}
+
+let IMG_PROVS = [], SYS_PROVIDER = '';   /* SYS_PROVIDER = 系统设置里当前生效的生图渠道 */
+
+async function loadImgProviders(){
+
+  try{
+
+    const r = await fetch('/api/douyin/image-providers');
+
+    const d = await r.json();
+
+    IMG_PROVS = d.providers || [];
+
+    SYS_PROVIDER = d.current || '';
+
+    const sel = $('cfgImgChannel');
+
+    /* 「跟随系统设置」是一个**真实选项**（值存空串）：不提供它的话，用户一旦选过
+       某个渠道就被永久钉死 —— 之后在「系统设置」里换生图渠道，这里还按老渠道出图，
+       而界面上完全看不出区别（本项报告里的"渠道不回跟系统"）。 */
+    sel.innerHTML = '<option value="__system__">跟随系统设置（推荐）</option>'
+      + IMG_PROVS.map(p=>`<option value="${p.id}">${p.name}${p.has_key?'':'（未配密钥）'}</option>`).join('');
+
+    /* 必须优先显示**已保存**的渠道，而不是"当前生效渠道"。
+
+       旧实现用 `d.current`：而 current_provider() 返回的是归一后的 id
+
+       （配置走方舟时返回 openai-images），与用户存进 config 的值（如 doubao）不一致 ——
+
+       于是下拉永远显示不到用户自己的设置，一保存就被静默覆盖，刷新后还是显示
+
+       d.current，观感就是"改了保存不了"。 */
+
+    const saved = CFG && CFG.image_channel;
+
+    if(saved && !IMG_PROVS.some(p=>p.id===saved)){
+
+      // 存的值不在候选里（历史/手工配置）：补一个选项，让用户看得见自己存的是什么
+
+      sel.insertAdjacentHTML('beforeend',
+
+        `<option value="${saved}">${saved}（已保存的配置）</option>`);
+
+    }
+
+    sel.value = saved || '__system__';
+
+    onChannelChange(d.current_model || CFG.image_model || '');
+
+  }catch(e){ /* 渠道清单拉取失败不影响其他配置 */ }
+
+}
+
+/* 不向用户暴露生图供应商：内置默认模型的真实 ID 只保留在配置与保存链路里，
+   界面显示中性标签（value 不变，保存结果不受影响）。 */
+function modelLabel(m){
+  return /sensenova/i.test(String(m || '')) ? '默认模型' : m;
+}
+
+function onChannelChange(preferModel){
+
+  const pid = $('cfgImgChannel').value;
+
+  /* 「跟随系统设置」时分不出自己的模型，就把系统当前渠道的模型显示出来 ——
+     否则模型下拉会变成"该渠道未登记模型"，用户以为坏了。 */
+  const p = IMG_PROVS.find(x=>x.id===pid)
+    || (pid==='__system__' ? IMG_PROVS.find(x=>x.id===SYS_PROVIDER) : null);
+
+  const msel = $('cfgImgModel');
+
+  const models = (p && p.models) || [];
+
+  msel.innerHTML = models.map(m=>`<option value="${m}">${modelLabel(m)}</option>`).join('')
+
+    || '<option value="">（该渠道未登记模型，可手填于配置文件）</option>';
+
+  const want = preferModel || CFG.image_model || '';
+
+  if(models.includes(want)) msel.value = want;
+
+}
+
+/* ================= 参数设置：改动即自动保存 =================
+
+   为什么加：用户反馈"配图数量下限/上限、联系电话、推广城市改完之后保存不下来"。
+   查证结论——后端与接口都能正常落库（逐字段真机验证 8/8 通过），问题在交互：
+
+   ① 保存按钮在页面最底部，要滚过三大段提示词文本域才看得见，改完顶部字段极易漏点；
+   ② 没有任何"未保存"提示，切页签/刷新就读回旧值，观感就是"改了没保存"。
+
+   现在改成：停止输入 0.9 秒自动保存 + 明显的未保存/已保存状态 + 切页签自动存 +
+   离开页面前有未保存改动时拦截。 */
+
+let CFG_DIRTY = false, _cfgSaveTimer = null;
+
+const CFG_FIELDS = ['cfgCreative','cfgStylePrompt','cfgCopyPrompt','cfgNMin','cfgNMax',
+                    'cfgPhone','cfgCities','cfgAddress','cfgBanned','cfgSize','cfgImgChannel','cfgImgModel'];
+
+function cfgBuildBody(){
+
+  return {
+
+    creative_prompt: $('cfgCreative').value.trim(),
+
+    style_prompt: $('cfgStylePrompt').value,
+
+    copy_prompt: $('cfgCopyPrompt').value.trim(),
+
+    image_count_min: +$('cfgNMin').value, image_count_max: +$('cfgNMax').value,
+
+    phone: $('cfgPhone').value.trim(),
+
+    cities: $('cfgCities').value.split(/[,，]/).map(s=>s.trim()).filter(Boolean),
+
+    address: $('cfgAddress').value.trim(),
+
+    banned_words: $('cfgBanned').value.split(/[,，]/).map(s=>s.trim()).filter(Boolean),
+
+    image_size: $('cfgSize').value,
+
+    /* 渠道/模型：空值时**不下发**，让后端保留原值。
+
+       旧写法 `|| 'sensenova'` 会在下拉还没填好（loadImgProviders 是异步的）或
+
+       用户清空时，把已配置的方舟渠道静默改回 sensenova —— 又是一次"改完反而没了"。 */
+
+    image_channel: $('cfgImgChannel').value === '__system__' ? '' : ($('cfgImgChannel').value || undefined),
+
+    /* 选了「跟随系统设置」时模型也一起跟随（存空串 = 用系统当前模型）：
+       否则下拉里显示的是**此刻**的系统模型名，一旦存下来就钉死了 ——
+       以后在「系统设置」里换模型，这里还在用旧名字出图。 */
+    image_model: $('cfgImgChannel').value === '__system__' ? ''
+                 : ($('cfgImgModel').value || CFG.image_model || ''),
+
+    schedule: collectSch(),
+
+  };
+
+}
+
+/* 配图数量区间的**自动纠正**。
+
+   旧实现是"下限>上限 → 整单 400 失败"，而基础参数的所有字段（数量、电话、推广城市、
+   尺寸、屏蔽词）都在**同一个 POST** 里 —— 于是只因为数量区间填反了，**电话和城市
+   一起保存不上**（2026-10-19 用户反馈："这四个东西改完都保存不下来"）。
+
+   现在改成：填反了自动对调并**如实告知**，其余字段照常保存。
+   服务端 `save_config` 的校验保留（其它调用方的防线），但页面不再被它整单卡住。 */
+
+function cfgFixRange(body){
+
+  const lo = +body.image_count_min, hi = +body.image_count_max;
+
+  if(!(lo > hi)) return '';
+
+  body.image_count_min = hi; body.image_count_max = lo;
+
+  return `配图数量下限/上限已自动对调（原 ${lo} > ${hi}），已按 ${hi}–${lo} 保存`;
+
+}
+
+function cfgMarkDirty(){
+
+  CFG_DIRTY = true;
+
+  $('cfgSaved').textContent = '有未保存的改动…';
+
+  clearTimeout(_cfgSaveTimer);
+
+  _cfgSaveTimer = setTimeout(cfgAutosave, 900);   /* 停止输入 0.9s 后自动保存 */
+
+}
+
+function cfgBindAutosave(){
+
+  CFG_FIELDS.forEach(id=>{
+
+    const el = $(id); if(!el) return;
+
+    el.addEventListener('input', cfgMarkDirty);
+
+    el.addEventListener('change', cfgMarkDirty);
+
+  });
+
+}
+
+async function cfgAutosave(){
+
+  if(!CFG_DIRTY) return;
+
+  const body = cfgBuildBody();
+
+  const note = cfgFixRange(body);       /* 区间填反 → 自动对调，不拦其它字段 */
+
+  try{
+
+    const r = await fetch('/api/douyin/config', {method:'POST',
+
+      headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+
+    if(r.ok){
+
+      CFG_DIRTY = false;
+
+      $('cfgSaved').textContent = (note ? note + '；' : '') + '已自动保存 ' +
+
+        new Date().toLocaleTimeString('zh-CN',{hour12:false});
+
+      setTimeout(()=>{ if(!CFG_DIRTY) $('cfgSaved').textContent=''; }, 4000);
+
+      loadConfig();          /* 回读：刷新徽章/图例，并把对调后的区间显示出来 */
+
+    }else{
+
+      let msg = '自动保存失败，请稍后重试';
+
+      try{ const d = await r.json(); if(d && d.error) msg = '保存失败：' + d.error; }catch(e){}
+
+      $('cfgSaved').textContent = msg;
+
+    }
+
+  }catch(e){ $('cfgSaved').textContent = '自动保存失败：网络异常'; }
+
+}
+
+async function saveConfig(){
+
+  clearTimeout(_cfgSaveTimer);
+
+  const body = cfgBuildBody();
+
+  const note = cfgFixRange(body);       /* 区间填反 → 自动对调（与自动保存同一口径） */
+
+  const r = await fetch('/api/douyin/config', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+
+  if(r.ok){
+
+    $('cfgSaved').textContent = (note ? note + '；' : '') + '已保存（租户独立）';
+
+  }else{
+
+    /* 把服务端的真实原因显示出来（如"图片张数区间不合法"），不要只写"保存失败" */
+
+    let msg = '保存失败';
+
+    try{ const d = await r.json(); if(d && d.error) msg = '保存失败：' + d.error; }catch(e){}
+
+    $('cfgSaved').textContent = msg;
+
+  }
+
+  if(r.ok) CFG_DIRTY = false;
+
+  setTimeout(()=>{ if(!CFG_DIRTY) $('cfgSaved').textContent=''; }, 2500);
+
+  loadConfig();
+
+}
+
+
+
+/* ================= 计划任务 ================= */
+
+function schRowHtml(t='09:00', c=2, on=true){
+
+  return `<div class="rec sch-row">
+
+    <input type="time" value="${t}">
+
+    <input type="number" value="${c}" min="1" max="20" title="生成条数">
+
+    <label style="font-size:12px;color:var(--ink3);display:flex;align-items:center;gap:4px;font-weight:500"><input type="checkbox" ${on?'checked':''}> 启用</label>
+
+    <button class="cl-btn ghost sm" onclick="this.parentElement.remove()">删除</button>
+
+  </div>`;
+
+}
+
+function renderSch(list){
+
+  $('schRows').innerHTML = (list&&list.length?list:[{time:'09:00',count:2,enabled:true}])
+
+    .map(e=>schRowHtml(e.time,e.count,e.enabled!==false)).join('') || schRowHtml();
+
+}
+
+function addSchRow(){ $('schRows').insertAdjacentHTML('beforeend', schRowHtml('12:00',2,true)); }
+
+function collectSch(){
+
+  /* 只收「生成计划任务」那一组行：`.sch-row` 这个类名**定时发布的档位行也在用**，
+
+     旧实现 `querySelectorAll('.sch-row')` 会把两组行混在一起 —— 定时档位行有
+
+     10 个 input（时间/数量/7 个星期/启用），按位置取 `[tm,cn,cb]` 时 cb 会取到
+
+     "周一"勾选框，导致 enabled 读错、保存出的 schedule 混进定时发布的档位。 */
+
+  return [...document.querySelectorAll('#schRows .sch-row')].map(r=>{
+
+    const [tm,cn,cb] = r.querySelectorAll('input');
+
+    return {time:tm.value, count:+cn.value||1, enabled:cb.checked};
+
+  }).filter(e=>/^\d{1,2}:\d{2}$/.test(e.time));
+
+}
+
+async function saveSchedule(){
+
+  const r = await fetch('/api/douyin/config',{method:'POST',headers:{'Content-Type':'application/json'},
+
+    body:JSON.stringify({schedule:collectSch()})});
+
+  alert(r.ok?'计划已保存':'保存失败');
+
+}
+
+
+
+/* ================= 生成 ================= */
+
+async function doGenerate(){
+
+  /* 运行中守卫：以前不查状态就直接入队，连点两下会让第二个批次的 gen_begin
+
+     清空日志、重置 KPI，先结束的作业 finally 又把 running 置回 false ——
+
+     界面显示"空闲"而队列还在跑。 */
+
+  let st = {};
+
+  try{ st = await (await fetch('/api/douyin/status')).json(); }catch(e){}
+
+  if(st.gen && st.gen.running){
+
+    alert(`生成队列正在运行中（${st.gen.cur||0}/${st.gen.total||0}），请等当前批次结束，或先点「停止队列」`);
+
+    return;
+
+  }
+
+  const r = await fetch('/api/douyin/generate',{method:'POST',headers:{'Content-Type':'application/json'},
+
+    body:JSON.stringify({count:+$('genCount').value||1})});
+
+  const j = await r.json();
+
+  if(!r.ok){ alert(j.error||'失败'); return; }
+
+  pollStatus(true);
+
+}
+
+async function stopGen(){
+
+  if(!confirm('停止生成队列？（已完成的内容包保留）')) return;
+
+  await fetch('/api/douyin/generate/stop',{method:'POST'});
+
+  pollStatus(true);
+
+}
+
+let polling = null, _wasBusy = false;
+
+function renderTerm(el, lines, sig){
+
+  if(!lines || !lines.length) return;
+
+  if(el.dataset.sig === String(sig)) return;
+
+  el.dataset.sig = String(sig);
+
+  delete el.dataset.empty;   // 有日志后退出空态样式, 恢复深色终端观感
+
+  el.innerHTML = lines.map(l=>{
+
+    if(l.length > 160) l = l.slice(0, 160) + ' …';
+
+    let c=''; if(l.includes('\u2705'))c='ok'; else if(l.includes('\u274C'))c='err';
+
+    else if(l.includes('\u26A0')||l.includes('质检')||l.includes('\uD83D\uDED1')||l.includes('\u23F8'))c='w';
+
+    const esc2 = l.replace(/&/g,'&amp;').replace(/</g,'&lt;');
+
+    return `<span class="${c}">${esc2}</span>`;
+
+  }).join('\n');
+
+  el.scrollTop = el.scrollHeight;
+
+}
+
+async function pollStatus(kick){
+
+  if(kick && polling) return;
+
+  let j;
+
+  try{ j = await (await fetch('/api/douyin/status')).json(); }catch(e){ return; }
+
+  const g = j.gen || {};
+
+  const pending = g.pending||0;
+
+  $('runBadge').classList.toggle('on', !!g.running);
+
+  $('btnStop').style.display = (g.running||pending>0)?'':'none';
+
+  $('genChip').className = 'chip' + (g.running?' run':'');
+
+  $('genChip').textContent = g.running ? `生成中 第${g.cur}/${g.total}条` : (pending>0?`待生成${pending}条`:'生成空闲');
+
+  $('genChipInfo').textContent = pending>0 ? `排队${pending}条` : (j.posts && j.posts.length ? `本次已出${j.posts.length}包` : '');
+
+  const tg = $('tGen'); tg.className = 'kpi' + (g.running?' run':'');
+
+  $('tvGen').innerHTML = g.running ? `${g.cur}<small>/ ${g.total} 条</small>` : (pending>0?`${pending}<small>条排队</small>`:'空闲');
+
+  renderTerm($('term'), j.gen_logs, (j.gen_logs||[]).length);
+
+  const pub = j.pub || {};
+
+  $('pubBadge').classList.toggle('on', !!pub.active);
+
+  $('pubChip').className = 'chip' + (pub.active ? (pub.paused?' pause':' run') : '');
+
+  $('pubChip').textContent = pub.active
+
+    ? (pub.paused ? `发布已暂停` : `发布中 ${pub.done}/${pub.total}`)
+
+    : '发布空闲';
+
+  $('pubChipInfo').textContent = pub.active ? `待发${pub.waiting}任务${pub.cur_account?' · 当前: '+pub.cur_account:''}` : '';
+
+  $('btnPause').style.display = (pub.active && !pub.paused) ? '' : 'none';
+
+  $('btnResume').style.display = (pub.active && pub.paused) ? '' : 'none';
+
+  const tp = $('tPub'); tp.className = 'kpi' + (pub.active ? (pub.paused?' warn':' run') : '');
+
+  $('tvPub').innerHTML = pub.active ? `${pub.done}<small>/ ${pub.total} · 待${pub.waiting}</small>` : '空闲';
+
+  renderTerm($('pubTerm'), j.pub_logs, (j.pub_logs||[]).length);
+
+  const busy = !!(g.running || pub.active);
+
+  if(busy || kick){ clearTimeout(polling); polling = setTimeout(pollStatus, 2000); _wasBusy = true; }
+
+  else {
+
+    /* 链条结束必须把 polling 清成 null：它存的是 setTimeout 的返回值，从不置空时
+
+       下一次 `pollStatus(true)` 会被 `if(kick && polling) return` 直接挡掉 ——
+
+       表现为「第 2 次点开始生成/发布后，进度条/日志/KPI/停止按钮全静止」，
+
+       而队列其实还在跑，且用户无法点「停止」，只能刷新页面。 */
+
+    polling = null;
+
+    if(kick || _wasBusy) loadPacks();   /* kick=要立即看结果；_wasBusy=队列刚跑完，刷作品库 */
+
+    else loadLedger().then(pruneSelected);   /* 后台发掉的选择项要及时清，否则会重复上架 */
+
+    _wasBusy = false;
+
+  }
+
+}
+
+
+
+/* 清掉已发布/已消失的选择项：后台（定时/循环）发掉的包不会触发 loadPacks，
+
+   仍留在 SELECTED 里 → 用户再点「发布」就会把同一作品重复上架。 */
+
+function pruneSelected(){
+
+  if(!SELECTED.size) return;
+
+  let changed = false;
+
+  [...SELECTED].forEach(id=>{
+
+    const p = PACKS.find(x=>String(x.id)===id);
+
+    if(!p || !packSelectable(p)){ SELECTED.delete(id); changed = true; }
+
+  });
+
+  if(changed) renderPage();
+
+}
+
+
+
+/* ================= 作品库 ================= */
+
+let LEDGER = {}, PACKS = [], VPACKS = [], PAGE = 1, PGSIZE = 8, SELECTED = new Set();
+
+/* 池内**可用**的号（懒加载一次）。`each` 口径下"这包发完了没有"要拿它当分母 ——
+   矩阵铺开是有过程的，光看"账本里有一条成功"会把"12 个号只发了 1 个"当成"发完了"，
+   用户看到的正是"设置了所有账号发布，只有一个号发出去"这个现象。 */
+let POOL_IDS = null;
+
+async function loadPool(){
+
+  if(POOL_IDS) return POOL_IDS;
+
+  try{
+
+    const a = await (await fetch('/api/douyin/accounts')).json();
+
+    POOL_IDS = new Set((Array.isArray(a)?a:[]).filter(x=>x.status===1).map(x=>String(x.id)));
+
+  }catch(e){ POOL_IDS = null; }
+
+  return POOL_IDS;
+
+}
+
+/* 这一包已经在哪些号上发成功过（账本按 account_id 记） */
+function packOkAccounts(p){
+
+  return new Set((LEDGER[p.id]||[]).filter(r=>r.ok).map(r=>String(r.account_id)));
+
+}
+
+/* each 口径：**每个可用号都发过**才算发完；rotate 口径：发过一次就算完。 */
+function packAllSent(p){
+
+  if(!packPublished(p)) return false;
+
+  if(PUB_MODE !== 'each' || !POOL_IDS || !POOL_IDS.size) return true;
+
+  const done = packOkAccounts(p);
+
+  return [...POOL_IDS].every(id=>done.has(id));
+
+}
+
+/* 待发布口径 = 还没铺满（each）/ 还没发过（rotate）。列表筛选、全选、计数共用它。 */
+function packTodo(p){ return !packAllSent(p); }
+
+function packSpan(p){
+
+  const done = packOkAccounts(p).size;
+
+  return {done: done, total: Math.max(POOL_IDS ? POOL_IDS.size : 0, done)};
+
+}
+
+async function loadLedger(){
+
+  try{ LEDGER = await (await fetch('/api/douyin/ledger')).json(); }catch(e){ LEDGER = {}; }
+
+}
+
+function packPublished(p){ return (LEDGER[p.id]||[]).some(r=>r.ok); }
+
+/* 勾选闸门（与上面 packPublished 的"历史/筛选"语义分开）：
+   each 口径下一个包发到多个号是有过程的（#40 先发了 1 个号、其余还没发），
+   所以"发过"的包仍要能再选上 —— 服务端按「包×号」跳过已发过的，只补没发过的号。
+   rotate 口径下一个包只占一个号，没有补充语义，发过即不可选。 */
+function packSelectable(p){ return !packPublished(p) || PUB_MODE === 'each'; }
+
+/* 三个谓词各管一件事，别再混用：`packPublished` 历史（发过没有）/ `packTodo`
+   进度（铺满没有，列表筛选与计数用）/ `packSelectable` 闸门（能不能再选上）。 */
+
+function packFailed(p){ const r = LEDGER[p.id]||[]; return r.length && !r.some(x=>x.ok); }
+
+/* `packFails` = 最近一次成功**之后**连续失败了几次（与后端 douyin_publish.state_of
+   同一口径：成功会清零失败计数）。`packGivenUp` = 连续失败已达自动重发上限。
+
+   为什么要这两个：循环发布以前对失败包**无限重试** —— 一个坏包每 5 分钟被重新捞出来
+   发一次，永远占着一个发布位。现在后端第 3 次失败就停自动重发（MAX_AUTO_ATTEMPTS=3），
+   但用户得**看得见**这件事，否则只会觉得"这个包怎么再也不发了"。 */
+const MAX_AUTO_ATTEMPTS = 3;
+
+function packFails(p){
+  const r = LEDGER[p.id]||[]; let n = 0;
+  for(let i=r.length-1; i>=0; i--){ if(r[i].ok) break; n++; }
+  return n;
+}
+
+function packGivenUp(p){ return packFails(p) >= MAX_AUTO_ATTEMPTS; }
+
+/* 已排期、还没到点（或正在补发窗口内）的作品。"已错过"不算进来 ——
+   它需要用户处理，但不在"等着发"这件事上，卡片上的红标会点明。 */
+function packScheduled(p){ return !!p.publish_at && p.publish_state==='pending'; }
+
+function applyFilter(){
+
+  VPACKS = PACKS.filter(p=> FILTER==='all' ? true : FILTER==='done' ? packPublished(p) : FILTER==='fail' ? packFailed(p) : FILTER==='sched' ? packScheduled(p) : packTodo(p));
+
+}
+
+function setFilter(el){
+
+  document.querySelectorAll('.fchip').forEach(c=>c.classList.remove('on'));
+
+  el.classList.add('on');
+
+  FILTER = el.dataset.f; PAGE = 1; applyFilter(); renderPage();
+
+}
+
+async function loadPacks(){
+
+  const list = await (await fetch('/api/douyin/posts')).json();
+
+  await loadPool();
+
+  await loadLedger();
+
+  PACKS = list.slice().sort((a,b)=>{
+
+    const pa = packTodo(a)?0:1, pb = packTodo(b)?0:1;   // 还没铺满的排前面
+
+    if(pa!==pb) return pa-pb;
+
+    return (b.id>a.id)?1:(b.id<a.id)?-1:0;
+
+  });
+
+  applyFilter();
+
+  const todo = PACKS.filter(packTodo).length;
+
+  $('tvTodo').textContent = todo;
+
+  if ($('pc-stock')) $('pc-stock').textContent = todo + ' 条待发';
+
+  if ($('pc-total')) $('pc-total').textContent = PACKS.length + ' 条';
+
+  $('tvTotal').textContent = PACKS.length;
+
+  const tb = $('tvBar');
+
+  if (tb) tb.style.width = (PACKS.length ? Math.round(todo / PACKS.length * 100) : 0) + '%';
+
+  const tKey = new Date().toLocaleDateString('sv');
+
+  const today = PACKS.filter(p=>(p.time||'').startsWith(tKey)).length;
+
+  $('packCount').textContent = `共 ${PACKS.length} 包 · 待发 ${todo} · 今日产出 ${today}`;
+
+  $('fcTodo').textContent = todo; $('fcDone').textContent = PACKS.length - todo;
+
+  $('fcFail').textContent = PACKS.filter(p=>packFailed(p)).length; $('fcAll').textContent = PACKS.length;
+
+  $('fcSched').textContent = PACKS.filter(p=>packScheduled(p)).length;
+
+  if(!PACKS.length){ $('packs').innerHTML = '<div class="empty"><div class="e-ic"><i class="ic" data-ic="archive" data-sz="24"></i></div><div class="e-t">还没有内容包</div><div class="e-s">去「生成台」点「开始生成」，产出第一批内容包</div></div>'; if(window.ICONS) ICONS.mount($('packs')); $('pager').innerHTML=''; SELECTED.clear(); $('selInfo').textContent='已选 0 包'; return; }
+
+  /* id 类型必须归一：PACKS 里 p.id 是**数字**，而 onclick 传进来的是**字符串**。
+     以前直接 `p.id===id` 永远不匹配 → 这里会把所有勾选全部删掉。 */
+  [...SELECTED].forEach(id=>{ if(!PACKS.find(p=>String(p.id)===String(id) && packSelectable(p))) SELECTED.delete(id); });
+
+  if(!VPACKS.length){ $('packs').innerHTML = '<div class="empty"><div class="e-ic"><i class="ic" data-ic="filter" data-sz="24"></i></div><div class="e-t">该筛选下没有内容包</div><div class="e-s">换一个筛选条件试试</div></div>'; if(window.ICONS) ICONS.mount($('packs')); $('pager').innerHTML=''; SELECTED.clear(); $('selInfo').textContent='已选 0 包'; return; }
+
+  renderPage();
+
+}
+
+function esc(s){ return String(s??'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function renderPage(){
+
+  const total = VPACKS.length, pages = Math.max(1, Math.ceil(total/PGSIZE));
+
+  if(PAGE>pages) PAGE=pages; if(PAGE<1) PAGE=1;
+
+  const slice = VPACKS.slice((PAGE-1)*PGSIZE, PAGE*PGSIZE);
+
+  $('packs').innerHTML = slice.map(p=>{
+
+    const pubs = LEDGER[p.id]||[];
+
+    const okd = pubs.filter(r=>r.ok);
+
+    const stBadge = okd.length
+
+      ? (packAllSent(p)
+
+        ? `<span class="pill ok">${esc(okd[okd.length-1].account)} ${okd[okd.length-1].time.slice(5,16)}</span>`
+
+        : `<span class="pill ok" title="已发到：${esc(okd.map(r=>r.account).join('、'))}">已发 ${packSpan(p).done}/${packSpan(p).total} 号 · 待补发</span>`)
+
+      : (pubs.length
+
+          ? (packGivenUp(p)
+
+              ? `<span class="pill warn" title="自动重发已停：连失败 ${packFails(p)} 次。改稿后可在下方手动重发">失败 ${packFails(p)} 次 · 已停自动重发</span>`
+
+              : `<span class="pill warn">失败可重发</span>`)
+
+          : `<span class="pill warn">待发布</span>`);
+
+    /* 定时标记（每条作品自己的一次性发布时间）：待发 = 品牌色；已派单 = 绿；
+       「已错过」= 红 —— 到点时应用没开着且超过补发窗口，这条要用户改时间或手动发，
+       所以必须显眼，不能只留个看不出所以然的时间戳。 */
+    const pubWhen = (p.publish_at||'').slice(5,16);
+
+    const pubBadge = !p.publish_at ? '' :
+
+      p.publish_state==='fired'
+        ? `<span class="pill ok" title="定时已派单：${esc(p.publish_fired_at)}，覆盖 ${p.publish_accounts||0} 个可用号">⏰ ${pubWhen} 已发</span>`
+
+      : p.publish_state==='missed'
+        ? `<span class="pill bad" title="到点未发（超过 3 小时补发窗口）：应用当时没开着。请重设时间或手动发布">⏰ ${pubWhen} 已错过</span>`
+
+      : `<span class="pill brand" title="到点自动发到所有可用号（一次性）">⏰ ${pubWhen} 定时</span>`;
+
+    const imgs = p.images||[];
+
+    const nShow = imgs.length>4 ? 3 : Math.min(imgs.length, 4);
+
+    const shown4 = imgs.slice(0, nShow).map(u=>
+
+      `<div class="th"><img src="${u}" loading="lazy" onclick="zoomImg(this.src)"></div>`
+
+    ).join('') + (imgs.length>4 ? `<div class="th"><img src="${imgs[3]}" style="filter:brightness(.7)" onclick="zoomImg('${imgs[3]}')"><div class="more" onclick="zoomImg('${imgs[3]}')">+${imgs.length-4}</div></div>` : '');
+
+    const canSel = packSelectable(p);
+
+    return `
+
+    <div class="icard flat">
+
+      <div class="icard-h">
+
+        ${canSel?`<input type="checkbox" class="pick" ${SELECTED.has(String(p.id))?'checked':''} onchange="toggleSel('${p.id}', this.checked)">`:''}
+
+        <span class="t">#${p.id} ${esc(p.title)}</span>
+
+        <span class="x">${pubBadge}${stBadge}</span>
+
+      </div>
+
+      <div class="icard-tags">${(p.tags||[]).map(t=>`<span class="pill brand">#${esc(t)}</span>`).join('')}</div>
+
+      <div class="imgs">${shown4}</div>
+
+      <div class="icard-b">${esc(p.description)}</div>
+
+      <div class="icard-f">
+
+        <span class="meta">${p.time} · ${esc(p.city||'')} · ${esc(p.brand||'')} · 电话 ${esc(p.phone||'')} · 配图${imgs.length}张${p.qc&&p.qc.length?` · <span style="color:var(--warn);font-weight:600">质检: ${esc(p.qc.join('、'))}</span>`:''}</span>
+
+        <span class="ops">
+
+          ${canSel?`<button class="cl-btn sm" onclick="openPub('${p.id}')"><i class="ic" data-ic="send" data-sz="16"></i>发布</button>`:''}
+
+          <button class="cl-btn ghost sm" onclick="openTimePicker('${p.id}', '${p.publish_at||''}')" title="设置这条作品的定时发布">⏰ 定时</button>
+
+          <button class="cl-btn ghost sm" onclick="openEdit('${p.id}')"><i class="ic" data-ic="pencil" data-sz="16"></i>编辑</button>
+
+          <button class="cl-btn ghost sm" onclick="openLocPreset('${p.id}')" title="给这条作品预设每个号的定位">定位</button>
+
+          <button class="cl-btn danger sm" onclick="delPack('${p.id}')"><i class="ic" data-ic="trash" data-sz="16"></i>删除</button>
+
+        </span>
+
+      </div>
+
+    </div>`;
+
+  }).join('');
+
+  if(window.ICONS) ICONS.mount($('packs'));
+
+  const selTodo = PACKS.filter(packTodo).length;
+
+  $('selAll').checked = SELECTED.size>0 && SELECTED.size===selTodo;
+
+  $('selInfo').textContent = `已选 ${SELECTED.size} 包(可选${selTodo})`;
+
+  let btns = `<button ${PAGE===1?'disabled':''} onclick="gotoPage(${PAGE-1})"><i class="ic" data-ic="chevronLeft" data-sz="16"></i>上一页</button>`;
+
+  const show = pagerNums(PAGE, pages);
+
+  btns += show.map(n=> n==='...' ? `<span class="pg-info">…</span>` :
+
+    `<button class="${n===PAGE?'on':''}" onclick="gotoPage(${n})">${n}</button>`).join('');
+
+  btns += `<button ${PAGE===pages?'disabled':''} onclick="gotoPage(${PAGE+1})">下一页<i class="ic" data-ic="chevronRight" data-sz="16"></i></button>`;
+
+  $('pager').innerHTML = `<div class="pager">${btns}<span class="pg-info">第 ${PAGE}/${pages} 页 · 本筛选共${total}包</span></div>`;
+
+  if(window.ICONS) ICONS.mount($('pager'));
+
+}
+
+function pagerNums(cur, total){
+
+  if(total<=7) return Array.from({length:total},(_,i)=>i+1);
+
+  const s2 = new Set([1,2,cur-1,cur,cur+1,total-1,total]);
+
+  const arr = [...s2].filter(n=>n>=1&&n<=total).sort((a,b)=>a-b);
+
+  const out=[]; let prev=0;
+
+  for(const n of arr){ if(n-prev>1) out.push('...'); out.push(n); prev=n; }
+
+  return out;
+
+}
+
+function gotoPage(n){ PAGE=n; renderPage(); }
+
+function toggleSel(id, on){ const k=String(id); on?SELECTED.add(k):SELECTED.delete(k); renderPage(); }
+
+function toggleSelAll(on){
+
+  if(on) PACKS.filter(packTodo).forEach(p=>SELECTED.add(String(p.id)));
+
+  else SELECTED.clear();
+
+  renderPage();
+
+}
+
+function zoomImg(src){ const z=$('imgzoom'); z.querySelector('img').src=src; z.classList.add('on'); }
+
+
+
+/* ================= 编辑/删除 ================= */
+
+let ED = null;
+
+function openEdit(id){
+
+  /* 必须归一类型：onclick 传进来是字符串，PACKS 里 p.id 是数字。
+     以前 `x.id===id` 恒 false → 直接 return，弹窗永远打不开（点了像没反应）。 */
+  const p = PACKS.find(x=>String(x.id)===String(id)); if(!p) return;
+
+  ED = p;
+
+  $('edPackName').textContent = '#'+id;
+
+  $('edTitle').value = p.title||'';
+
+  $('edDesc').value = p.description||'';
+
+  $('edTags').value = (p.tags||[]).join(',');
+
+  $('edAt').value = p.publish_at||'';
+
+  $('edImgs').innerHTML = (p.images||[]).map(u=>{
+
+    const bn = u.split('/').pop();
+
+    return `<div class="th" style="width:72px;height:96px"><img src="${u}"><button class="rm" title="移除这张图" onclick="rmImg(this,'${bn}')"><i class="ic" data-ic="close" data-sz="16"></i></button><input type="hidden" class="keep" value="${bn}"></div>`;
+
+  }).join('');
+
+  if(window.ICONS) ICONS.mount($('edImgs'));
+
+  $('editMask').classList.add('on');
+
+}
+
+function rmImg(btn, bn){ btn.closest('.th').remove(); }
+
+function closeEdit(){ $('editMask').classList.remove('on'); }
+
+async function saveEdit(){
+
+  if(!ED) return;
+
+  const keeps = [...document.querySelectorAll('#edImgs .keep')].map(i=>i.value);
+
+  if(!keeps.length){ alert('至少保留1张图'); return; }
+
+  const body = {pack_id: ED.id, title: $('edTitle').value, description: $('edDesc').value,
+
+                tags: $('edTags').value, images: keeps, publish_at: $('edAt').value.trim()};
+
+  const r = await fetch('/api/douyin/pack/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+
+  const j = await r.json();
+
+  /* 也要认 `ok:false`：定时时间写错时后端返回 200 + ok:false（不是 HTTP 错误），
+     原来只看 `r.ok` 会把"保存失败"当成成功、静默关窗，用户以为改上了。 */
+  if(!r.ok || j.ok===false){ alert(j.error||'保存失败'); return; }
+
+  closeEdit(); loadPacks(); pollStatus(true);
+
+}
+
+async function delPack(id){
+
+  /* 已发布过的包要额外警示：删本地不撤销平台内容，且账本会留孤儿记录 */
+
+  const row = PACKS.find(p=>String(p.id)===String(id));
+
+  const done = !!(row && packPublished(row));
+
+  const tip = done
+
+    ? `内容包 #${id} 已经发布过。\n删除本地内容包不会撤销已发布的内容，账本也会留下对不上的记录。\n仍要删除吗？`
+
+    : `确定删除内容包 #${id}？文案与图片一并删除, 不可恢复`;
+
+  if(!confirm(tip)) return;
+
+  const r = await fetch('/api/douyin/pack/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pack_id:id})});
+
+  const j = await r.json();
+
+  /* 后端失败返的是 HTTP 200 + {ok:false}（不是 4xx）：只判 r.ok 会把失败当成功，
+
+     用户以为删掉了，其实包还在，反复点也没有任何提示。 */
+
+  if(!r.ok || j.ok === false){ alert(j.error||'删除失败'); return; }
+
+  SELECTED.delete(String(id)); loadPacks();
+
+}
+
+
+
+/* ================= 发布 ================= */
+
+let PUB_BATCH = [], PUB_ACCTS = new Set();
+
+/* 分发口径（取值与服务端 douyin_publish.MODES 同名）：
+   each   = 一包发到**所有**勾选的号（每号各一份）；
+   rotate = 一包只发**一个**号（多包多号轮流摊开）。
+   默认 each：弹窗里的预览一直是"N 个内容包 × M 个账号，每号约 X 包"（多号分发），
+   2026-10-19 用户实测投诉的正是"勾了所有号只发出去 1 条"。选了就记住（存回配置）。 */
+let PUB_MODE = 'each';
+
+let _pubPreviewTimer = null;
+
+async function openPub(packId, batch){
+
+  const ids = batch ? [...SELECTED] : (packId ? [packId] : []);
+
+  if(!ids.length){ alert('请先选择要发布的内容包'); return; }
+
+  PUB_BATCH = ids; PUB_ACCTS = new Set();
+
+  if(CFG && CFG.publish_mode && (CFG.publish_mode==='each'||CFG.publish_mode==='rotate')) PUB_MODE = CFG.publish_mode;
+
+  $('pubMode').value = PUB_MODE;
+
+  $('pubPackName').textContent = batch ? `${ids.length} 个内容包` : '#'+packId;
+
+  $('pubMask').classList.add('on');
+
+  $('pubModeHint').textContent = pubModeHelp();
+
+  $('pubAssign').textContent = '';
+
+  $('acctList').innerHTML = '<span class="hint">加载蚁小二抖音账号…</span>';
+
+  try{
+
+    const accts = await (await fetch('/api/douyin/accounts')).json();
+
+    if(!Array.isArray(accts) || !accts.length){ $('acctList').innerHTML = '<span class="hint" style="color:var(--bad)">未获取到抖音账号（蚁小二未配置或掉线）</span>'; return; }
+
+    $('acctList').innerHTML = accts.map(a=>{
+
+      const st = a.frozen?['fz','冻结']:a.status===1?['on','在线']:['off','掉线'];
+
+      const dis = a.frozen||a.status!==1;
+
+      const cb = `<input type="checkbox" class="acb" value="${a.id}" data-nm="${esc(a.name||a.id)}" onchange="acctChanged()" ${dis?'disabled':''}>`;
+
+      return `<div class="acct" ${dis?'style="opacity:.5"':''}>
+
+        ${cb}<span class="nm">${esc(a.name||a.id)}</span>
+
+        <span class="st ${st[0]}">${st[1]}</span></div>`;
+
+    }).join('');
+
+    PUB_ACCT_NAMES = {}; accts.forEach(a=>{ PUB_ACCT_NAMES[a.id] = a.name || a.id; });
+
+    acctChanged();
+
+  }catch(e){ $('acctList').innerHTML = '<span class="hint" style="color:var(--bad)">账号加载失败: '+e+'</span>'; }
+
+}
+
+function acctChanged(){
+
+  PUB_ACCTS = new Set([...document.querySelectorAll('.acb:checked')].map(c=>c.value));
+
+  const n = PUB_BATCH.length, m = PUB_ACCTS.size;
+
+  const nms = [...document.querySelectorAll('.acb:checked')].map(c=>c.dataset.nm).join('、');
+
+  $('pubAssign').textContent = m ? `${n}个内容包 × ${m}个账号（${nms}）　正按服务端口径核算…` : '';
+
+  schedulePubPreview();
+
+  schedulePubLoc();
+
+  document.querySelectorAll('.acct').forEach(el=>{
+
+    const cb = el.querySelector('.acb');
+
+    el.classList.toggle('sel', cb && cb.checked);
+
+  });
+
+}
+
+function closePub(){ $('pubMask').classList.remove('on'); }
+
+/* 口径说明文案（与后端 plan() 的行为一一对应） */
+function pubModeHelp(){
+
+  return PUB_MODE === 'rotate'
+
+    ? '一包只落一个号（多包时依次摊到各号），已发过的包会被跳过'
+
+    : '每个勾选的号各发一份；已发到过的号会自动跳过，再发一次只补没发过的号';
+
+}
+
+/* ================= 定位（发布前逐号可改 + 作品库预设） ================= */
+
+let PUB_LOC = [], PUB_ACCT_NAMES = {}, _pubLocTimer = null, LOC_POOL = null;
+
+let LOC_PACK = null, LOC_ROWS = [];
+
+async function ensureLocPool(){
+
+  if(LOC_POOL && (LOC_POOL.regions||[]).length) return LOC_POOL;
+
+  LOC_POOL = await (await fetch('/api/douyin/poi-pool')).json();
+
+  return LOC_POOL;
+
+}
+
+function poiSelectOptions(region, poiId){
+  const regions = (LOC_POOL&&LOC_POOL.regions)||[];
+  const r = regions.find(x=>x.name===region);
+  const opts = (r?r.pois:[]).map(p=>
+    `<option value="${esc(p.id)}" ${p.id===poiId?'selected':''}>${esc(p.name)}${p.used?'（本轮已用）':''}</option>`).join('');
+  return '<option value="">自动</option>' + opts;
+}
+
+function currentPicks(){
+  return PUB_LOC.filter(x=>x.poi_id).map(x=>
+    ({pack_id:x.pack_id, account_id:x.account_id, poi_id:x.poi_id}));
+}
+
+function schedulePubLoc(){ clearTimeout(_pubLocTimer); _pubLocTimer = setTimeout(loadPubLoc, 320); }
+
+async function loadPubLoc(){
+  if(!PUB_BATCH.length || !PUB_ACCTS.size){ $('pubLoc').innerHTML=''; PUB_LOC=[]; return; }
+  $('pubLoc').innerHTML='<span class="hint">核算定位…</span>';
+  try{
+    await ensureLocPool();
+    const d = await (await fetch('/api/douyin/poi-pool/preview',{method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({pack_ids:PUB_BATCH, account_ids:[...PUB_ACCTS],
+                           mode:PUB_MODE, locations:currentPicks()})})).json();
+    PUB_LOC = d.items || [];
+    renderPubLoc();
+  }catch(e){ $('pubLoc').innerHTML='<span class="hint" style="color:var(--bad)">定位核算失败：'+esc(e)+'</span>'; }
+}
+
+function renderPubLoc(){
+  const regions = (LOC_POOL&&LOC_POOL.regions)||[];
+  $('pubLoc').innerHTML = PUB_LOC.length ? PUB_LOC.map((x,i)=>{
+    const nm = PUB_ACCT_NAMES[x.account_id] || x.account_id;
+    const src = x.source==='manual'?'手选':(x.source==='preset'?'预设':'自动');
+    return `<div style="display:flex;gap:6px;align-items:center">
+      <div style="width:170px;font-size:12px">${esc(nm)}<span class="hint" style="margin:0 0 0 6px">${src}</span></div>
+      <select class="cl-input" style="max-width:130px" onchange="pubLocRegion(${i},this.value)">
+        <option value="">自动</option>
+        ${regions.map(r=>`<option value="${esc(r.name)}" ${r.name===x.region?'selected':''}>${esc(r.name)}</option>`).join('')}
+      </select>
+      <select class="cl-input" style="max-width:250px" onchange="pubLocPoi(${i},this.value)">
+        ${poiSelectOptions(x.region, x.poi_id)}
+      </select>
+    </div>`;
+  }).join('') : '<span class="hint">无可用条目（账号都已发过 / 额度已满）</span>';
+}
+
+function pubLocRegion(i, region){
+  PUB_LOC[i].region = region; PUB_LOC[i].poi_id = '';
+  PUB_LOC[i].source = region ? 'manual' : 'auto';
+  renderPubLoc();
+}
+
+function pubLocPoi(i, poiId){
+  PUB_LOC[i].poi_id = poiId;
+  const regions = (LOC_POOL&&LOC_POOL.regions)||[];
+  const r = regions.find(x=>(x.pois||[]).some(p=>p.id===poiId));
+  PUB_LOC[i].region = r ? r.name : '';
+  PUB_LOC[i].source = poiId ? 'manual' : 'auto';
+  renderPubLoc();
+}
+
+/* 作品库：给某条作品预设每个号的定位（留「自动」= 发布时自动分配） */
+async function openLocPreset(packId){
+  LOC_PACK = String(packId);
+  $('locPresetPack').textContent = '#'+packId;
+  $('locPresetMask').classList.add('on');
+  $('locPresetRows').innerHTML = '<span class="hint">加载中…</span>';
+  try{
+    const pool = await ensureLocPool();
+    const accts = await (await fetch('/api/douyin/accounts')).json();
+    const ov = ((await (await fetch('/api/douyin/poi-override?pack_id='+encodeURIComponent(packId))).json()).overrides)||{};
+    const index = {};
+    (pool.regions||[]).forEach(r=>(r.pois||[]).forEach(p=>{ index[p.id]=r.name; }));
+    LOC_ROWS = (Array.isArray(accts)?accts:[]).map(a=>{
+      const poi = ov[a.id] || '';
+      return {account_id:a.id, name:a.name||a.id, poi_id:poi, region:index[poi]||''};
+    });
+    renderLocPreset();
+  }catch(e){ $('locPresetRows').innerHTML = '<span class="hint" style="color:var(--bad)">加载失败：'+esc(e)+'</span>'; }
+}
+
+function renderLocPreset(){
+  const regions = (LOC_POOL&&LOC_POOL.regions)||[];
+  $('locPresetRows').innerHTML = LOC_ROWS.length ? LOC_ROWS.map((r,i)=>
+    `<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+      <div style="width:190px;font-size:13px">${esc(r.name)}</div>
+      <select class="cl-input" style="max-width:140px" onchange="locRegionChange(${i},this.value)">
+        <option value="">自动</option>
+        ${regions.map(x=>`<option value="${esc(x.name)}" ${x.name===r.region?'selected':''}>${esc(x.name)}</option>`).join('')}
+      </select>
+      <select class="cl-input" style="max-width:250px" onchange="locPoiChange(${i},this.value)">
+        ${poiSelectOptions(r.region, r.poi_id)}
+      </select>
+    </div>`).join('') : '<span class="hint">无账号</span>';
+}
+
+function locRegionChange(i, region){
+  LOC_ROWS[i].region = region; LOC_ROWS[i].poi_id = '';
+  renderLocPreset();
+}
+
+function locPoiChange(i, poiId){
+  LOC_ROWS[i].poi_id = poiId;
+  const regions = (LOC_POOL&&LOC_POOL.regions)||[];
+  const r = regions.find(x=>(x.pois||[]).some(p=>p.id===poiId));
+  LOC_ROWS[i].region = r ? r.name : '';
+  renderLocPreset();
+}
+
+async function saveLocPreset(){
+  for(const r of LOC_ROWS){
+    try{
+      await fetch('/api/douyin/poi-override',{method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({pack_id:LOC_PACK, account_id:r.account_id, poi_id:r.poi_id||''})});
+    }catch(e){}
+  }
+  closeLocPreset(); LOC_POOL = null;
+}
+
+function closeLocPreset(){ $('locPresetMask').classList.remove('on'); }
+
+/* ================= 定时发布（滚动选择器） ================= */
+
+let TIME_PACK = null, TIME_MODE = 'api';
+
+let TIME_SEL = {y: 0, m: 1, d: 1, h: 9, mi: 0};
+
+let TIME_LISTS = {mon: [], day: [], hour: [], min: []};
+
+let TIME_TIMERS = {};
+
+const WHEEL_H = 44;
+
+function daysIn(y, m){ return new Date(y, m, 0).getDate(); }
+
+function dayList(){ return Array.from({length: daysIn(TIME_SEL.y, TIME_SEL.m)}, (_, i) => i + 1); }
+
+function buildWheel(el, values, sel){
+  el.innerHTML = '<div class="opt"></div><div class="opt"></div>' +
+    values.map(v => `<div class="opt" data-v="${v}">${String(v).padStart(2, '0')}</div>`).join('') +
+    '<div class="opt"></div><div class="opt"></div>';
+  const idx = Math.max(0, values.indexOf(sel));
+  el.scrollTop = idx * WHEEL_H;
+  markWheel(el);
+}
+
+function markWheel(el){
+  const idx = Math.round(el.scrollTop / WHEEL_H);
+  [...el.querySelectorAll('.opt')].forEach((o, i) => o.classList.toggle('on', i === idx + 2));
+}
+
+function wheelScroll(key, el){
+  markWheel(el);
+  clearTimeout(TIME_TIMERS[key]);
+  TIME_TIMERS[key] = setTimeout(() => {
+    const idx = Math.round(el.scrollTop / WHEEL_H);
+    const vals = TIME_LISTS[key];
+    if(!vals.length) return;
+    const v = vals[Math.min(Math.max(idx, 0), vals.length - 1)];
+    if(key === 'mon'){
+      TIME_SEL.m = v;
+      TIME_SEL.d = Math.min(TIME_SEL.d, daysIn(TIME_SEL.y, v));
+      TIME_LISTS.day = dayList();
+      buildWheel($('wDay'), TIME_LISTS.day, TIME_SEL.d);
+    } else if(key === 'day') TIME_SEL.d = v;
+    else if(key === 'hour') TIME_SEL.h = v;
+    else TIME_SEL.mi = v;
+    updateTimePreview();
+  }, 120);
+}
+
+function updateTimePreview(){
+  $('timePreview').textContent =
+    `${TIME_SEL.y}年${TIME_SEL.m}月${TIME_SEL.d}日 ` +
+    `${String(TIME_SEL.h).padStart(2, '0')}:${String(TIME_SEL.mi).padStart(2, '0')}`;
+}
+
+function openTimePicker(packId, current, mode){
+  TIME_PACK = packId;
+  TIME_MODE = mode || 'api';
+  const now = new Date();
+  let base = null;
+  if(current){
+    const t = new Date(String(current).replace(' ', 'T'));
+    if(!isNaN(t)) base = t;
+  }
+  if(!base) base = new Date(now.getTime() + 3600 * 1000);
+  TIME_SEL = {y: base.getFullYear(), m: base.getMonth() + 1, d: base.getDate(),
+              h: base.getHours(), mi: Math.floor(base.getMinutes() / 5) * 5};
+  TIME_LISTS.mon = Array.from({length: 12}, (_, i) => i + 1);
+  TIME_LISTS.day = dayList();
+  TIME_LISTS.hour = Array.from({length: 24}, (_, i) => i);
+  TIME_LISTS.min = Array.from({length: 12}, (_, i) => i * 5);
+  buildWheel($('wMon'), TIME_LISTS.mon, TIME_SEL.m);
+  buildWheel($('wDay'), TIME_LISTS.day, TIME_SEL.d);
+  buildWheel($('wHour'), TIME_LISTS.hour, TIME_SEL.h);
+  buildWheel($('wMin'), TIME_LISTS.min, TIME_SEL.mi);
+  updateTimePreview();
+  $('timeMask').classList.add('on');
+}
+
+function timeString(){
+  const now = new Date();
+  let y = now.getFullYear();
+  const t = new Date(y, TIME_SEL.m - 1, TIME_SEL.d, TIME_SEL.h, TIME_SEL.mi, 0, 0);
+  if(t.getTime() <= now.getTime()) y += 1;
+  return `${y}-${String(TIME_SEL.m).padStart(2, '0')}-${String(TIME_SEL.d).padStart(2, '0')} ` +
+         `${String(TIME_SEL.h).padStart(2, '0')}:${String(TIME_SEL.mi).padStart(2, '0')}`;
+}
+
+async function saveTimed(at){
+  const r = await fetch('/api/douyin/timed', {method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({pack_id: TIME_PACK, at: at})});
+  const j = await r.json();
+  if(!r.ok || j.ok === false){ alert(j.error || '设置失败'); return false; }
+  return true;
+}
+
+async function confirmTimePick(){
+  const at = timeString();
+  if(TIME_MODE === 'edit'){ $('edAt').value = at; closeTimePicker(); return; }
+  if(await saveTimed(at)){ closeTimePicker(); loadPacks(); }
+}
+
+async function clearTimePick(){
+  if(TIME_MODE === 'edit'){ $('edAt').value = ''; closeTimePicker(); return; }
+  if(await saveTimed('')){ closeTimePicker(); loadPacks(); }
+}
+
+function closeTimePicker(){ $('timeMask').classList.remove('on'); }
+
+/* 预览条数由**服务端**算（/api/douyin/publish/preview，与真正执行共用 plan()）：
+   前端自己估"N×M"曾经把 1 个包 × 12 个号算成"每号 1 包"，真发出去 1 条。 */
+function schedulePubPreview(){ clearTimeout(_pubPreviewTimer); _pubPreviewTimer = setTimeout(pubPreview, 250); }
+
+async function pubPreview(){
+
+  if(!PUB_ACCTS.size){ $('pubAssign').textContent = ''; return; }
+
+  try{
+
+    const r = await fetch('/api/douyin/publish/preview',{method:'POST',headers:{'Content-Type':'application/json'},
+
+      body:JSON.stringify({pack_ids:PUB_BATCH, account_ids:[...PUB_ACCTS], mode:PUB_MODE})});
+
+    const j = await r.json();
+
+    const notes = (j.notes||[]).length ? '（' + (j.notes||[]).join('；') + '）' : '';
+
+    $('pubAssign').textContent = j.ok ? `将发出 ${j.queued} 条${notes}` : (j.error||'预览失败');
+
+  }catch(e){ $('pubAssign').textContent = '预览失败: '+e; }
+
+}
+
+/* 改口径：立刻重算预览，并存回产线配置（下次打开还是这个口径） */
+async function pubModeChanged(){
+
+  PUB_MODE = $('pubMode').value === 'rotate' ? 'rotate' : 'each';
+
+  $('pubModeHint').textContent = pubModeHelp();
+
+  schedulePubPreview();
+
+  schedulePubLoc();
+
+  try{ await fetch('/api/douyin/config',{method:'POST',headers:{'Content-Type':'application/json'},
+
+    body:JSON.stringify({publish_mode: PUB_MODE})}); if(CFG) CFG.publish_mode = PUB_MODE; }catch(e){}
+
+  loadPacks();
+
+}
+
+async function confirmPub(){
+
+  if(!PUB_ACCTS.size){ alert('请至少勾选一个在线账号'); return; }
+
+  /* 与 doGenerate 同理：发布队列在跑时再提交会造成状态桥互相覆盖 */
+
+  let st = {};
+
+  try{ st = await (await fetch('/api/douyin/status')).json(); }catch(e){}
+
+  if(st.pub && st.pub.active && !st.pub.paused){
+
+    alert('发布队列正在运行中，请等当前批次结束（可先暂停）'); return;
+
+  }
+
+  /* 防重复上架：定时/循环发布在后台发掉的包不会刷新本页选择集，
+
+     直接提交会把同一作品再发一次。这里按账本实时过滤。 */
+
+  await loadLedger();
+
+  /* rotate 口径下一包只占一个号：前端先按账本把"已发布过"的包剔掉；
+     each 口径下改由**服务端**按「包×号」判断（一个包发到 12 个号是有过程的，
+     前端按包一刀切会把"只发过 1 个号"的包整个踢掉 —— 这正是 10-19 投诉的现象）。 */
+  const done = PUB_MODE==='each' ? [] : PUB_BATCH.filter(id=>{
+
+    const p = PACKS.find(x=>String(x.id)===String(id));
+
+    return p && packPublished(p);
+
+  });
+
+  if(done.length){
+
+    alert(`以下内容包已经发布过，已自动跳过：#${done.join('、#')}`);
+
+    PUB_BATCH = PUB_BATCH.filter(id=>!done.includes(id));
+
+  }
+
+  if(!PUB_BATCH.length){ closePub(); loadPacks(); return; }
+
+  $('btnDoPub').disabled = true; $('btnDoPub').textContent = '提交队列…';
+
+  const r = await fetch('/api/douyin/publish',{method:'POST',headers:{'Content-Type':'application/json'},
+
+    body:JSON.stringify({pack_ids: PUB_BATCH, account_ids: [...PUB_ACCTS], mode: PUB_MODE,
+                         locations: currentPicks()})});
+
+  const j = await r.json();
+
+  $('btnDoPub').disabled = false; $('btnDoPub').textContent = '发布到所选账号';
+
+  if(!r.ok){ alert(j.error||'发布失败'); return; }
+
+  const notes = (j.notes||[]).join('\n');
+
+  if(!j.queued){
+
+    alert('没有可发的条目：' + (notes || '勾选的号都已发过 / 停用 / 当日额度已满')); return;
+
+  }
+
+  if(notes) console.log('[douyin publish] ' + notes);
+
+  closePub(); POOL_IDS = null; pollStatus(true); loadPacks();
+
+}
+
+async function pausePub(){
+
+  const r = await fetch('/api/douyin/publish/pause',{method:'POST'});
+
+  if(!r.ok){ const j = await r.json(); alert(j.error||'操作失败'); }
+
+  pollStatus(true);
+
+}
+
+async function resumePub(){
+
+  const r = await fetch('/api/douyin/publish/resume',{method:'POST'});
+
+  if(!r.ok){ const j = await r.json(); alert(j.error||'操作失败'); }
+
+  pollStatus(true);
+
+}
+
+
+
+/* ================= 循环发布 ================= */
+
+let APJSON = null;
+
+let APACCTS = [];        /* 定时档的"指定账号"下拉要用的账号列表 */
+
+async function loadAutopub(){
+
+  try{
+
+    const [j, accts] = await Promise.all([
+
+      (await fetch('/api/douyin/autopub')).json(),
+
+      (await fetch('/api/douyin/accounts')).json(),
+
+    ]);
+
+    const ap = j.config||{};
+
+    $('apEnabled').checked = !!ap.enabled;
+
+    $('apGenMode').value = ap.gen_mode || (ap.auto_gen !== false ? 'stock' : 'off');
+
+    $('apGenEvery').value = ap.gen_every_min ?? 60;
+
+    $('apGenBatch').value = ap.gen_batch ?? 5;
+
+    dyGenModeUi();
+
+    $('apInterval').value = ap.interval_min??30;
+
+    $('apOrder').value = ap.order||'new';
+
+    $('apAutoGen').checked = ap.auto_gen!==false;
+
+    const sel = new Set(ap.account_ids||[]);
+
+    const list = Array.isArray(accts)?accts:(accts.accounts||[]);
+
+    $('apAccounts').innerHTML = list.length ? list.map(a=>
+
+      `<label><input type="checkbox" class="apAcc" value="${a.id}" ${sel.has(a.id)?'checked':''}> ${esc(a.name||a.nickname||a.id)}</label>`).join('')
+
+      : '<span class="hint">无可用账号</span>';
+
+    APACCTS = list;        /* 账号列表要先就位，定时档的"指定账号"下拉才有内容 */
+
+    $('apMode').value = ap.mode==='schedule' ? 'schedule' : 'interval';
+
+    apRenderSlots(ap.schedule||[]);
+
+    dyModeUi();
+
+    APJSON = j; renderApStatus(j); renderApTiles();
+
+  }catch(e){ $('apAccounts').textContent = '加载失败: '+e.message; }
+
+}
+
+function renderApTiles(){
+
+  const t = $('tAp');
+
+  const ap = (APJSON&&APJSON.config)||{};
+
+  if(!$('apEnabled').checked){
+
+    t.className = 'kpi'; $('tvAp').textContent = '未开启';
+
+    $('apStateTxt').textContent = '未开启';
+
+    return;
+
+  }
+
+  if((ap.mode||'interval')==='schedule'){
+
+    const n = (ap.schedule||[]).filter(s=>s.enabled!==false).length;
+
+    t.className = 'kpi run'; $('apStateTxt').textContent = '定时发布';
+
+    $('tvAp').innerHTML = `每日 ${n} 档`;
+
+    return;
+
+  }
+
+  t.className = 'kpi run';
+
+  $('apStateTxt').textContent = '运行中';
+
+  /* `next_in_sec` 可以是 **null**（定时模式无已启用档位 / 时间算不出来）。
+     旧写法判的是 `!== undefined`，恰好放过 null → `Math.floor(null/60)` 得 0，
+     看起来"能跑"；但字段缺失时整段渲染成 `NaN:NaN`（本项报告的现象）。 */
+  if(APJSON && APJSON.next_in_sec != null){
+
+    const mm = String(Math.floor(APJSON.next_in_sec/60)).padStart(2,'0'), ss = String(APJSON.next_in_sec%60).padStart(2,'0');
+
+    $('tvAp').innerHTML = `每${ap.interval_min}分 <small>下一篇 ${mm}:${ss}</small>`;
+
+  } else {
+
+    $('tvAp').innerHTML = `每${+$('apInterval').value||30}分`;
+
+  }
+
+}
+
+function renderApStatus(j){
+
+  const ap = j.config||{};
+
+  const el = $('apStatus');
+
+  if(!ap.enabled){ el.innerHTML = '循环发布未开启'; return; }
+
+  /* 倒计时秒数可能是 **null**（时间算不出来 / 定时模式没有已启用档位）。
+     旧实现无条件对它做算术：字段缺失时渲染成 `NaN:NaN`（本项报告的现象）。
+     拿不到就如实说"待定"，绝不显示乱码。 */
+  const sec = j.next_in_sec;
+
+  const eta = (sec==null) ? '下一篇时间待定'
+    : `下一篇约 <b>${String(Math.floor(sec/60)).padStart(2,'0')}:${String(sec%60).padStart(2,'0')}</b> 后`;
+
+  const last = j.last_pub_ts ? new Date(j.last_pub_ts*1000).toLocaleTimeString('zh-CN',{hour12:false}) : '—';
+
+  if((ap.mode||'interval')==='schedule'){
+
+    const list = (ap.schedule||[]).filter(s=>s.enabled!==false)
+
+      .map(s=>`${s.time}×${s.count}`).join(' · ') || '未配置时刻';
+
+    el.innerHTML = `定时发布：${list}<br>最近发布：${last}`;
+
+    return;
+
+  }
+
+  /* 剩余篇数：`daily_limit = 0` 是**不限量**，后端给的是 null ——
+     旧实现直接插值会写成"可发 0 篇"，看上去像号已经打满（本项报告的额度那一项）。 */
+  const stock = (j.stock||[]).map(s=>`${esc(s.name)}: ${!s.online
+
+    ? '<span style="color:var(--bad);font-weight:600">掉线</span>'
+
+    : (s.remaining==null ? '不限量' : `可发${s.remaining}篇`)}`).join(' · ');
+
+  /* 补货口径跟着 `gen_mode` 如实写：interval 模式按"每 N 分钟补货"跑，不看库存水位，
+     写死"库存不足自动生成"与真实行为不符（本项报告里 gen_every_min 那一条）。 */
+  const gen = ap.auto_gen===false ? ''
+    : (ap.gen_mode==='interval' ? ` · 每 ${ap.gen_every_min ?? 60} 分钟补货`
+                                : ' · 库存不足自动生成');
+
+  el.innerHTML = `运行中 · 每 ${ap.interval_min} 分钟一篇${gen}<br>` +
+
+    `${eta} · 上次发布 ${last}<br>库存：${stock||'未选账号'}`;
+
+}
+
+function dyGenModeUi(){
+
+    const m = $('apGenMode') ? $('apGenMode').value : 'stock';
+
+    const iv = $('apGenEveryWrap'), bt = $('apGenBatchWrap');
+
+    if (iv) iv.style.display = m === 'interval' ? '' : 'none';
+
+    if (bt) bt.style.display = m === 'interval' ? '' : 'none';
+
+}
+
+/* ===== 定时发布（每天指定时刻）===== */
+function dyModeUi(){
+
+  const sch = ($('apMode')||{}).value === 'schedule';
+
+  if($('apSchWrap')) $('apSchWrap').style.display = sch ? '' : 'none';
+
+  if($('apIntervalWrap')) $('apIntervalWrap').style.display = sch ? 'none' : '';
+
+  renderApTiles();
+
+}
+
+function apSlotRow(time, count, enabled, days, acct){
+
+  const D = ['一','二','三','四','五','六','日'];
+
+  const on = (days&&days.length) ? days.map(Number) : null;   // null = 每天（七个全勾）
+
+  const dayHtml = D.map((lab,i)=>
+
+    `<label style="font-size:11px;display:inline-flex;align-items:center;gap:1px"><input type="checkbox" class="apSlotDay" value="${i}" ${(!on||on.indexOf(i)>=0)?'checked':''}>${lab}</label>`).join('');
+
+  const accOpts = ['<option value="">跟随上方账号（轮流）</option>'].concat(
+
+    (APACCTS||[]).map(a=>`<option value="${esc(a.id)}" ${acct&&String(acct)===String(a.id)?'selected':''}>${esc(a.name||a.nickname||a.id)}</option>`)).join('');
+
+  return `<div class="sch-row" style="display:flex;gap:6px;align-items:center;margin-bottom:6px;flex-wrap:wrap">
+
+    <input type="time" class="apSlotTime" value="${esc(time||'09:00')}" style="width:104px">
+
+    <span style="font-size:12px;color:var(--ink3)">发</span>
+
+    <input type="number" class="apSlotCount" min="1" max="10" value="${+count||1}" style="width:58px">
+
+    <span style="font-size:12px;color:var(--ink3)">条</span>
+
+    <span class="apDays" style="display:inline-flex;gap:3px;padding:0 4px;border-left:1px solid var(--line);border-right:1px solid var(--line)">${dayHtml}</span>
+
+    <select class="apSlotAcc" style="width:150px">${accOpts}</select>
+
+    <label style="font-size:12px;display:flex;align-items:center;gap:4px"><input type="checkbox" class="apSlotOn" ${enabled?'checked':''}>启用</label>
+
+    <button class="cl-btn ghost sm" onclick="this.parentNode.remove()">移除</button>
+
+  </div>`;
+
+}
+
+function apRenderSlots(list){
+
+  const box = $('apSchRows'); if(!box) return;
+
+  const rows = (list&&list.length) ? list : [{time:'09:00', count:1, enabled:true}];
+
+  box.innerHTML = rows.map(s=>apSlotRow(s.time, s.count, s.enabled!==false,
+
+                                        s.days||[], (s.account_ids||[])[0]||'')).join('');
+
+  if(window.ICONS) ICONS.mount(box);
+
+}
+
+function apAddSlot(time, count){
+
+  const box = $('apSchRows'); if(!box) return;
+
+  box.insertAdjacentHTML('beforeend', apSlotRow(time||'09:00', count||1, true));
+
+}
+
+function apReadSlots(){
+
+  return [...document.querySelectorAll('#apSchRows .sch-row')].map(r=>{
+
+    const days = [...r.querySelectorAll('.apSlotDay:checked')].map(x=>+x.value);
+
+    const acc = (r.querySelector('.apSlotAcc')||{}).value || '';
+
+    return {
+
+      time: (r.querySelector('.apSlotTime')||{}).value || '',
+
+      count: +(r.querySelector('.apSlotCount')||{}).value || 1,
+
+      enabled: !!(r.querySelector('.apSlotOn')||{}).checked,
+
+      days: days.length === 7 ? [] : days,     // 七个全勾 = 每天（空数组）
+
+      account_ids: acc ? [acc] : [],           // 空 = 跟随上方账号轮流分配
+
+    };
+
+  });
+
+}
+
+async function saveAutopub(reset){
+
+  const account_ids = [...document.querySelectorAll('.apAcc:checked')].map(x=>x.value);
+
+  if($('apEnabled').checked && !account_ids.length){ alert('开启循环发布需至少勾选一个抖音号'); return; }
+
+  const body = {
+
+    mode: ($('apMode')||{}).value || 'interval',
+
+    schedule: apReadSlots(),
+
+    enabled: $('apEnabled').checked,
+
+    interval_min: +$('apInterval').value||30,
+
+    order: $('apOrder').value,
+
+    auto_gen: $('apGenMode').value !== 'off',
+
+    gen_mode: $('apGenMode').value,
+
+    gen_every_min: +$('apGenEvery').value||60,
+
+    gen_batch: +$('apGenBatch').value||5,
+
+    account_ids, reset_timer: !!reset,
+
+  };
+
+  const r = await fetch('/api/douyin/autopub',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+
+  $('apSaved').textContent = r.ok ? '已保存' : '保存失败';
+
+  setTimeout(()=>$('apSaved').textContent='', 2500);
+
+  loadAutopub();
+
+}
+
+async function apTick(){
+
+  try{
+
+    APJSON = await (await fetch('/api/douyin/autopub')).json();
+
+    renderApStatus(APJSON);
+
+    renderApTiles();
+
+  }catch(e){}
+
+}
+
+
+
+/* ================= 定位管理 ================= */
+
+/* 复用页面已有的 esc()（line 1771），不要重复声明 */
+
+async function loadLoc(){
+
+  try{
+
+    const d = await (await fetch('/api/douyin/poi-pool')).json();
+
+    if(!d.ok){ $('locMeta').textContent = d.error || '读取失败'; return; }
+
+    const regions = d.regions || [];
+    const total = regions.reduce((n,x)=>n+x.total,0);
+    const used = regions.reduce((n,x)=>n+x.used,0);
+
+    $('locMeta').textContent = (d.built_at ? '构建于 ' + d.built_at : '尚未构建') +
+
+      (d.building ? ' · 正在构建…' : '');
+
+    $('btnLocRefresh').disabled = !!d.building;
+
+    $('locStatus').innerHTML = [['地区数',regions.length],['地址总数',total],
+
+      ['本轮已用',used],['可复用',Math.max(0,total-used)]]
+
+      .map(([k,v])=>'<div><div class="hint" style="margin:0">'+k+'</div>'+
+
+        '<b style="font-size:22px;line-height:1.4">'+v+'</b></div>').join('');
+
+    $('locRegionMeta').textContent = regions.length ? (regions.length + ' 个地区') : '';
+
+    $('locRegions').innerHTML = regions.length ? regions.map(x=>
+
+      '<details style="border:1px solid var(--line);border-radius:var(--r-sm);padding:8px 12px;margin-bottom:8px">'+
+
+      '<summary style="cursor:pointer;font-weight:600">'+esc(x.name)+
+
+      ' <span class="hint" style="font-weight:400;margin-left:8px">'+x.used+'/'+x.total+' 已用</span></summary>'+
+
+      '<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px">'+
+
+      (x.pois||[]).map(p=>'<span class="hint" style="margin:0;padding:2px 8px;border:1px solid var(--line);'+
+
+        'border-radius:10px'+(p.used?';opacity:.45;text-decoration:line-through':'')+'">'+esc(p.name)+'</span>').join('')+
+
+      '</div></details>').join('') : '<div class="hint">暂无地址，请点右上角「刷新定位池」</div>';
+
+    const accs = d.accounts || [];
+
+    $('locAccounts').innerHTML = accs.length ?
+
+      '<table style="width:100%;border-collapse:collapse;font-size:13px">'+
+
+      '<thead><tr><th style="text-align:left;padding:6px 8px;color:var(--ink3);font-weight:500">账号</th>'+
+
+      '<th style="text-align:left;padding:6px 8px;color:var(--ink3);font-weight:500">上次地区</th></tr></thead><tbody>'+
+
+      accs.map(a=>'<tr><td style="padding:6px 8px;border-top:1px solid var(--line)">'+esc(a.name)+'</td>'+
+
+        '<td style="padding:6px 8px;border-top:1px solid var(--line)">'+esc((a.regions||[]).join(' → ')||'-')+'</td></tr>').join('')+
+
+      '</tbody></table>' : '<div class="hint">还没有发布记录</div>';
+
+    const miss = d.unavailable || [];
+
+    const missFailed = miss.filter(x=>x.state==='failed');
+
+    const missEmpty = miss.filter(x=>x.state==='empty');
+
+    $('locMissMeta').textContent = miss.length
+
+      ? `${miss.length} 个（接口失败 ${missFailed.length} / 当地无 POI ${missEmpty.length}）` : '';
+
+    $('locMissing').innerHTML = miss.length ?
+
+      `<div style="display:flex;flex-wrap:wrap;gap:6px">${miss.map(x=>
+
+        `<span class="hint" style="margin:0;padding:2px 8px;border:1px solid var(--line);border-radius:10px${x.state==='failed'?';color:var(--warn)':''}">${esc(x.name)}${x.state==='failed'?'（接口失败）':'（无本地地址）'}</span>`).join('')}</div>
+
+      <div class="hint" style="margin-top:8px">原因：抖音的地点搜索是名称模糊匹配，且按账号所在区域限定。搜「鄞州区 / 德清县」返回的都是上海的同名商家，所以外地取不到当地 POI；只有上海各区 + 昆山这类近邻能命中。</div>`
+
+      : '';
+
+    if(d.building) setTimeout(loadLoc, 5000);   /* 构建中：每 5 秒自动刷新 */
+
+  }catch(e){ $('locMeta').textContent = '读取失败：' + e; }
+
+}
+
+async function refreshLoc(){
+
+  const r = await fetch('/api/douyin/poi-pool/refresh', {method:'POST',
+
+    headers:{'Content-Type':'application/json'}, body:'{}'});
+
+  const d = await r.json();
+
+  if(!d.ok){ $('locMeta').textContent = d.error || '刷新失败'; return; }
+
+  $('locMeta').textContent = '已开始构建，约 5-15 分钟…';
+
+  $('btnLocRefresh').disabled = true;
+
+  setTimeout(loadLoc, 2000);
+
+}
+
+loadConfig();
+
+pollStatus();
+
+loadPacks();
+
+loadAutopub();
+
+cfgBindAutosave();          /* 参数设置：改动即自动保存 */
+
+/* 切走页签时把未保存的参数设置立刻存掉（用户改完顶部字段直接切页签是老问题） */
+
+const _origShowTab = window.showTab;
+
+window.showTab = function(name, btn){
+
+  if(CFG_DIRTY && name !== 'cfg') cfgAutosave();
+
+  return _origShowTab.apply(this, arguments);
+
+};
+
+/* 关闭/刷新页面前仍有未保存改动 → 拦截一次（自动保存失败时的兜底） */
+
+window.addEventListener('beforeunload', function(e){
+
+  if(!CFG_DIRTY) return;
+
+  cfgAutosave();
+
+  e.preventDefault(); e.returnValue = '';
+
+});
+
+setInterval(apTick, 15000);
+
+setInterval(loadPacks, 60000);
+
+</script>
+
+</body>
+
+</html>
+

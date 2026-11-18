@@ -1,0 +1,32 @@
+# GEO 内容营销 SaaS 复刻 · 运行依赖
+# 原则：与 ADR 一致的最小依赖集。不引入前端构建链（ADR-009）。
+Flask>=3.0,<4
+Flask-SQLAlchemy>=3.1,<4
+SQLAlchemy>=2.0,<3
+alembic>=1.13,<2
+pydantic>=2.6,<3
+pydantic-settings>=2.2,<3
+python-dotenv>=1.0,<2
+tzdata>=2024.1        # Windows 无 IANA 时区库时的标准来源（app/timeutil.py 已做降级）
+cryptography>=42      # Cookie 静态加密（app/services/crypto.py：规约禁明文存储）
+
+# Phase 2+ 预留（Phase 0/1 不导入，装了也不影响）
+# psycopg[binary]>=3.1      # 生产 PostgreSQL（RLS 验收需要）
+# curl_cffi>=0.7            # 生图通道：Cloudflare TLS 指纹（AI-ARCH-002）
+
+# 真实发布渠道驱动（可选）：搜狐/百家号/美篇/列表网/58 的浏览器适配
+# 装了它才走真实浏览器发布；没装/没下载内核时自动改用系统 Edge/Chrome，
+# 都没有则如实报错（绝不假装发布成功）。内核下载：python -m playwright install chromium
+# 国内网络下载不动可加：PLAYWRIGHT_DOWNLOAD_HOST=https://cdn.npmmirror.com/binaries/playwright
+playwright>=1.40,<2
+
+# 开发/测试
+pytest>=8.0,<9
+pytest-cov>=5.0,<6
+
+# 桌面形态（desktop/launcher 的生产 WSGI 服务器；SaaS 生产路径仍用 gunicorn）
+waitress>=3.0,<4
+
+# 视频产线：ffmpeg 随包（imageio-ffmpeg 把静态二进制装进 site-packages，桌面
+# 打包自动收集）。演示片合成 + 真视频装配都靠它；缺它时 provider 如实报错。
+imageio-ffmpeg>=0.5,<1

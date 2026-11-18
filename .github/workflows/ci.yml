@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: S3 spec gate (variables / review contract / brand sections)
+        run: |
+          python spec/prompts/_共享/check_variables.py
+          python spec/prompts/_样例/validate_review.py spec/prompts/_样例/B-审稿输出-样例.json
+          python spec/品牌资料规范/check_brand.py
+      - name: Tests (fake provider, offline)
+        env:
+          GEO_ENV: test
+        run: python -m pytest tests -q -p no:cacheprovider

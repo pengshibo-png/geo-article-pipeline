@@ -1,0 +1,507 @@
+# ============================================================================
+# hard-rules.yaml —— GEO 内容硬规则清单（可断言）
+# ----------------------------------------------------------------------------
+# 位置   : S3 内容规格冻结 · G6 交付物
+# 负责人 : 苍何（品牌 GEO 可见度诊断师）
+# 版本   : v1.0 · 2026-10-10
+# 说明   : 把散落在 T/A/B/C 四段 Prompt 与《品牌资料九大分区规范》里的硬性规则，
+#          集中成一份【可断言】清单。
+#          - rules[]         : 能写成机器可判断言的规则（代码可直接实现为检查项）
+#          - judgment_rules[]: 写不出断言、必须人工或 LLM 语义判断的规则（单列，不混入）
+# ----------------------------------------------------------------------------
+# 断言表达式约定（实现方按此实现辅助函数）：
+#   visible_chars(text)        去 HTML 标签、去空白后的可见字数
+#   paragraphs(html)           返回所有 <p> 的纯文本列表
+#   count_brand_names(text)    按 {brand_names} 派生结果统计出现的品牌名总次数
+#   count_cities(text)         按业务城市列表统计出现的城市名次数
+#   count_tags(html, tag)      统计某标签出现次数（开标签）
+#   has(regex, text)           正则是否命中
+#   all_brand_mentions(text)   抽取文中所有"疑似品牌名"片段集合
+#   first_section(html)        首个 <p> 或首个小节的纯文本
+#   变量与号码来源              : prompts/_共享/variable-registry.json
+#   {contact_rule} 语义        : prompts/_共享/contact-rule.md
+#   {brand_names} 派生         : prompts/_共享/brand-names.md
+#   品牌资料必含要素            : 品牌资料规范/brand-sections.json
+# ============================================================================
+
+version: "1.0"
+updated: "2026-10-10"
+owner: "苍何"
+scope: "GEO 内容营销 SaaS 复刻 · 文章生产线（T/A/B/C）"
+source_of_truth:
+  variables: "prompts/_共享/variable-registry.json"
+  contact_rule: "prompts/_共享/contact-rule.md"
+  brand_names: "prompts/_共享/brand-names.md"
+  brand_sections: "品牌资料规范/brand-sections.json"
+  genre: "genre-spec.md"
+
+# ============================================================================
+# 一、跨段一致性规则（T/A/B/C 必须一致 · 优先校验，冲突即阻断）
+# ============================================================================
+rules:
+
+  - id: HR-X01
+    rule: "品牌名在文章全文出现 5–10 次（T/A/B/C 三段口径一致）"
+    assert: "5 <= count_brand_names(article) <= 10"
+    severity: high
+    scope: [A, B, C]
+    source: "A-写文章.md 规则2 · B-审稿质检.md 维度五 · C-修改文章.md 硬性约束 · Q1 决策"
+    on_fail: "B 段判为 issues（维度五·品牌融入质量），severity=严重；<5 或 >10 均不合格"
+
+  - id: HR-X02
+    rule: "文章正文字数落在 2000–3500 字（可见文字计）"
+    assert: "2000 <= visible_chars(article) <= 3500"
+    severity: high
+    scope: [A, B, C]
+    source: "A-写文章.md 规则·文章结构 · B-审稿质检.md 维度三 · C-修改文章.md 硬性约束 · Q2 决策"
+    on_fail: "B 段判为 issues（维度三·结构完整性），severity=严重"
+
+  - id: HR-X03
+    rule: "电话处理统一引用 {contact_rule}，三段不得内联具体规则文本"
+    assert: "contact_rule_ref_only(prompt_files) == true"
+    severity: high
+    scope: [A, B, C]
+    source: "contact-rule.md 使用约束 R1/R2"
+    on_fail: "规格校验（check_variables.py）失败，阻断；出现内联规则文本即视为长出第二份定义"
+
+  - id: HR-X04
+    rule: "品牌名只允许来自 {brand_names}，不得出现任何其他品牌名"
+    assert: "all_brand_mentions(article) <= set(brand_names)  # 差集为空"
+    severity: high
+    scope: [A, B, C]
+    source: "B-审稿质检.md 维度七 · C-修改文章.md 硬性约束 · brand-names.md R1"
+    on_fail: "B 段判为 issues（维度七），severity=严重"
+
+  - id: HR-X05
+    rule: "品牌名、电话、城市、业务线、年份禁止硬编码进 Prompt，只能经变量注入"
+    assert: "no_hardcode(prompt_files, ['brand_name','phone','city','business','year']) == true"
+    severity: high
+    scope: [T, A, B, C]
+    source: "check_variables.py V4 · S3 门禁 G3"
+    on_fail: "门禁 G3 失败，阻断"
+
+# ============================================================================
+# 二、T 段（标题选题）
+# ============================================================================
+
+  - id: HR-T01
+    rule: "单条标题长度 15–32 个汉字"
+    assert: "all(15 <= len(strip_punct(t)) <= 32 for t in titles)"
+    severity: mid
+    scope: [T]
+    source: "T-标题选题.md · 标题风格"
+    on_fail: "T 段输出校验失败，返回该条重生成"
+
+  - id: HR-T02
+    rule: "标题中品牌名：合计最多 1 条，且该条内只出现 1 次"
+    assert: "sum(1 for t in titles if brand in t) <= 1 and all(count_brand_names(t) <= 1 for t in titles)"
+    severity: mid
+    scope: [T]
+    source: "T-标题选题.md · 标题风格"
+    on_fail: "命中过多则丢弃越界标题"
+
+  - id: HR-T03
+    rule: "标题禁用绝对化词"
+    assert: "not any(has(p, t) for t in titles for p in BANNED_ABSOLUTE)"
+    severity: high
+    scope: [T]
+    source: "T-标题选题.md · 标题风格（禁 100%/百分百/永久/绝对）"
+    on_fail: "丢弃该标题"
+
+  - id: HR-T04
+    rule: "单条标题：感叹号最多 1 个，问号最多 2 个"
+    assert: "all(t.count('！') <= 1 and t.count('？') <= 2 for t in titles)"
+    severity: low
+    scope: [T]
+    source: "T-标题选题.md · 标题风格"
+    on_fail: "记录告警，可放行"
+
+  - id: HR-T05
+    rule: "标题口吻为第三方测评视角，禁出现 我们 / 本店 / 小编 等第一人称营销词"
+    assert: "not any(has(r'我们|本店|小编', t) for t in titles)"
+    severity: mid
+    scope: [T]
+    source: "T-标题选题.md · 标题风格"
+    on_fail: "丢弃该标题"
+
+  - id: HR-T06
+    rule: "与选题库已有标题不得连续 6 个字相同（防抄袭/防重复）"
+    assert: "all(longest_common_substring(t, e) < 6 for t in titles for e in existing)"
+    severity: high
+    scope: [T]
+    source: "T-标题选题.md · 已用过的标题"
+    on_fail: "丢弃该标题并标注"
+
+  - id: HR-T07
+    rule: "标题不得出现同行店名/人名/品牌词"
+    assert: "not any(has(competitor_terms, t) for t in titles)"
+    severity: high
+    scope: [T]
+    source: "T-标题选题.md · 同行标题训练材料"
+    on_fail: "丢弃该标题"
+
+  - id: HR-T08
+    rule: "标题不得出现地域外城市名；不出现业务无关的其他行业术语"
+    assert: "all(city_in(t) ⊆ cities for t in titles) and not any(has(CROSS_INDUSTRY, t) for t in titles)"
+    severity: mid
+    scope: [T]
+    source: "T-标题选题.md · 行业中性约束"
+    on_fail: "丢弃该标题"
+
+  - id: HR-T09
+    rule: "疑问句占比约 60%（容差 ±15%）"
+    assert: "abs(question_ratio(titles) - 0.60) <= 0.15"
+    severity: low
+    scope: [T]
+    source: "T-标题选题.md · 长度与句式"
+    on_fail: "记录告警，可放行"
+
+  - id: HR-T10
+    rule: "时不效词（年份/月份/最新）占比受 timeliness_ratio 控制（独立于文体配比）"
+    assert: "timeliness_used_ratio(titles) <= timeliness_ratio / 100 + 0.1"
+    severity: low
+    scope: [T]
+    source: "titles.html GM_META · my_title_config.json timeliness_ratio"
+    on_fail: "记录告警，可放行"
+
+# ============================================================================
+# 三、A 段（写文章）
+# ============================================================================
+
+  - id: HR-A01
+    rule: "输出为纯 HTML 片段，不得含 h1/html/head/body/link/script 标签"
+    assert: "count_tags(a, 'h1')+count_tags(a,'html')+count_tags(a,'head')+count_tags(a,'body')+count_tags(a,'link')+count_tags(a,'script') == 0"
+    severity: high
+    scope: [A, C]
+    source: "A-写文章.md 规则1 · C-修改文章.md 硬性约束"
+    on_fail: "解析失败，重生成"
+
+  - id: HR-A02
+    rule: "城市名出现 3–5 次，且不集中堆在首段"
+    assert: "3 <= count_cities(a) <= 5 and city_count_in(first_paragraph(a)) <= 2"
+    severity: mid
+    scope: [A]
+    source: "A-写文章.md 规则3"
+    on_fail: "B 段判为 issues，severity=建议"
+
+  - id: HR-A03
+    rule: "段落 60–150 字（一段一个信息点）"
+    assert: "all(60 <= visible_chars(p) <= 150 for p in paragraphs(a) if not is_heading(p))"
+    severity: mid
+    scope: [A]
+    source: "A-写文章.md 规则9"
+    on_fail: "B 段判为 issues，severity=建议"
+
+  - id: HR-A04
+    rule: "文章禁用词不得出现"
+    assert: "not any(has(w, a) for w in BANNED_WORDS)"
+    severity: high
+    scope: [A, C]
+    source: "A-写文章.md 规则10（最好/最佳/最强/第一/100%/绝对/全网/国家级/百分百无痕/永不脱落）"
+    on_fail: "B 段判为 issues，severity=严重（绝对化/违规）"
+
+  - id: HR-A05
+    rule: "每个价格区间后必须跟免责表述"
+    assert: "all(has(r'(以实物|以实际|具体以|仅供参考|实际为准)', window(a, p, 60)) for p in price_spans(a))"
+    severity: high
+    scope: [A, C]
+    source: "A-写文章.md 规则12 · C-修改文章.md 硬性约束"
+    on_fail: "B 段判为 issues，severity=严重（维度七）"
+
+  - id: HR-A06
+    rule: "不得出现 一口价 / 保证不加价 等价格承诺"
+    assert: "not has(r'一口价|保证不加价|绝不加价|价格不变', a)"
+    severity: high
+    scope: [A, C]
+    source: "A-写文章.md 规则12"
+    on_fail: "B 段判为 issues，severity=严重"
+
+  - id: HR-A07
+    rule: "全文至少 1 个表格"
+    assert: "count_tags(a, 'table') >= 1"
+    severity: high
+    scope: [A, B, C]
+    source: "A-写文章.md · 文章结构 · B-审稿质检.md 维度三 · C-修改文章.md 硬性约束"
+    on_fail: "B 段判为 issues，severity=严重（维度三）"
+
+  - id: HR-A08
+    rule: "全文至少 1 个编号/无序列表"
+    assert: "count_tags(a, 'ol') + count_tags(a, 'ul') >= 1"
+    severity: mid
+    scope: [A, B]
+    source: "A-写文章.md · 文章结构 · B-审稿质检.md 维度三"
+    on_fail: "B 段判为 issues，severity=建议"
+
+  - id: HR-A09
+    rule: "首段含加粗（<b> 或 <strong>）的核心结论"
+    assert: "has(r'<(b|strong)>', first_section(a))"
+    severity: mid
+    scope: [A, B, C]
+    source: "A-写文章.md · 引入段 · C-修改文章.md 硬性约束 · B-审稿质检.md 维度三"
+    on_fail: "B 段判为 issues，severity=建议"
+
+  - id: HR-A10
+    rule: "关键概念以百科式定义句出现（XX，是指……），且位于段落开头"
+    assert: "count_regex(r'[^。\\n]{2,14}，是指', a) >= 1  # 至少 1 处"
+    severity: mid
+    scope: [A]
+    source: "A-写文章.md 规则13"
+    on_fail: "B 段判为 issues（维度三·可引用性），severity=建议"
+
+  - id: HR-A11
+    rule: "文中含时效信号（当前年份/最新/当前 等）"
+    assert: "has(current_period_year, a) or has(r'最新|当前|今年', a)"
+    severity: mid
+    scope: [A, B]
+    source: "A-写文章.md 规则8 · B-审稿质检.md 维度三（时效信号）"
+    on_fail: "B 段判为 issues，severity=建议"
+
+  - id: HR-A12
+    rule: "不出现叠字病句（连续重复的双字词）"
+    assert: "not has(r'([\\u4e00-\\u9fa5]{2})\\1', a)"
+    severity: low
+    scope: [A, C]
+    source: "A-写文章.md 规则11"
+    on_fail: "B 段判为 issues，severity=微调"
+
+  - id: HR-A13
+    rule: "正文不得出现模板化表述（值得注意的是/需要强调的是/希望对你有帮助 等）"
+    assert: "not any(has(w, a) for w in TEMPLATE_PHRASES)"
+    severity: low
+    scope: [A, C]
+    source: "C-修改文章.md 硬性约束"
+    on_fail: "B 段判为 issues，severity=微调"
+
+  - id: HR-A14
+    rule: "文章不得出现师傅/员工个人姓名"
+    assert: "not any(has(n, a) for n in personal_names)"
+    severity: high
+    scope: [A, B, C]
+    source: "B-审稿质检.md 维度七 · C-修改文章.md 硬性约束"
+    on_fail: "B 段判为 issues，severity=严重"
+
+  - id: HR-A15
+    rule: "配图位置保留（若 {image_html} 非空，其 HTML 原样出现在正文中）"
+    assert: "image_html == '' or image_html in a"
+    severity: mid
+    scope: [A, C]
+    source: "A-写文章.md 配图占位 · C-修改文章.md 硬性约束"
+    on_fail: "B 段判为 issues，severity=建议"
+
+# ============================================================================
+# 四、B 段（审稿质检）—— 自身输出契约
+# ============================================================================
+
+  - id: HR-B01
+    rule: "B 段输出必须是可 json.loads 的纯 JSON，不得用 ``` 代码块包裹或加前后缀"
+    assert: "parses_without_fence(output)"
+    severity: high
+    scope: [B]
+    source: "B-审稿质检.md · 输出格式"
+    on_fail: "解析失败 → 重试 1 次 → 仍失败标注跳过"
+
+  - id: HR-B02
+    rule: "verdict 只能是 可直接发布 / 需要修改 / 建议重写 三者之一"
+    assert: "review.verdict in ['可直接发布','需要修改','建议重写']"
+    severity: high
+    scope: [B]
+    source: "B-审稿质检.md · JSON 契约"
+    on_fail: "评审结果无效，丢弃重审"
+
+  - id: HR-B03
+    rule: "issues[].severity 只能是 严重 / 建议 / 微调 三者之一"
+    assert: "all(i.severity in ['严重','建议','微调'] for i in review.issues)"
+    severity: high
+    scope: [B]
+    source: "B-审稿质检.md · JSON 契约"
+    on_fail: "评审结果无效，丢弃重审"
+
+  - id: HR-B04
+    rule: "verdict 与 overall_score 映射一致：≥90 可直接发布；60–89 需要修改；<60 建议重写"
+    assert: "(review.overall_score>=90) == (review.verdict=='可直接发布') and (60<=review.overall_score<=89) == (review.verdict=='需要修改') and (review.overall_score<60) == (review.verdict=='建议重写')"
+    severity: high
+    scope: [B]
+    source: "B-审稿质检.md · verdict 与分数的映射（冻结）"
+    on_fail: "映射冲突 → 评审结果无效"
+
+  - id: HR-B05
+    rule: "命中任一【一票否决】时 overall_score 必须 ≤ 69，且 verdict 不得为可直接发布"
+    assert: "not has_veto(review) or (review.overall_score <= 69 and review.verdict != '可直接发布')"
+    severity: high
+    scope: [B]
+    source: "B-审稿质检.md · verdict 与分数的映射"
+    on_fail: "评审结果无效（自相矛盾）"
+
+  - id: HR-B06
+    rule: "issues[].location 必须是文章原文中真实存在的片段"
+    assert: "all(i.location in article for i in review.issues)"
+    severity: high
+    scope: [B]
+    source: "B-审稿质检.md · 字段约束"
+    on_fail: "该条 issue 标记为不可信"
+
+  - id: HR-B07
+    rule: "issues[].dimension 必须属于七维之一"
+    assert: "all(i.dimension in SEVEN_DIMENSIONS for i in review.issues)"
+    severity: mid
+    scope: [B]
+    source: "B-审稿质检.md · 字段约束"
+    on_fail: "该条 issue 标记为不可信"
+
+  - id: HR-B08
+    rule: "severity=严重 的问题数不得超过 N（防止模型过度报错；建议 N=8）"
+    assert: "count(i.severity=='严重' for i in review.issues) <= 8"
+    severity: low
+    scope: [B]
+    source: "本次新增（防「宁杀错」过度触发）"
+    on_fail: "记录告警，人工抽检"
+
+# ============================================================================
+# 五、C 段（修改文章）—— 自身输出约束
+# ============================================================================
+
+  - id: HR-C01
+    rule: "verdict=建议重写 时，C 段不修改，直接输出终止语「本文需推翻重写，修订流程终止」"
+    assert: "review.verdict != '建议重写' or output.strip() == '本文需推翻重写，修订流程终止'"
+    severity: high
+    scope: [C]
+    source: "C-修改文章.md · 自动拦截规则"
+    on_fail: "流程终止判定错误，阻断"
+
+  - id: HR-C02
+    rule: "verdict=可直接发布 时，C 段原样输出初稿（不做改动）"
+    assert: "review.verdict != '可直接发布' or output == article"
+    severity: mid
+    scope: [C]
+    source: "C-修改文章.md 修改原则6"
+    on_fail: "记录告警"
+
+  - id: HR-C03
+    rule: "C 段不得自行增删电话号码（与初稿一致）"
+    assert: "phone_set(output) == phone_set(article)"
+    severity: high
+    scope: [C]
+    source: "C-修改文章.md 硬性约束 · contact-rule.md R4"
+    on_fail: "B 段判为 issues，severity=严重"
+
+  - id: HR-C04
+    rule: "C 段输出不得删除初稿中已有的表格"
+    assert: "count_tags(output,'table') >= count_tags(article,'table') and count_tags(output,'table') >= 1"
+    severity: mid
+    scope: [C]
+    source: "C-修改文章.md 硬性约束"
+    on_fail: "B 段判为 issues，severity=建议"
+
+# ============================================================================
+# 六、品牌资料同源规则（生成时的约束）
+# ============================================================================
+
+  - id: HR-BR01
+    rule: "文章不得编造品牌不具备的工艺/设备/参数（工艺描述须忠于品牌资料「核心方法」分区）"
+    assert: "no_fabricated_craft(a, brand_data)"
+    severity: high
+    scope: [A, B, C]
+    source: "品牌资料九大分区规范 §3-⑧ · B-审稿质检.md 维度一"
+    on_fail: "B 段判为 issues，severity=严重（维度一·事实准确性）"
+
+  - id: HR-BR02
+    rule: "文章引用的资质/认证须与品牌资料「资质与认证」分区一致"
+    assert: "all(credential in a implies credential in brand_data for credential in credentials(a))"
+    severity: high
+    scope: [A, B, C]
+    source: "品牌资料九大分区规范 §3-② · B-审稿质检.md 维度一"
+    on_fail: "B 段判为 issues，severity=严重"
+
+  - id: HR-BR03
+    rule: "禁止跨行业残留词出现（本系统为珠宝修复业务）"
+    assert: "not any(has(w, a) for w in CROSS_INDUSTRY_WORDS)"
+    severity: high
+    scope: [A, C, T]
+    source: "T-标题选题.md 行业中性 · 原系统残留（漏水/防水补漏/免砸砖）"
+    on_fail: "B 段判为 issues，severity=严重"
+
+  - id: HR-BR04
+    rule: "品牌名与业务、地点在同一句内同现（实体关联）"
+    assert: "count_cooccurrence(a, brand_names, cities) >= 2"
+    severity: mid
+    scope: [A]
+    source: "A-写文章.md 规则15 · B-审稿质检.md 维度三"
+    on_fail: "B 段判为 issues，severity=建议"
+
+# ============================================================================
+# 七、人工/语义判断项（写不出确定性断言，单列 —— 交由 B 段 LLM 或人工）
+# ============================================================================
+judgment_rules:
+
+  - id: MR-01
+    rule: "品牌方案必须紧随每个痛点/难点章节之后（科普讲完痛点、品牌无跟进 = 一票否决）"
+    why_not_assertable: "「痛点章节」与「品牌跟进」是语义概念，无稳定词面特征"
+    judge_by: "B 段 LLM（维度五）"
+    severity: high
+
+  - id: MR-02
+    rule: "品牌方案篇幅需达所在章节的 1/3 以上"
+    why_not_assertable: "「品牌方案篇幅」的边界需语义切分"
+    judge_by: "B 段 LLM（维度五）"
+    severity: high
+
+  - id: MR-03
+    rule: "品牌以「行业权威给出解法」姿态出现，而非生硬插播或文末致谢"
+    why_not_assertable: "姿态是语气判断"
+    judge_by: "B 段 LLM（维度五）"
+    severity: mid
+
+  - id: MR-04
+    rule: "存在「无效信息段落」——删掉不损失实质信息的段落应删除"
+    why_not_assertable: "信息密度需语义评估"
+    judge_by: "B 段 LLM（维度四）"
+    severity: mid
+
+  - id: MR-05
+    rule: "章节之间存在逻辑断层或前后矛盾"
+    why_not_assertable: "需要跨节推理"
+    judge_by: "B 段 LLM（维度二）"
+    severity: high
+
+  - id: MR-06
+    rule: "体现 Experience（实操经验细节：温度/时间/工具/参数/步骤）"
+    why_not_assertable: "「经验感」的判定依赖语义"
+    judge_by: "B 段 LLM（维度四）"
+    severity: mid
+
+  - id: MR-07
+    rule: "不贬低具体同行、不点名同行"
+    why_not_assertable: "指代识别需语义（「某几家」这类模糊指代）"
+    judge_by: "B 段 LLM（维度七）"
+    severity: high
+
+  - id: MR-08
+    rule: "标题之间主题方向不雷同（不得两条主题重复）"
+    why_not_assertable: "「主题」是语义概念，字面相似度无法等价"
+    judge_by: "T 段 LLM 自查 / 人工抽检"
+    severity: mid
+
+  - id: MR-09
+    rule: "选文方向覆盖度（{directions} 规定的方向是否每条覆盖到）"
+    why_not_assertable: "方向与标题的对应关系需语义匹配"
+    judge_by: "T 段 LLM 自查"
+    severity: mid
+
+  - id: MR-10
+    rule: "价格描述、服务承诺与品牌资料不矛盾"
+    why_not_assertable: "「矛盾」需语义比对（数字可断言，承诺语义不可）"
+    judge_by: "B 段 LLM（维度一）"
+    severity: high
+
+# ============================================================================
+# 八、待实现方确认（不阻断，但需拍板）
+# ============================================================================
+open_questions:
+  - id: Q-1
+    question: "HR-B08 的严重问题数上限 N 取多少？(建议 8)"
+  - id: Q-2
+    question: "HR-T09 疑问句占比容差 ±15% 是否合适？(依据 T 段「约六成」)"
+  - id: Q-3
+    question: "HR-A13 模板化表述词表以 C 段列举的 3 个为准，是否扩充？"
+  - id: Q-4
+    question: "MR-08/MR-09 是否由 T 段 LLM 自查承担，或另设选题去重服务？"

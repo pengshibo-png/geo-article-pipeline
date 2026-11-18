@@ -1,0 +1,828 @@
+/* ============================================================
+   theme-light.css · 企业级 GEO 分析工具 · 浅色主题层 (阶段 0)
+   规范: 中性色为主 / 品牌色面积<10% / 圆角 4-8px / 阴影极轻
+        数据密度优先(表格行高 44, 控件 32) / 8px 间距栅格
+        禁止: 渐变、玻璃拟态、发光、3D、大圆角、居中大英雄区
+   加载顺序: style.css / client_style.css / ds.css 之后
+   作用域: html.theme-light  —— 未加该 class 的页面保持原样(逐页迁移)
+   迁移完成后可机械去掉 "html.theme-light " 前缀, 升级为全局主题
+   ============================================================ */
+
+/* ============ 1. 设计 Token ============ */
+html.theme-light, html.theme-light body {
+    /* 中性色 */
+    --bg: #08080A;
+    --bg-soft: #1B1B1F;
+    --bg-deep: #121215;
+    --card: #141417;
+    --line: #29292F;
+    --line-soft: #1F1F24;
+    --line2: #1F1F24;
+    --line-strong: #3A3A42;
+    --ink: #F4F4F5;   --text: #F4F4F5;
+    --ink2: #A1A1AA;  --text-2: #A1A1AA;
+    --ink3: #8A8A94;  --text-3: #8A8A94;
+    --ink4: #52525B;  --ink-disabled: #52525B;
+    /* 品牌与语义(品牌色仅用于主按钮/选中/链接/关键数据) */
+    --brand: #B08D57;
+    --brand2: #B08D57;
+    --brand-soft: rgba(176, 141, 87, .14);
+    --accent: #D6B473;
+    --brand-ink: #C69C6D;              /* hover/亮铜 */
+    --brand-hover: #C69C6D;
+    --grad: linear-gradient(135deg, #B08D57 0%, #B08D57 100%);   /* 中性化: 任何 var(--grad) 变成纯品牌色 */
+    --green: #4E9A6B;  --ok: #4E9A6B;  --ok-bg: rgba(78, 154, 107, .16);
+    --cyan: #D6B473;
+    --amber: #D9A34A;  --warn: #D9A34A; --warn-bg: rgba(217, 163, 74, .16);
+    --red: #C25B54;    --bad: #C25B54;  --bad-bg: rgba(194, 91, 84, .16);
+    --blue: #B08D57;   --blue-bg: rgba(176, 141, 87, .14);   --info: #D6B473;
+    --violet-soft: #1B1B1F;
+    /* 圆角(规范 4-8px) */
+    --r: 8px; --r-sm: 6px; --r-lg: 8px;
+    --r-btn: 6px; --r-input: 4px; --r-tag: 4px;
+    /* 阴影极轻 */
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, .40);
+    --shadow: 0 1px 2px rgba(0, 0, 0, .40), 0 4px 12px rgba(0, 0, 0, .28);
+    --shadow-lg: 0 4px 12px rgba(0, 0, 0, .45);
+    /* 终端/日志 */
+    --term-bg: #0C0C0F; --term-text: #A1A1AA;
+    /* 图表色板(≤6 色, 低饱和) */
+    --c1: #B08D57; --c2: #D6B473; --c3: #4E9A6B; --c4: #D9A34A; --c5: #C25B54; --c6: #71717A;
+    --c-grid: #1F1F24; --c-axis: #3A3A42;
+}
+
+/* ============ 2. 基础 ============ */
+html.theme-light, html.theme-light body { background: var(--bg) !important; color: var(--ink); }
+html.theme-light body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    font-size: 14px; line-height: 1.55;
+}
+html.theme-light h1, html.theme-light h2, html.theme-light h3 { letter-spacing: 0; font-weight: 600; }
+html.theme-light ::selection { background: var(--line); }
+html.theme-light .num, html.theme-light .kpi-v, html.theme-light .sv-num { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
+html.theme-light ::-webkit-scrollbar { width: 10px; height: 10px; }
+html.theme-light ::-webkit-scrollbar-track { background: transparent; }
+html.theme-light ::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 6px; border: 2px solid transparent; background-clip: content-box; }
+html.theme-light ::-webkit-scrollbar-thumb:hover { background: var(--ink3); background-clip: content-box; }
+/* 图标 */
+html.theme-light .ic { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; color: currentColor; flex: none; }
+html.theme-light .ic[data-sz="20"] { width: 20px; height: 20px; }
+html.theme-light .svg-ic { display: block; }
+/* 删除深色期的 emoji 灰度补丁 */
+html.theme-light .kpi-x, html.theme-light .cl-ct .em, html.theme-light .sec-ico,
+html.theme-light .sec-t .em, html.theme-light .dy-tile .k, html.theme-light .v-tile .k,
+html.theme-light body .kpi-x, html.theme-light body .cl-ct .em {
+    filter: none !important; opacity: 1 !important; color: var(--ink3);
+}
+
+/* ============ 3. 顶部导航 ============ */
+html.theme-light .topbar {
+    height: 48px; display: flex; align-items: center; justify-content: space-between;
+    padding: 0 20px; background: var(--card); border-bottom: 1px solid var(--line);
+    position: sticky; top: 0; z-index: 60;
+}
+html.theme-light .tb-brand { display: flex; align-items: center; gap: 8px; min-width: 0; }
+html.theme-light .tb-logo {
+    width: 26px; height: 26px; border-radius: var(--r-sm); background: var(--brand); color: #fff;
+    display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700;
+}
+html.theme-light .tb-name { font-size: 15px; font-weight: 600; color: var(--ink); }
+html.theme-light .tb-env { font-size: 12px; color: var(--ink3); padding-left: 10px; border-left: 1px solid var(--line); }
+html.theme-light .tb-right { display: flex; align-items: center; gap: 8px; }
+html.theme-light .tb-chip {
+    height: 26px; display: inline-flex; align-items: center; gap: 8px; padding: 0 10px;
+    border: 1px solid var(--line); border-radius: var(--r-input); background: var(--bg-soft);
+    font-size: 12px; color: var(--ink2); font-variant-numeric: tabular-nums;
+}
+html.theme-light .tb-icon {
+    width: 28px; height: 28px; border-radius: var(--r-btn); border: 1px solid transparent; background: transparent;
+    color: var(--ink2); cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
+}
+html.theme-light .tb-icon:hover { background: var(--bg-deep); color: var(--ink); }
+html.theme-light .tb-user {
+    height: 28px; display: inline-flex; align-items: center; gap: 8px; padding: 0 10px 0 4px;
+    border-radius: var(--r-btn); cursor: pointer; font-size: 13px; color: var(--ink2);
+}
+html.theme-light .tb-user:hover { background: var(--bg-deep); }
+html.theme-light .tb-av {
+    width: 22px; height: 22px; border-radius: 50%; background: var(--brand-soft); color: var(--brand);
+    display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600;
+}
+html.theme-light .tb-menu {
+    position: absolute; right: 20px; top: 44px; min-width: 168px; background: var(--card);
+    border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--shadow-lg); padding: 4px; display: none; z-index: 70;
+}
+html.theme-light .tb-menu.on { display: block; }
+html.theme-light .tb-menu a, html.theme-light .tb-menu button {
+    display: flex; align-items: center; gap: 8px; width: 100%; padding: 8px 10px; border: none; background: none;
+    font: inherit; font-size: 13px; color: var(--ink2); text-align: left; border-radius: var(--r-sm); cursor: pointer;
+}
+html.theme-light .tb-menu a:hover, html.theme-light .tb-menu button:hover { background: var(--bg-deep); color: var(--ink); }
+
+/* ============ 4. 面包屑 ============ */
+html.theme-light .crumb {
+    display: flex; align-items: center; gap: 8px; height: 40px; font-size: 13px; color: var(--ink3);
+    margin: 16px 0 0;
+}
+html.theme-light .crumb a { color: var(--ink3); text-decoration: none; }
+html.theme-light .crumb a:hover { color: var(--brand); }
+html.theme-light .crumb i { color: var(--ink4); font-style: normal; }
+html.theme-light .crumb span { color: var(--ink); font-weight: 500; }
+
+/* ============ 5. 外壳: 左菜单 + 内容 ============ */
+html.theme-light .cl-app { grid-template-columns: 216px minmax(0, 1fr); align-items: start; min-height: calc(100vh - 48px); }
+html.theme-light .cl-main { padding: 0 24px 32px; max-width: 1600px; margin: 0; }
+html.theme-light .cl-side,
+html.theme-light body .sidebar,
+html.theme-light body .cl-side {
+    background: var(--card) !important; border-right: 1px solid var(--line) !important;
+    padding: 12px 10px 24px !important; width: 216px; min-width: 216px;
+    position: sticky; top: 48px; max-height: calc(100vh - 48px); overflow-y: auto;
+}
+html.theme-light .cl-brand, html.theme-light .side-brand { display: none; }   /* 品牌移到顶栏, 菜单里不再重复 */
+html.theme-light .cl-user, html.theme-light body .cl-user {
+    margin: 0 0 8px; padding: 8px 10px; background: var(--bg-soft); border-radius: var(--r-sm);
+    display: flex; align-items: center; gap: 8px;
+}
+html.theme-light .cl-user .av { width: 24px; height: 24px; border-radius: 50%; background: var(--brand-soft); color: var(--brand); font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center; }
+html.theme-light .cl-user .nm { font-size: 13px; font-weight: 500; color: var(--ink); }
+html.theme-light .cl-user .out { font-size: 12px; color: var(--ink3); cursor: pointer; margin-left: auto; }
+html.theme-light .cl-user .out:hover { color: var(--bad); }
+html.theme-light .cl-ngt, html.theme-light .nav-group-title {
+    font-size: 12px; font-weight: 500; color: var(--ink3); letter-spacing: 0; padding: 16px 10px 6px;
+}
+html.theme-light .cl-nav { display: flex; flex-direction: column; gap: 2px; padding-top: 4px; }
+html.theme-light .cl-na {
+    display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 10px; border-radius: var(--r-sm);
+    font-size: 13px; color: var(--ink2); text-decoration: none;
+}
+html.theme-light .cl-na .ic { width: 16px; opacity: 1; color: inherit; }
+html.theme-light .cl-na:hover { background: var(--bg-deep); color: var(--ink); }
+html.theme-light .cl-na.on { background: var(--brand-soft); color: var(--brand); font-weight: 500; }
+html.theme-light .cl-tsel, html.theme-light .sidebar select, html.theme-light .cl-side select {
+    width: 100%; height: 30px; border-radius: var(--r-input); border: 1px solid var(--line-strong);
+    background: var(--card); color: var(--ink); font-size: 13px; padding: 0 8px;
+}
+html.theme-light .cl-main { min-width: 0; }
+
+/* ============ 6. 页头(去掉渐变/光晕, 只留信息) ============ */
+html.theme-light .phead, html.theme-light .cmd, html.theme-light .geo-cmd {
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 24px;
+    background: var(--card) !important; border: 1px solid var(--line) !important; border-radius: var(--r) !important;
+    padding: 20px 20px !important; margin: 0 0 16px !important; position: static; overflow: visible;
+    box-shadow: var(--shadow-sm) !important;
+}
+html.theme-light .phead::before, html.theme-light .cmd::before, html.theme-light .geo-cmd::before { display: none !important; }
+html.theme-light .phead-eyebrow, html.theme-light .cmd-eyebrow {
+    font-size: 12px; font-weight: 500; color: var(--ink3); letter-spacing: 0; text-transform: none; margin-bottom: 6px;
+}
+html.theme-light .phead-eyebrow::before, html.theme-light .cmd-eyebrow::before { display: none; }
+html.theme-light .phead-h1, html.theme-light .cmd-h1 {
+    font-size: 20px; font-weight: 600; letter-spacing: 0; line-height: 1.3;
+}
+html.theme-light .phead-h1 .g, html.theme-light .cmd-h1 .g { background: none; -webkit-text-fill-color: currentColor; color: var(--ink); }
+html.theme-light .phead-sub, html.theme-light .cmd-sub { font-size: 13px; color: var(--ink2); margin-top: 4px; line-height: 1.6; }
+html.theme-light .phead-chips, html.theme-light .cmd-chips { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+html.theme-light .phead-chip, html.theme-light .cmd-chip {
+    height: 26px; display: inline-flex; align-items: center; gap: 8px; padding: 0 10px; background: var(--bg-soft);
+    border: 1px solid var(--line); border-radius: var(--r-tag); font-size: 12px; color: var(--ink2); font-weight: 400;
+}
+html.theme-light .phead-chip b, html.theme-light .cmd-chip b { color: var(--ink); font-weight: 600; }
+html.theme-light .phead-r, html.theme-light .cmd-r {
+    flex-direction: row; align-items: center; gap: 8px; background: transparent !important; border: none !important;
+    padding: 0 !important; min-width: 0; backdrop-filter: none; -webkit-backdrop-filter: none;
+}
+html.theme-light .pr-l, html.theme-light .cmd-r .cr-l { font-size: 12px; color: var(--ink3); font-weight: 400; letter-spacing: 0; }
+html.theme-light .cl-hero, html.theme-light .cl-hero::before, html.theme-light .cl-hero::after { display: none !important; }
+
+/* ============ 7. KPI 指标卡 ============ */
+html.theme-light .kpi-grid { gap: 12px; margin-bottom: 16px; }
+html.theme-light .kpi {
+    display: flex; flex-direction: column; background: var(--card) !important; border: 1px solid var(--line) !important;
+    border-radius: var(--r) !important; padding: 16px !important; box-shadow: none !important;
+}
+html.theme-light .kpi:hover { border-color: var(--line-strong) !important; box-shadow: var(--shadow-sm) !important; transform: none !important; }
+html.theme-light .kpi-l { font-size: 12px; font-weight: 400; color: var(--ink3); letter-spacing: 0; }
+html.theme-light .kpi-r { margin-top: 8px; gap: 8px; }
+html.theme-light .kpi-v { font-size: 24px; font-weight: 600; letter-spacing: 0; color: var(--ink); }
+html.theme-light .kpi-u { font-size: 12px; color: var(--ink3); font-weight: 400; }
+html.theme-light .kpi-d { font-size: 12px; padding: 1px 6px; border-radius: var(--r-tag); background: var(--ok-bg); color: var(--ok); }
+html.theme-light .kpi-d.down { background: var(--bad-bg); color: var(--bad); }
+html.theme-light .kpi-d.flat { background: var(--bg-deep); color: var(--ink3); }
+html.theme-light .kpi-x { position: absolute; top: 14px; right: 14px; }
+html.theme-light .kpi-spark { height: 22px; gap: 3px; margin-top: 10px; }
+html.theme-light .kpi-spark i { background: var(--line) !important; border-radius: 2px; }
+html.theme-light .kpi-spark i.hi { background: var(--accent) !important; }
+html.theme-light .kpi > .kpi-l:last-child { margin-top: auto; }
+
+/* ============ 8. 区块与卡片 ============ */
+html.theme-light .sec {
+    background: var(--card) !important; border: 1px solid var(--line) !important; border-radius: var(--r) !important;
+    box-shadow: none !important; margin-bottom: 16px;
+}
+html.theme-light .sec-h { padding: 16px 16px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 8px; }
+html.theme-light .sec-ico { width: 20px; height: 20px; background: none !important; border: none !important; color: var(--ink3); }
+html.theme-light .sec-t b { font-size: 15px; font-weight: 600; color: var(--ink); }
+html.theme-light .sec-t span { font-size: 12px; color: var(--ink3); }
+html.theme-light .sec-x { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+html.theme-light .sec-b { padding: 16px; }
+html.theme-light .sec-b.flush { padding: 0; }
+html.theme-light .card, html.theme-light .cl-card, html.theme-light .icard, html.theme-light .rec, html.theme-light .as-card,
+html.theme-light body .card, html.theme-light body .sec, html.theme-light body .kpi, html.theme-light body .cl-card,
+html.theme-light body .icard, html.theme-light body .rec, html.theme-light body .as-card {
+    background: var(--card) !important; border-color: var(--line) !important; border-radius: var(--r) !important;
+    box-shadow: none !important;
+}
+html.theme-light .icard:hover, html.theme-light .rec:hover, html.theme-light .as-card:hover {
+    border-color: var(--line-strong) !important; box-shadow: var(--shadow-sm) !important; transform: none !important;
+}
+html.theme-light .icard.on { background: var(--brand-soft) !important; border-color: var(--brand) !important; box-shadow: none !important; }
+html.theme-light .icard-h .ico { width: 28px; height: 28px; border-radius: var(--r-sm); background: var(--bg-deep); border: none; color: var(--ink2); font-size: 13px; }
+html.theme-light .icard-h .t { font-size: 14px; font-weight: 600; }
+html.theme-light .icard-b { font-size: 13px; color: var(--ink2); line-height: 1.6; }
+html.theme-light .icard-f { border-top-color: var(--line-soft); font-size: 12px; color: var(--ink3); }
+html.theme-light .bento-2 > *, html.theme-light .bento-3 > * { min-width: 0; }
+
+/* ============ 9. 表格(核心) ============ */
+html.theme-light .tbl-wrap { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+html.theme-light .tbl-scroll { overflow-x: auto; }
+html.theme-light table.tbl { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; }
+html.theme-light table.tbl thead th {
+    position: sticky; top: 0; z-index: 2; background: var(--bg-soft); border-bottom: 1px solid var(--line);
+    height: 40px; padding: 0 12px; text-align: left; font-weight: 500; font-size: 12px; color: var(--ink2); white-space: nowrap;
+}
+html.theme-light table.tbl thead th.num, html.theme-light table.tbl td.num { text-align: right; font-variant-numeric: tabular-nums; }
+html.theme-light table.tbl thead th.sortable { cursor: pointer; user-select: none; }
+html.theme-light table.tbl thead th.sortable:hover { color: var(--brand); }
+html.theme-light table.tbl thead th .sort-ic { display: inline-flex; vertical-align: -2px; margin-left: 2px; color: var(--ink4); }
+html.theme-light table.tbl thead th.on { color: var(--brand); }
+html.theme-light table.tbl thead th.on .sort-ic { color: var(--brand); }
+html.theme-light table.tbl tbody tr { height: 44px; }
+html.theme-light table.tbl tbody tr:nth-child(even) { background: var(--bg); }
+html.theme-light table.tbl tbody tr:hover { background: var(--brand-soft); }
+html.theme-light table.tbl tbody tr.on { background: var(--brand-soft); }
+html.theme-light table.tbl td {
+    padding: 8px 12px; border-bottom: 1px solid var(--line-soft); color: var(--ink2); vertical-align: middle;
+}
+html.theme-light table.tbl td.strong { color: var(--ink); font-weight: 500; }
+html.theme-light table.tbl tbody tr:last-child td { border-bottom: none; }
+html.theme-light table.tbl .col-check { width: 40px; padding-left: 14px; }
+html.theme-light table.tbl .col-op { width: 1%; white-space: nowrap; }
+html.theme-light table.tbl .t-title { max-width: 460px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+html.theme-light table.tbl .t-sub { font-size: 12px; color: var(--ink3); }
+html.theme-light table.tbl .row-act { display: flex; gap: 4px; opacity: .25; transition: opacity .12s; }
+html.theme-light table.tbl tbody tr:hover .row-act { opacity: 1; }
+html.theme-light input[type=checkbox] { width: 14px; height: 14px; accent-color: var(--brand); cursor: pointer; vertical-align: -2px; }
+
+/* 工具条 */
+html.theme-light .toolbar {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 12px 16px; border-bottom: 1px solid var(--line);
+}
+html.theme-light .toolbar .sp { flex: 1; }
+html.theme-light .inp {
+    height: 32px; padding: 0 10px; border: 1px solid var(--line-strong); border-radius: var(--r-input);
+    background: var(--card); color: var(--ink); font-size: 13px; font-family: inherit; outline: none;
+}
+html.theme-light .inp:focus { border-color: var(--brand); box-shadow: 0 0 0 2px rgba(176, 141, 87, .22); }
+html.theme-light .inp::placeholder { color: var(--ink4); }
+html.theme-light select.inp { padding-right: 26px; appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238F959E' stroke-width='1.5' stroke-linecap='round'%3E%3Cpath d='M6 9.5 12 15.5 18 9.5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 8px center; }
+html.theme-light .search-wrap { position: relative; }
+html.theme-light .search-wrap .ic { position: absolute; left: 9px; top: 8px; color: var(--ink3); pointer-events: none; }
+html.theme-light .search-wrap .inp { padding-left: 30px; }
+html.theme-light .seg { display: inline-flex; border: 1px solid var(--line-strong); border-radius: var(--r-input); overflow: hidden; }
+html.theme-light .seg button {
+    height: 30px; padding: 0 12px; border: none; background: var(--card); color: var(--ink2); font: inherit; font-size: 12px;
+    cursor: pointer; border-right: 1px solid var(--line);
+}
+html.theme-light .seg button:last-child { border-right: none; }
+html.theme-light .seg button:hover { color: var(--brand); }
+html.theme-light .seg button.on { background: var(--brand-soft); color: var(--brand); font-weight: 500; }
+/* 列显隐 */
+html.theme-light .colvis { position: relative; }
+html.theme-light .colvis-pop {
+    display: none; position: absolute; right: 0; top: 36px; z-index: 20; min-width: 168px; padding: 8px;
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--shadow-lg);
+}
+html.theme-light .colvis-pop.on { display: block; }
+html.theme-light .colvis-pop label {
+    display: flex; align-items: center; gap: 8px; padding: 8px 8px; border-radius: var(--r-sm);
+    font-size: 13px; color: var(--ink2); cursor: pointer;
+}
+html.theme-light .colvis-pop label:hover { background: var(--bg-deep); }
+/* 分页 */
+html.theme-light .pager {
+    display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-top: 1px solid var(--line);
+    font-size: 13px; color: var(--ink3);
+}
+html.theme-light .pager .sp { flex: 1; }
+html.theme-light .pg-btns { display: flex; align-items: center; gap: 4px; }
+html.theme-light .pg-btn {
+    min-width: 30px; height: 30px; padding: 0 8px; border: 1px solid var(--line-strong); background: var(--card);
+    border-radius: var(--r-btn); font: inherit; font-size: 13px; color: var(--ink2); cursor: pointer;
+    font-variant-numeric: tabular-nums;
+}
+html.theme-light .pg-btn:hover:not(:disabled) { border-color: var(--brand); color: var(--brand); }
+html.theme-light .pg-btn.on { background: var(--brand); border-color: var(--brand); color: #fff; }
+html.theme-light .pg-btn:disabled { color: var(--ink4); cursor: not-allowed; background: var(--bg-soft); }
+html.theme-light .pg-gap { min-width: 22px; text-align: center; color: var(--ink4); }
+
+/* ============ 10. 按钮 ============ */
+html.theme-light .btn, html.theme-light .cl-btn {
+    height: 32px; padding: 0 14px; border-radius: var(--r-btn); border: 1px solid var(--brand);
+    background: var(--brand); color: #fff; font: inherit; font-size: 13px; font-weight: 500; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 8px; justify-content: center; white-space: nowrap;
+    box-shadow: none !important; transition: background .12s, border-color .12s, color .12s;
+}
+html.theme-light .btn:hover, html.theme-light .cl-btn:hover { background: var(--brand-ink); border-color: var(--brand-ink); filter: none; }
+html.theme-light .btn:active, html.theme-light .cl-btn:active { background: #8A6E44; border-color: #8A6E44; }
+html.theme-light .btn:disabled, html.theme-light .cl-btn:disabled,
+html.theme-light .btn[disabled], html.theme-light .cl-btn[disabled] {
+    background: var(--bg-deep) !important; border-color: var(--line) !important; color: var(--ink4) !important; cursor: not-allowed;
+}
+html.theme-light .btn.gray, html.theme-light .cl-btn.ghost, html.theme-light .btn.ghost {
+    background: var(--card); border-color: var(--line-strong); color: var(--ink2);
+}
+html.theme-light .btn.gray:hover, html.theme-light .cl-btn.ghost:hover, html.theme-light .btn.ghost:hover {
+    border-color: var(--brand); color: var(--brand); background: var(--card);
+}
+html.theme-light .btn.sm, html.theme-light .cl-btn.sm { height: 28px; padding: 0 10px; font-size: 12px; }
+html.theme-light .btn.danger { background: var(--card); border-color: var(--bad); color: var(--bad); }
+html.theme-light .btn.danger:hover { background: var(--bad-bg); }
+html.theme-light .btn.plain, html.theme-light .btn.text { background: transparent; border-color: transparent; color: var(--brand); }
+html.theme-light .btn.plain:hover, html.theme-light .btn.text:hover { background: var(--brand-soft); }
+html.theme-light .btn .spin { animation: tl-spin .8s linear infinite; }
+@keyframes tl-spin { to { transform: rotate(360deg); } }
+
+/* ============ 11. 表单控件 ============ */
+html.theme-light input[type=text], html.theme-light input[type=number], html.theme-light input[type=password],
+html.theme-light input[type=date], html.theme-light select, html.theme-light textarea,
+html.theme-light .cl-input, html.theme-light .cl-ta, html.theme-light .field input, html.theme-light .field select {
+    background: var(--card) !important; color: var(--ink) !important; border: 1px solid var(--line-strong) !important;
+    border-radius: var(--r-input) !important; font-size: 13px; font-family: inherit; outline: none;
+    height: 32px; padding: 0 10px;
+}
+html.theme-light textarea, html.theme-light .cl-ta, html.theme-light .au-ta { height: auto; padding: 8px 10px; line-height: 1.6; resize: vertical; }
+html.theme-light input:focus, html.theme-light select:focus, html.theme-light textarea:focus, html.theme-light .cl-input:focus {
+    border-color: var(--brand) !important; box-shadow: 0 0 0 2px rgba(176, 141, 87, .22) !important;
+}
+html.theme-light input::placeholder, html.theme-light textarea::placeholder { color: var(--ink4) !important; }
+html.theme-light input[disabled], html.theme-light select[disabled], html.theme-light textarea[disabled] {
+    background: var(--bg-soft) !important; color: var(--ink3) !important; cursor: not-allowed;
+}
+html.theme-light label, html.theme-light .f, html.theme-light .geo-f label { color: var(--ink2) !important; font-size: 13px; }
+html.theme-light .switch { width: 40px; height: 22px; border-radius: 11px; background: var(--line-strong); position: relative; cursor: pointer; transition: background .15s; }
+html.theme-light .switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: var(--shadow-sm); transition: left .15s; }
+html.theme-light .switch.on { background: var(--brand); }
+html.theme-light .switch.on::after { left: 20px; }
+html.theme-light input[type=range] { color-scheme: light; accent-color: var(--brand); }
+html.theme-light input[type=range]::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: var(--line); }
+
+/* ============ 12. 标签/徽章 ============ */
+html.theme-light .pill, html.theme-light .badge, html.theme-light .cl-badge, html.theme-light .tag {
+    display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 8px; border-radius: var(--r-tag);
+    font-size: 12px; font-weight: 400; background: var(--bg-deep); color: var(--ink2); border: 1px solid transparent; white-space: nowrap;
+}
+html.theme-light .pill.brand, html.theme-light .badge.brand { background: var(--brand-soft); color: var(--brand); }
+html.theme-light .pill.ok, html.theme-light .badge.ok { background: var(--ok-bg); color: var(--ok); }
+html.theme-light .pill.warn, html.theme-light .badge.warn, html.theme-light .status-tag.pending { background: var(--warn-bg) !important; color: var(--warn) !important; border-color: transparent !important; }
+html.theme-light .pill.bad, html.theme-light .badge.bad, html.theme-light .badge.missing { background: var(--bad-bg); color: var(--bad); }
+html.theme-light .pill.gray, html.theme-light .badge.gray { background: var(--bg-deep); color: var(--ink3); }
+html.theme-light .badge.souhu, html.theme-light .badge.meipian, html.theme-light .badge.lieju, html.theme-light .badge.mp {
+    background: var(--brand-soft) !important; color: var(--brand) !important; border: none !important;
+}
+html.theme-light .pill.bad, html.theme-light .badge.warn { font-weight: 400; }
+html.theme-light .pill:empty, html.theme-light .badge:empty, html.theme-light .cl-badge:empty { display: none; }
+html.theme-light .var-chip { background: var(--bg-deep); border: 1px solid var(--line); color: var(--ink2); border-radius: var(--r-tag); font-family: ui-monospace, Consolas, monospace; font-size: 12px; padding: 2px 8px; }
+
+/* ============ 13. 终端/日志 ============ */
+html.theme-light .term, html.theme-light .term-body, html.theme-light .gn-term, html.theme-light .pz-term, html.theme-light .pz-tb {
+    background: var(--term-bg) !important; color: var(--ink2) !important; border-color: var(--line) !important;
+    border-radius: var(--r) !important; font-family: ui-monospace, Consolas, "Cascadia Code", monospace; font-size: 12.5px; line-height: 1.75;
+}
+html.theme-light .term-head, html.theme-light .pz-th { background: var(--bg-deep); border-bottom: 1px solid var(--line); color: var(--ink2); }
+html.theme-light .term-head .dot, html.theme-light .pz-th .dot { display: none; }
+html.theme-light .st-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ink4); }
+html.theme-light .st-dot.live { background: var(--ok); }
+html.theme-light .term::-webkit-scrollbar-thumb, html.theme-light .gn-term::-webkit-scrollbar-thumb { background: var(--line-strong); }
+
+/* ============ 14. 弹窗/遮罩 ============ */
+html.theme-light .modal, html.theme-light .modal-mask, html.theme-light #pub-mask, html.theme-light #batch-pub-modal {
+    background: rgba(31, 35, 41, .45) !important; backdrop-filter: none !important;
+}
+html.theme-light .modal-content, html.theme-light .modal-box, html.theme-light .pz-hc {
+    background: var(--card) !important; border: 1px solid var(--line) !important; border-radius: var(--r) !important;
+    box-shadow: var(--shadow-lg) !important; color: var(--ink);
+}
+html.theme-light .modal-h, html.theme-light .modal-content h3 { font-size: 16px; font-weight: 600; color: var(--ink); border-bottom: 1px solid var(--line); padding-bottom: 12px; }
+
+/* ============ 15. 空/加载/错误态 ============ */
+html.theme-light .empty, html.theme-light .cl-empty {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+    padding: 40px 16px; color: var(--ink3); text-align: center;
+}
+html.theme-light .empty .e-ic, html.theme-light .cl-empty .em { width: 32px; height: 32px; color: var(--ink4); margin-bottom: 2px; }
+html.theme-light .empty .e-t, html.theme-light .cl-empty .e-t { font-size: 13px; color: var(--ink2); font-weight: 500; }
+html.theme-light .empty .e-s, html.theme-light .cl-empty .tip { font-size: 12px; color: var(--ink3); }
+html.theme-light .skel { background: linear-gradient(90deg, var(--bg-soft) 25%, var(--bg-soft) 37%, var(--bg-soft) 63%); background-size: 400% 100%; animation: tl-skel 1.4s ease infinite; border-radius: var(--r-sm); }
+@keyframes tl-skel { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
+html.theme-light .err-box { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--bad-bg); border: 1px solid rgba(194, 91, 84, .35); border-radius: var(--r-sm); color: var(--bad); font-size: 13px; }
+
+/* ============ 16. 图表容器 ============ */
+html.theme-light .chart { width: 100%; min-height: 200px; }
+html.theme-light .chart-legend { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 8px; font-size: 12px; color: var(--ink2); }
+html.theme-light .chart-legend i { display: inline-flex; align-items: center; gap: 8px; font-style: normal; }
+html.theme-light .chart-legend i::before { content: ''; width: 8px; height: 8px; border-radius: 2px; background: var(--c5); }
+html.theme-light .chart-legend i.c1::before { background: var(--c1); } html.theme-light .chart-legend i.c2::before { background: var(--c2); }
+html.theme-light .chart-legend i.c3::before { background: var(--c3); } html.theme-light .chart-legend i.c4::before { background: var(--c4); }
+html.theme-light .chart-legend i.c6::before { background: var(--c6); }
+html.theme-light .viz-bar { background: var(--bg-deep); box-shadow: none; height: 8px; border-radius: 4px; }
+html.theme-light .viz-bar.thin { height: 6px; }
+html.theme-light .viz-cols i { background: var(--line) !important; border-radius: 2px; }
+html.theme-light .viz-cols i.hi { background: var(--accent) !important; }
+html.theme-light .viz-legend i::before { border-radius: 2px; }
+html.theme-light .viz-meter-top b { font-size: 13px; font-weight: 500; color: var(--ink2); }
+html.theme-light .viz-donut { background: none !important; }
+
+/* ============ 17. 流水线 ============ */
+html.theme-light .pipe-flow { gap: 0; }
+html.theme-light .pipe-node { background: var(--card); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 8px 12px; }
+html.theme-light .pipe-node .pn-dot { background: var(--bg-deep); border: 1px solid var(--line); color: var(--ink3); font-weight: 600; }
+html.theme-light .pipe-node .pn-name { color: var(--ink2); font-weight: 500; }
+html.theme-light .pipe-node .pn-sub { color: var(--ink3); }
+html.theme-light .pipe-node.on { border-color: var(--brand); background: var(--brand-soft); }
+html.theme-light .pipe-node.on .pn-dot { background: var(--brand); border-color: var(--brand); color: #fff; }
+html.theme-light .pipe-node.on .pn-name { color: var(--brand); }
+html.theme-light .pipe-link { background: var(--line) !important; }
+
+/* ============ 18. 响应式(1440 / 1280 / 1024) ============ */
+@media (max-width: 1440px) {
+    html.theme-light .kpi-grid { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+}
+@media (max-width: 1280px) {
+    html.theme-light .cl-main { padding: 0 18px 28px; }
+}
+/* 中间档(1024–1120): 保持双列但收窄内边距与图表高度, 避免页高翻倍 */
+@media (max-width: 1120px) and (min-width: 901px) {
+    html.theme-light .cl-main { padding: 0 14px 24px; }
+    html.theme-light .bento-2 { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 12px; }
+    html.theme-light .chart { min-height: 200px; }
+}
+/* 只在 ≤900px(窄屏) 才塌成单列 */
+@media (max-width: 900px) {
+    html.theme-light .bento-2, html.theme-light .bento-3, html.theme-light .dash-split { grid-template-columns: 1fr !important; }
+}
+@media (max-width: 1024px) {
+    html.theme-light .cl-app { grid-template-columns: 180px minmax(0, 1fr); }
+    html.theme-light .cl-side, html.theme-light body .cl-side { width: 180px; min-width: 180px; }
+    html.theme-light .phead, html.theme-light .cmd { flex-direction: column; }
+    html.theme-light .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* ============ 19. 压制深色主题的 !important 规则(同权重下靠顺序+特异性取胜) ============ */
+/* 表头 / 行 hover(ds.css 873-874 带 !important 的紫色) */
+html.theme-light body th,
+html.theme-light table.tbl thead th {
+    background: var(--bg-soft) !important; color: var(--ink2) !important; font-weight: 500 !important;
+}
+html.theme-light body tbody tr:hover,
+html.theme-light table.tbl tbody tr:hover { background: var(--brand-soft) !important; }
+html.theme-light table.tbl tbody tr:nth-child(even) { background: var(--bg); }
+html.theme-light table.tbl tbody tr:nth-child(even):hover { background: var(--brand-soft); }
+html.theme-light table.tbl tbody tr.on { background: var(--brand-soft) !important; }
+/* 按钮(次要按钮 白底描边 / 主按钮 品牌实心 / 危险 描边红) */
+html.theme-light body .btn, html.theme-light body .cl-btn,
+html.theme-light body .btn.red, html.theme-light body .cl-btn.danger { box-shadow: none !important; }
+html.theme-light body .btn.gray, html.theme-light body .btn.ghost, html.theme-light body .cl-btn.ghost,
+html.theme-light body .btn.sm.gray, html.theme-light body .cl-btn.sm.ghost {
+    background: var(--card) !important; color: var(--ink2) !important; border: 1px solid var(--line-strong) !important;
+}
+html.theme-light body .btn.gray:hover, html.theme-light body .cl-btn.ghost:hover {
+    color: var(--brand) !important; border-color: var(--brand) !important; background: var(--card) !important;
+}
+html.theme-light body .btn:not(.gray):not(.ghost):not(.danger):not(.plain):not(.text),
+html.theme-light body .cl-btn:not(.ghost):not(.sm) {
+    background: var(--brand) !important; color: #fff !important; border-color: var(--brand) !important;
+}
+html.theme-light body .btn.red, html.theme-light body .cl-btn.danger {
+    background: var(--card) !important; color: var(--bad) !important; border-color: var(--bad) !important;
+}
+html.theme-light body .btn:disabled, html.theme-light body .cl-btn:disabled {
+    background: var(--bg-deep) !important; color: var(--ink4) !important; border-color: var(--line) !important;
+}
+/* 页头 / 区块 / 卡片 去渐变去光晕 */
+html.theme-light body .cmd, html.theme-light body .phead, html.theme-light body .geo-cmd { background: var(--card) !important; }
+html.theme-light body .cmd-r, html.theme-light body .geo-ctl { background: transparent !important; border: none !important; }
+html.theme-light body .cmd-chip, html.theme-light body .eng-chip, html.theme-light body .fchip,
+html.theme-light body .chip, html.theme-light body .pf-chip, html.theme-light body .hb-chip,
+html.theme-light body .sec-count {
+    background: var(--bg-soft) !important; border-color: var(--line) !important; color: var(--ink2) !important;
+}
+html.theme-light body .badge.mp, html.theme-light body .badge.souhu, html.theme-light body .badge.lieju,
+html.theme-light body .badge.wuba { color: var(--brand) !important; background: var(--brand-soft) !important; border-color: transparent !important; }
+html.theme-light body .badge.gray { color: var(--ink3) !important; background: var(--bg-deep) !important; }
+html.theme-light body .kpi.tk-pick.on { background: var(--brand-soft) !important; border-color: var(--brand) !important; }
+html.theme-light body .kpi.tk-pick.on .kpi-v { color: var(--brand) !important; }
+/* 终端 / 日志 浅色 */
+html.theme-light body .term, html.theme-light body .log-box, html.theme-light body .gn-term,
+html.theme-light body .pz-term, html.theme-light body .pz-tb, html.theme-light body .term-body {
+    background: var(--term-bg) !important; color: var(--ink2) !important;
+}
+html.theme-light body .term-body { color: var(--ink2) !important; }
+html.theme-light body .vthumb { background: var(--bg-deep) !important; }
+/* 表单 */
+html.theme-light body input, html.theme-light body select, html.theme-light body textarea,
+html.theme-light body .cl-input, html.theme-light body .cl-ta {
+    background: var(--card) !important; color: var(--ink) !important; border: 1px solid var(--line-strong) !important;
+}
+html.theme-light body input::placeholder, html.theme-light body textarea::placeholder { color: var(--ink4) !important; }
+html.theme-light body input:focus, html.theme-light body select:focus, html.theme-light body textarea:focus {
+    border-color: var(--brand) !important; box-shadow: 0 0 0 2px rgba(176, 141, 87, .22) !important;
+}
+html.theme-light body select.inp, html.theme-light body select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238F959E' stroke-width='1.5' stroke-linecap='round'%3E%3Cpath d='M6 9.5 12 15.5 18 9.5'/%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important; background-position: right 8px center !important;
+    background-size: 16px 16px !important; padding-right: 28px !important;
+}
+/* 左侧菜单 / 顶栏 去渐变 */
+html.theme-light body .sidebar, html.theme-light body .cl-side {
+    background: var(--card) !important; border-right: 1px solid var(--line) !important;
+}
+html.theme-light body .header { background: var(--card) !important; border-bottom: 1px solid var(--line) !important; }
+html.theme-light body .viz-bar { background: var(--bg-deep) !important; box-shadow: none !important; }
+html.theme-light body .pipe-node .pn-dot { background: var(--bg-deep) !important; }
+html.theme-light body .mtx-cell.na, html.theme-light body .mc.none { background: var(--bg-deep) !important; color: var(--ink3) !important; }
+/* 表格内边距收拢, 保证行高 44 */
+html.theme-light table.tbl tbody td { padding: 3px 12px; line-height: 20px; }
+html.theme-light table.tbl tbody td .file-link { margin-right: 8px; }
+
+/* ============ 20. 残留渐变收敛 ============ */
+html.theme-light body .cl-na.on, html.theme-light .cl-na.on {
+    background: var(--brand-soft) !important; color: var(--brand) !important; font-weight: 500 !important;
+}
+html.theme-light body .cl-na.on .ic { color: var(--brand) !important; }
+html.theme-light body .sec-h, html.theme-light body .pz-hc { background: var(--card) !important; box-shadow: none !important; }
+html.theme-light body .cl-logo, html.theme-light body .tb-logo { background: var(--brand) !important; }
+html.theme-light body .viz-donut::after { box-shadow: none !important; }
+
+/* 顶栏模式下: 侧栏不再重复用户卡(用户名/退出已在顶栏) */
+html.theme-light body .cl-side .cl-user { display: none !important; }
+
+/* ============ 21. 验收修正(阶段0 视觉判定) ============ */
+/* 表格内操作按钮: 文字按钮形态(未 hover 弱化但可读), 不用浅蓝填充 */
+html.theme-light table.tbl .row-act .btn { height: 28px; padding: 0 8px; font-size: 12px; }
+/* 行内操作按钮: 纯文字按钮(提高选择器权重压过第19节的主按钮实心规则) */
+html.theme-light body table.tbl td .btn:not(.plain):not(.text):not(.danger):not(.ghost) {
+    background: transparent !important; border-color: transparent !important; color: var(--brand) !important;
+}
+html.theme-light body table.tbl td .btn.gray:not(.plain):not(.text):not(.danger) {
+    background: transparent !important; border-color: transparent !important; color: var(--ink2) !important;
+}
+html.theme-light body table.tbl td .btn:not(.plain):not(.text):not(.danger):not(.ghost):hover {
+    background: var(--brand-soft) !important; color: var(--brand) !important;
+}
+html.theme-light body table.tbl td .btn.gray:not(.plain):not(.text):not(.danger):hover {
+    background: var(--bg-deep) !important; color: var(--ink) !important;
+}
+/* 窄屏: 表格保底宽度 + 横向滚动, 不再挤压裁切操作列 */
+html.theme-light table.tbl { min-width: 920px; }
+html.theme-light .tbl-scroll { overflow-x: auto; }
+html.theme-light table.tbl td { white-space: nowrap; }
+html.theme-light table.tbl td .t-title { white-space: nowrap; }
+/* 斑马纹对比度提到可辨识 */
+html.theme-light table.tbl tbody tr:nth-child(even) { background: var(--bg-soft); }
+html.theme-light table.tbl tbody tr:nth-child(even):hover { background: var(--brand-soft); }
+/* 小号按钮统一 32px(与工具条一致) */
+html.theme-light body .btn.sm:not(.plain):not(.text), html.theme-light body .cl-btn.sm { height: 32px; padding: 0 12px; font-size: 13px; }
+html.theme-light table.tbl td .btn.sm { height: 28px; }   /* 表格行内例外: 保持行高 44 */
+/* 侧栏选中项: 去掉淡紫描边 */
+html.theme-light body .cl-side .cl-na.on, html.theme-light body .sidebar .cl-na.on {
+    box-shadow: none !important; border: none !important; outline: none !important;
+}
+/* KPI 变化标记: 「注意」用警告色而非中性灰 */
+html.theme-light .kpi-d.warn { background: var(--warn-bg); color: var(--warn); }
+/* 流水线: 启用节点=白底+品牌点(不再整块蓝底), 未启用=灰 */
+html.theme-light .pipe-node.on { background: var(--card) !important; border-color: var(--line) !important; }
+html.theme-light .pipe-node.on .pn-dot { background: var(--brand-soft) !important; border-color: transparent !important; color: var(--brand) !important; }
+html.theme-light .pipe-node.on .pn-name { color: var(--ink) !important; font-weight: 500; }
+html.theme-light .pipe-node .pn-dot { background: var(--bg-deep) !important; border-color: var(--line) !important; color: var(--ink3) !important; }
+/* 渠道标签: 中性徽章(非链接视觉) */
+html.theme-light table.tbl .badge { background: var(--bg-deep) !important; color: var(--ink2) !important; }
+/* 行内操作按钮: 未 hover 也保持可读(0.55), hover 提亮到 1 */
+html.theme-light body table.tbl .row-act { opacity: 1; }
+html.theme-light body table.tbl tbody tr:hover .row-act { opacity: 1; }
+
+/* ============ 22. 共享层补齐(客户页发现的宿主缺口, 避免逐页打补丁) ============ */
+/* 宿主弹窗 .cl-modal(ds.css 会刷成深蓝底) */
+html.theme-light body .cl-modal, html.theme-light .cl-modal {
+    background: var(--card) !important; border: 1px solid var(--line) !important; border-radius: var(--r) !important;
+    box-shadow: var(--shadow-lg) !important; color: var(--ink) !important;
+    -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
+}
+html.theme-light body .cl-modal .modal-h, html.theme-light .cl-modal h3 {
+    border-bottom: 1px solid var(--line); padding-bottom: 12px; font-weight: 600;
+}
+html.theme-light .modal-mask, html.theme-light .cl-mask { background: rgba(0, 0, 0, .55) !important; backdrop-filter: none !important; }
+/* 原生下拉选项(宿主设过深色底) */
+html.theme-light select option, html.theme-light .inp option { background: var(--card) !important; color: var(--ink) !important; }
+/* 视图/详情遮罩内的正文 */
+html.theme-light .view-body, html.theme-light .cv-body { color: var(--ink2); background: var(--card); }
+/* 空态图标槽: 深色期是半透明白底, 浅色下改中性灰圆 */
+html.theme-light .empty .e-ic, html.theme-light .cl-empty .em, html.theme-light body .empty .e-ic {
+    background: var(--bg-deep) !important; color: var(--ink3) !important; border-radius: 50%;
+}
+
+/* ============================================================
+   23. 高端感收紧(诊断报告 P0/P1 执行)  近黑 #08080A + 铜金 #B08D57
+   ============================================================ */
+/* 字重: 只允许 400/500/600 */
+html.theme-light body b, html.theme-light body strong,
+html.theme-light .phead-h1, html.theme-light .sec-t b, html.theme-light .kpi-v,
+html.theme-light table.tbl thead th { font-weight: 600 !important; }
+html.theme-light body { font-weight: 400; }
+/* 字距: 标题 -0.01em, 正文 0 */
+html.theme-light .phead-h1, html.theme-light h1, html.theme-light h2, html.theme-light .sec-t b,
+html.theme-light .kpi-v { letter-spacing: -.01em !important; }
+html.theme-light body .phead-chip, html.theme-light body .tb-chip, html.theme-light body .crumb,
+html.theme-light body .cl-ngt, html.theme-light body .kpi-l, html.theme-light body .pill,
+html.theme-light body .badge, html.theme-light body .t-sub, html.theme-light body .phead-sub { letter-spacing: 0 !important; }
+/* 字号刻度: 12 / 13 / 14 / 16 / 20 / 24 */
+html.theme-light body .kpi-l, html.theme-light body .kpi-u, html.theme-light body .t-sub,
+html.theme-light body .phead-sub, html.theme-light body .sec-t span, html.theme-light body .sec-s,
+html.theme-light body .rec-m, html.theme-light body .icard-b, html.theme-light body .icard-f,
+html.theme-light body .empty .e-s, html.theme-light body .chart-legend, html.theme-light body .pill,
+html.theme-light body .badge, html.theme-light body .crumb { font-size: 12px !important; }
+html.theme-light body .phead-h1 { font-size: 20px !important; line-height: 1.3 !important; }
+html.theme-light body table.tbl thead th { font-size: 12px !important; }
+html.theme-light body table.tbl tbody td { font-size: 13px !important; line-height: 1.4 !important; }
+/* 数字等宽: 表格数字列 + 所有指标/单位/时间 */
+html.theme-light body table.tbl td, html.theme-light body table.tbl th,
+html.theme-light body .kpi-v, html.theme-light body .kpi-d, html.theme-light body .tb-chip,
+html.theme-light body .phead-chip b, html.theme-light body .num, html.theme-light body .cell-time {
+    font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1;
+}
+/* 边框分层: 表头底线深一档 / 行线最浅 / 去斑马纹 */
+html.theme-light body table.tbl thead th { border-bottom: 1px solid var(--line-strong) !important; }
+html.theme-light body table.tbl tbody td { border-bottom: 1px solid var(--line-soft) !important; }
+html.theme-light body table.tbl tbody tr:nth-child(even) { background: transparent !important; }
+html.theme-light body table.tbl tbody tr:hover { background: rgba(255, 255, 255, .03) !important; }
+html.theme-light body table.tbl tbody tr.on { background: var(--brand-soft) !important; box-shadow: inset 3px 0 0 var(--brand); }
+/* 圆角收敛到 8px 体系 */
+html.theme-light body .icard, html.theme-light body .sec, html.theme-light body .kpi,
+html.theme-light body .tbl-wrap, html.theme-light body .phead, html.theme-light body .card,
+html.theme-light body .cl-card, html.theme-light .empty .e-ic { border-radius: 8px !important; }
+/* 阴影收敛: 卡片不带阴影, 弹层轻阴影 */
+html.theme-light body .btn, html.theme-light body .cl-btn, html.theme-light body .topbar,
+html.theme-light body .sec, html.theme-light body .kpi, html.theme-light body .tbl-wrap { box-shadow: none !important; }
+html.theme-light body .sec:hover, html.theme-light body .kpi:hover { box-shadow: none !important; }
+html.theme-light body .colvis-pop, html.theme-light body .tb-menu, html.theme-light body .cl-modal,
+html.theme-light body .modal-content { box-shadow: 0 4px 12px rgba(0, 0, 0, .45) !important; }
+/* 微交互补齐: 按钮 loading / 输入框 focus 浅底 / 空态引导按钮 */
+html.theme-light body .btn.loading, html.theme-light body .cl-btn.loading { pointer-events: none; opacity: .72; }
+html.theme-light body .btn.loading::before {
+    content: ''; width: 12px; height: 12px; border-radius: 50%; margin-right: 6px;
+    border: 2px solid rgba(255, 255, 255, .35); border-top-color: #fff; animation: tl-spin .7s linear infinite;
+}
+html.theme-light body .inp:focus, html.theme-light body input:focus, html.theme-light body select:focus,
+html.theme-light body textarea:focus { background: var(--bg-soft) !important; }
+html.theme-light body .empty .btn, html.theme-light body .empty a.btn, html.theme-light body .empty button { margin-top: 12px; }
+html.theme-light body .empty { padding: 36px 16px; }
+/* 过渡: 统一 160ms, ease-out 类曲线 */
+html.theme-light * { transition-duration: .16s; transition-timing-function: cubic-bezier(.16, 1, .3, 1); }
+/* 卡片 hover: 边框变深(不带位移/阴影) */
+html.theme-light body .icard:hover, html.theme-light body .rec:hover, html.theme-light body .as-card:hover {
+    border-color: var(--line-strong) !important; transform: none !important;
+}
+
+/* 表格内空态: 高度收拢(诊断 P1: 空态行 ≤160px 观感), 图标规格统一 28px */
+html.theme-light body table.tbl tbody td .empty { padding: 26px 16px; }
+html.theme-light body table.tbl tbody td .empty .e-ic { width: 28px; height: 28px; }
+html.theme-light body table.tbl tbody td .empty .e-t { font-size: 13px; font-weight: 500; }
+
+/* ============================================================
+   24. 视觉验收修正(第一轮)  近黑+铜金
+   ============================================================ */
+/* 主按钮: 铜金底 + 深色字(白字在铜金上仅 3.1:1, 不达标) */
+html.theme-light body .btn:not(.gray):not(.ghost):not(.plain):not(.text):not(.danger):not(.loading),
+html.theme-light body .cl-btn:not(.ghost):not(.plain):not(.danger) { color: #141417 !important; font-weight: 600 !important; }
+html.theme-light body .btn:not(.gray):not(.ghost):not(.plain):not(.text):not(.danger) .ic { color: #141417 !important; }
+/* 表格内操作链接: 可读性(原 2.6~3.0:1) */
+html.theme-light body table.tbl td .btn:not(.gray) { color: var(--brand) !important; }
+html.theme-light body table.tbl td .btn.gray { color: var(--ink2) !important; }
+html.theme-light body table.tbl td .t-sub { color: var(--ink3) !important; }
+/* 表头排序图标: 对比度 + 规格 16px */
+html.theme-light body table.tbl thead th .ic, html.theme-light body table.tbl thead th .ic svg,
+html.theme-light body table.tbl thead th svg.sort-ic { width: 16px !important; height: 16px !important; color: var(--ink2) !important; }
+html.theme-light body table.tbl thead th.sortable:hover .ic { color: var(--brand) !important; }
+html.theme-light body table.tbl thead th.on .ic, html.theme-light body table.tbl thead th.on svg { color: var(--brand) !important; }
+/* 错误态: 规范形态 = 红色提示条 + 重试按钮(原来渲染成居中徽章) */
+html.theme-light body .empty.err, html.theme-light body .err-box {
+    flex-direction: row !important; align-items: center !important; justify-content: flex-start !important;
+    gap: 8px; text-align: left; padding: 12px 14px !important;
+    background: var(--bad-bg) !important; border: 1px solid rgba(194, 91, 84, .38) !important; border-radius: 8px !important;
+    color: var(--bad) !important; margin: 8px 0;
+}
+html.theme-light body .empty.err .e-ic, html.theme-light body .err-box .e-ic {
+    width: 20px !important; height: 20px !important; background: none !important; color: var(--bad) !important;
+}
+html.theme-light body .empty.err .e-t { color: var(--bad) !important; font-weight: 500 !important; }
+html.theme-light body .empty.err .e-s { color: var(--ink2) !important; }
+/* 间距体系: KPI 行 gutter 12 -> 16 */
+html.theme-light .kpi-grid { gap: 16px !important; }
+/* 空态/错误态里的引导统一为可见按钮 */
+html.theme-light body .empty .btn { height: 32px; padding: 0 14px; }
+html.theme-light body .empty a.btn.gray, html.theme-light body .empty button.btn.gray {
+    background: transparent !important; border: 1px solid var(--line-strong) !important; color: var(--ink2) !important;
+}
+html.theme-light body .empty a.btn.gray:hover, html.theme-light body .empty button.btn.gray:hover { border-color: var(--brand) !important; color: var(--brand) !important; }
+
+/* ============================================================
+   25. 视觉验收修正(第二轮) 图标规格 / 间距 / 空态按钮
+   ============================================================ */
+/* 图标规格: 槽位统一 20px, 内联 SVG 16/20, 空态 24(例外但成体系) */
+html.theme-light body .kpi-x, html.theme-light body .sec-ico { width: 20px; height: 20px; font-size: 0; }
+html.theme-light body .kpi-x svg, html.theme-light body .sec-ico svg,
+html.theme-light body .kpi-x .svg-ic, html.theme-light body .sec-ico .svg-ic { width: 20px !important; height: 20px !important; }
+html.theme-light body .empty .e-ic { width: 28px; height: 28px; font-size: 0; }
+html.theme-light body .empty .e-ic svg, html.theme-light body .empty .e-ic .svg-ic { width: 24px !important; height: 24px !important; }
+html.theme-light body .topbar .tb-icon svg { width: 16px !important; height: 16px !important; }
+html.theme-light body .cl-na .ic svg, html.theme-light body .cl-na .ic .svg-ic { width: 16px !important; height: 16px !important; }
+/* 8px 栅格: 常见间距归一 */
+html.theme-light body .phead { margin-bottom: 16px !important; }
+html.theme-light body .sec { margin-bottom: 16px !important; }
+html.theme-light body .sec-h { padding: 16px 16px; }
+html.theme-light body .sec-b { padding: 16px; }
+/* 空态按钮形态统一: 次级=描边灰底, 主 CTA 保持铜金实心 */
+html.theme-light body .empty .btn:not(.gray):not(.plain) { background: var(--brand) !important; color: #141417 !important; border-color: var(--brand) !important; }
+html.theme-light body .empty a:not(.btn):not(.ic) { color: var(--brand); text-decoration: none; border-bottom: 1px solid rgba(176, 141, 87, .4); }
+/* focus 可见性(键盘可达) */
+html.theme-light body :focus-visible { outline: 2px solid rgba(176, 141, 87, .55); outline-offset: 1px; border-radius: 4px; }
+
+/* 深色下的可读性下限: 正文/单位/脚注 >=4.5:1, 次要图标 >=4.5:1 */
+html.theme-light body .phead-sub, html.theme-light body .kpi-u, html.theme-light body .kpi-l,
+html.theme-light body .t-sub, html.theme-light body .sec-t span, html.theme-light body .icard-b,
+html.theme-light body .empty .e-s, html.theme-light body .crumb { color: var(--ink3) !important; }
+html.theme-light body .sec-t span, html.theme-light body .pill.gray, html.theme-light body .badge.gray { color: var(--ink2) !important; }
+html.theme-light body table.tbl td .t-sub { color: var(--ink3) !important; }
+
+/* ============================================================
+   26. 批次2 验收修正  窄屏表格保底宽度 / 状态对比度 / 输入框对齐 / 栅格统一
+   ============================================================ */
+/* 操作列保底宽度: 1024 下不再被挤掉按钮 */
+html.theme-light body table.tbl th.col-op, html.theme-light body table.tbl td.col-op {
+    min-width: 116px; white-space: nowrap;
+}
+html.theme-light body table.tbl td .row-act { flex-wrap: nowrap; }
+/* 窄屏表格保底宽度(触发容器内横向滚动, 而不是压缩裁切) */
+@media (max-width: 1120px) {
+    html.theme-light body table.tbl { min-width: 1000px; }
+}
+/* 页面留白与卡片间距统一为 16px 栅格 */
+html.theme-light .cl-main { padding: 0 16px 32px; }
+/* KPI 卡: 窄屏用 auto-fit 避免 2+1 留洞 */
+@media (max-width: 1024px) {
+    html.theme-light .kpi-grid { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) !important; }
+}
+/* 表格内数值输入框(如每日额度): 右对齐 + 等宽 */
+html.theme-light body table.tbl td input[type=number], html.theme-light body table.tbl td input.inp {
+    text-align: right; font-variant-numeric: tabular-nums; width: 88px;
+}
+/* 状态 pill 对比度: 失败/成功/待处理 提到 >=4.5:1 */
+html.theme-light body .pill.bad, html.theme-light body .badge.bad, html.theme-light body .badge.missing {
+    background: rgba(194, 91, 84, .24) !important; color: #E8A29B !important;
+}
+html.theme-light body .pill.ok, html.theme-light body .badge.ok {
+    background: rgba(78, 154, 107, .24) !important; color: #7CC79A !important;
+}
+html.theme-light body .pill.warn, html.theme-light body .badge.warn, html.theme-light body .status-tag.pending {
+    background: rgba(217, 163, 74, .24) !important; color: #E4B96B !important;
+}
+
+/* 批次3 验收修正: KPI 断点避免 3+2 留洞 */
+@media (max-width: 1024px) {
+    html.theme-light .kpi-grid { grid-template-columns: repeat(auto-fit, minmax(176px, 1fr)) !important; }
+}
+/* 图表容器: 环形图与图例之间留白 */
+html.theme-light .chart .chart-legend, html.theme-light .chart-legend { margin-top: 12px; }
+
+/* ============================================================
+   27. 批次4/5/6 验收修正
+   ============================================================ */
+/* 卡片网格间距统一 16px(实测 13px) */
+html.theme-light .icard-grid, html.theme-light .rec-grid { gap: 16px !important; }
+html.theme-light .bento-2, html.theme-light .bento-3 { gap: 16px !important; }
+/* 侧栏在 900px 视口下末项被裁切 -> 允许滚动并给出滚动条空间 */
+html.theme-light body .cl-side, html.theme-light body .sidebar {
+    overflow-y: auto !important; scrollbar-width: thin;
+    padding-bottom: 28px !important;
+}
+html.theme-light body .cl-side::-webkit-scrollbar, html.theme-light body .sidebar::-webkit-scrollbar { width: 6px; }
+html.theme-light body .cl-side::-webkit-scrollbar-thumb, html.theme-light body .sidebar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, .14); border: none; border-radius: 3px;
+}
+/* 破图占位块: 提对比度 + 居中, 供素材/封面复用 */
+html.theme-light body .img-fallback {
+    background: var(--bg-deep) !important; border: 1px dashed var(--line-strong) !important;
+    color: var(--ink3) !important; flex-direction: column; gap: 6px; font-size: 12px;
+}

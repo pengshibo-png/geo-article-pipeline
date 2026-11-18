@@ -1,0 +1,44 @@
+{
+  "version": "1.1",
+  "updated": "2026-11-18",
+  "scope": "GEO 优化系统 · 四段 Prompt（T/A/B/C）变量注册表",
+  "authority": "本文件是变量定义的唯一来源（single source of truth）。任何段的变量增删改必须先改本文件。",
+  "timezone": "Asia/Shanghai",
+  "totals": { "unique": 24, "T": 11, "A": 11, "B": 6, "C": 8 },
+  "revision_note": "v1.1 收口：benefit_hints 最终并入 directions/example_hint 注入，未作为独立占位符进入 T 段正文，已从注册表移除；business 补登记 A 段实际归属。以实际 Prompt 正文为准（check_variables.py 校验通过）。",
+  "computed_renderers": {
+    "contact_rule": "按 contact_mode 渲染，规则文本见 _共享/contact-rule.md",
+    "brand_names": "由品牌资料派生，规则见 _共享/brand-names.md",
+    "angle": "按 A 段附录 8 视角表渲染，见 prompts/A-写文章.md",
+    "current_period": "取服务器当前时间，时区 Asia/Shanghai，格式 'YYYY年M月'",
+    "city_rule": "由业务城市列表与带城/泛地域比例计算"
+  },
+  "variables": [
+    { "name": "count",             "type": "int",       "segments": ["T"],          "source": "生成参数",        "required": true,  "example": "20",              "note": "本次生成标题数，范围 1–500" },
+    { "name": "business",          "type": "str",       "segments": ["T", "A", "C"],"source": "租户配置",        "required": true,  "example": "防水补漏 / 珠宝修复 / 酱酒品牌", "note": "业务定位，决定术语与利益点，禁止跨行业串味" },
+    { "name": "expert",            "type": "str",       "segments": ["T"],          "source": "租户配置",        "required": true,  "example": "本地生活服务搜索营销专家", "note": "标题生成时的专家身份" },
+    { "name": "cities",            "type": "list<str>", "segments": ["T"],          "source": "业务城市页",      "required": false, "example": "上海市黄浦区 / 上海市徐汇区 / …", "note": "业务城市列表；原 Prompt 未使用，v1.1 补入" },
+    { "name": "city_rule",         "type": "str",       "segments": ["T"],          "source": "系统计算",        "required": true,  "renderer": "city_rule",      "note": "城市选题规则，含带城/泛地域数量" },
+    { "name": "directions",        "type": "str",       "segments": ["T"],          "source": "系统轮换",        "required": true,  "note": "本次轮换的选题方向列表" },
+    { "name": "example_hint",      "type": "str",       "segments": ["T"],          "source": "租户配置",        "required": false, "note": "避坑类标题的问法示例" },
+    { "name": "genre_mix",         "type": "str",       "segments": ["T"],          "source": "文体配比配置",    "required": true,  "note": "四文体配比说明；原 Prompt 在用但规格书漏登记" },
+    { "name": "winners",           "type": "str",       "segments": ["T"],          "source": "GEO 监测数据",    "required": false, "note": "GEO 表现好的主题（来自监测）" },
+    { "name": "competitors",       "type": "str",       "segments": ["T"],          "source": "同行抓取",        "required": false, "note": "同行标题训练材料" },
+    { "name": "existing",          "type": "str",       "segments": ["T"],          "source": "选题库",          "required": true,  "note": "已用标题（防重复，最近 120 条）" },
+
+    { "name": "title",             "type": "str",       "segments": ["A", "C"],     "source": "选题库",          "required": true,  "note": "文章标题" },
+    { "name": "brand_data",        "type": "str",       "segments": ["A", "B", "C"],"source": "品牌资料",        "required": true,  "note": "品牌知识库全文，AI 写作的唯一事实来源" },
+    { "name": "audience",          "type": "str",       "segments": ["A"],          "source": "客户画像",        "required": true,  "note": "读者画像（表单内容 + AI 洞察）" },
+    { "name": "city_context",      "type": "str",       "segments": ["A"],          "source": "业务城市",        "required": true,  "note": "城市定位（标题含哪个城市就锚定哪个）" },
+    { "name": "angle",             "type": "str",       "segments": ["A"],          "source": "系统轮换",        "required": true,  "renderer": "angle",          "note": "8 个写作视角之一，按 A 段附录模板渲染" },
+    { "name": "image_html",        "type": "str",       "segments": ["A"],          "source": "素材库",          "required": false, "note": "配图 HTML，可为空；原 Prompt 未使用，v1.1 补入" },
+    { "name": "phone",             "type": "str",       "segments": ["A", "B", "C"],"source": "品牌资料",        "required": true,  "note": "品牌电话，多个用逗号分隔；v1.1 新增（原为硬编码）" },
+    { "name": "contact_rule",      "type": "str",       "segments": ["A", "B", "C"],"source": "系统（by contact_mode）", "required": true, "renderer": "contact_rule", "note": "联系方式处理规则；唯一来源 _共享/contact-rule.md" },
+    { "name": "business_skeleton", "type": "str",       "segments": ["A"],          "source": "租户配置",        "required": false, "note": "正文小节骨架；为空时由模型从品牌资料'核心产品与服务'分区推导" },
+    { "name": "current_period",    "type": "str",       "segments": ["A", "B"],     "source": "系统时间",        "required": true,  "renderer": "current_period", "note": "当前时段（时效信号）；v1.1 新增（原为硬编码年份）" },
+
+    { "name": "article",           "type": "str",       "segments": ["B", "C"],     "source": "A 段产出",        "required": true,  "note": "待审/待改文章（HTML 片段）" },
+    { "name": "brand_names",       "type": "str",       "segments": ["B", "C"],     "source": "由品牌资料派生",  "required": true,  "renderer": "brand_names",    "note": "品牌名与允许别名；唯一来源 _共享/brand-names.md" },
+    { "name": "review",            "type": "str",       "segments": ["C"],          "source": "B 段产出",        "required": true,  "note": "审稿报告 JSON（契约见 prompts/B-审稿质检.md）" }
+  ]
+}

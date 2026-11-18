@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN" class="theme-light">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>发布动态 · GEO优化系统</title>
+
+<link rel="stylesheet" href="/static/client_style.css?v={{ asset_ver }}">
+
+<link rel="stylesheet" href="/static/ds.css?v={{ asset_ver }}">
+
+<link rel="stylesheet" href="/static/theme-light.css?v={{ asset_ver }}">
+
+<style>
+
+/* ============================================================
+
+   发布动态(客户版) · 表格页浅色企业版 页内补丁
+
+   规范: 只用 var(--*) token / 圆角 ≤8px / 无渐变 无发光 无玻璃拟态
+
+   表格骨架(.tbl / .toolbar / .pager / .colvis)全部来自 theme-light.css
+
+   ============================================================ */
+
+
+
+/* 外壳: theme-light 只给栅格列宽, display 由本页补 */
+
+.cl-app { display: grid; grid-template-columns: 216px minmax(0, 1fr); align-items: start; min-height: calc(100vh - 48px); }
+
+
+
+/* 页头右侧 */
+
+.phead-r { flex-wrap: wrap; justify-content: flex-end; }
+
+.phead-r .pr-l { white-space: nowrap; }
+
+
+
+/* KPI */
+
+.kpi { position: relative; }
+
+.kpi-x { color: var(--ink4); }
+
+
+
+/* 进度条填充: ds.css 原为渐变, 浅色期改纯色 */
+
+html.theme-light .viz-bar .sg,
+
+html.theme-light .viz-bar .sg.brand { background: var(--brand); }
+
+html.theme-light .viz-bar .sg.ok { background: var(--ok); }
+
+html.theme-light .viz-bar .sg.warn { background: var(--warn); }
+
+html.theme-light .viz-bar .sg.bad { background: var(--bad); }
+
+html.theme-light .viz-bar .sg.idle { background: var(--line-strong); }
+
+
+
+/* 表格嵌在区块内, 不再套第二层描边 */
+
+html.theme-light .sec > .tbl-wrap { border: none; border-radius: 0; border-bottom: 1px solid var(--line); }
+
+html.theme-light table.tbl td.empty-cell,
+
+html.theme-light table.tbl td.err-cell { padding: 0; }
+
+
+
+/* 工具条控件宽度(宿主 select 默认较宽, 这里收回为内容宽) */
+
+html.theme-light .toolbar .search-wrap .inp { width: 220px; }
+
+html.theme-light .toolbar select.inp { width: auto; min-width: 116px; }
+
+html.theme-light .toolbar input[type=date] { width: auto; height: 32px; padding: 0 10px; }
+
+html.theme-light .toolbar .seg { height: 32px; }
+
+html.theme-light .toolbar .seg button { height: 30px; padding: 0 12px; font-size: 12px; }
+
+
+
+/* 渠道快捷筛选行(第二行): 分布 + 一键筛选 */
+
+html.theme-light .chips-row { flex-basis: 100%; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+html.theme-light .chip-btn {
+
+    height: 28px; padding: 0 10px; border: 1px solid var(--line-strong); background: var(--card);
+
+    color: var(--ink2); border-radius: var(--r-tag); font-family: inherit; font-size: 12px; cursor: pointer;
+
+    font-variant-numeric: tabular-nums;
+
+}
+
+html.theme-light .chip-btn:hover { border-color: var(--brand); color: var(--brand); }
+
+html.theme-light .chip-btn.on { background: var(--brand-soft); border-color: transparent; color: var(--brand); }
+
+html.theme-light .chip-btn b { font-weight: 600; margin-left: 4px; }
+
+
+
+/* 单元格小件 */
+
+html.theme-light table.tbl .t-title { max-width: 350px; }
+
+html.theme-light .t-ell { display: inline-block; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
+
+html.theme-light .file-link {
+
+    display: inline-flex; align-items: center; gap: 4px; color: var(--brand);
+
+    font-size: 12px; font-weight: 400; text-decoration: none; white-space: nowrap;
+
+}
+
+html.theme-light .file-link:hover { text-decoration: underline; }
+
+html.theme-light table.tbl td .t-sub { color: var(--ink3) !important; }
+
+html.theme-light table.tbl thead th .sort-ic { vertical-align: -3px; }
+
+
+
+/* 表格内空态 / 错误态 */
+
+html.theme-light table.tbl tbody td .empty { padding: 26px 16px; }
+
+html.theme-light table.tbl tbody td.err-cell .empty { padding: 12px 14px; }
+
+html.theme-light .empty.err .btn { margin-top: 0 !important; margin-left: auto; }
+
+
+
+/* 分页文案 */
+
+html.theme-light .pager .pg-info { font-variant-numeric: tabular-nums; }
+
+html.theme-light .pager .pg-info b { color: var(--ink); font-weight: 500; }
+
+html.theme-light .pager .pg-range { font-size: 12px; color: var(--ink4); }
+
+html.theme-light .pager .pg-btn .ic { width: 16px; height: 16px; }
+
+</style>
+
+</head>
+
+<body class="cl" data-page="publog">
+
+<header class="topbar" id="topbar">
+
+  <div class="tb-brand"><span class="tb-logo">G</span><span class="tb-name">GEO优化系统</span><span class="tb-env" id="tb-env">客户工作台</span></div>
+
+  <div class="tb-right">
+
+    <span class="tb-chip" id="model-tag">模型 · —</span>
+
+    <span class="tb-chip" id="run-tag">空闲</span>
+
+    <span class="tb-chip"><select class="cl-tsel" id="tb-tenant" style="height:24px;border:none;background:transparent"></select></span>
+
+    <div class="tb-user" id="tb-user-btn"><span class="tb-av" id="tb-av">客</span><span class="tb-uname" id="tb-uname">—</span><i class="ic" data-ic="chevronDown" data-sz="14"></i></div>
+
+  </div>
+
+  <div class="tb-menu" id="tb-menu"><button onclick="doLogout()"><i class="ic" data-ic="logout"></i>退出登录</button></div>
+
+</header>
+
+<div class="cl-app">
+
+  <aside class="cl-side" id="sidebar"></aside>
+
+  <main class="cl-main">
+
+    <nav class="crumb" id="crumb"></nav>
+
+
+
+    <div class="phead">
+
+        <div class="phead-l">
+
+            <div class="phead-eyebrow">发布分发 · 记录</div>
+
+            <div class="phead-h1">发布动态</div>
+
+            <div class="phead-sub">每一次发布都是一次 AI 收录机会 · 支持按渠道与时间筛选</div>
+
+            <div class="phead-chips">
+
+                <span class="phead-chip"><i class="ic" data-ic="log" data-sz="16"></i>发布记录 <b id="pc-pub-total">-</b> 条</span>
+
+                <span class="phead-chip"><i class="ic" data-ic="check" data-sz="16"></i>成功率 <b id="pc-pub-rate">-</b></span>
+
+            </div>
+
+        </div>
+
+        <div class="phead-r">
+
+            <div class="pr-l">发布记录</div>
+
+            <span class="pill gray" id="p-range2">全部</span>
+
+        </div>
+
+    </div>
+
+
+
+    <div class="kpi-grid">
+
+        <div class="kpi">
+
+            <div class="kpi-l">今日发布 <span class="kpi-x"><i class="ic" data-ic="send" data-sz="20"></i></span></div>
+
+            <div class="kpi-r"><span class="kpi-v" id="s-today" style="color:var(--ok)">-</span><span class="kpi-u">条</span></div>
+
+            <div class="kpi-l">按发布成功计</div>
+
+        </div>
+
+        <div class="kpi">
+
+            <div class="kpi-l">累计发布 <span class="kpi-x"><i class="ic" data-ic="log" data-sz="20"></i></span></div>
+
+            <div class="kpi-r"><span class="kpi-v" id="s-all">-</span><span class="kpi-u">条</span></div>
+
+            <div class="kpi-l">全渠道历史总量</div>
+
+        </div>
+
+        <div class="kpi">
+
+            <div class="kpi-l">发布成功率 <span class="kpi-x"><i class="ic" data-ic="check" data-sz="20"></i></span></div>
+
+            <div class="kpi-r"><span class="kpi-v" id="s-rate" style="color:var(--brand)">-</span></div>
+
+            <div class="viz-bar thin"><span class="sg ok" id="s-rate-bar" style="width:0%"></span></div>
+
+            <div class="kpi-l" id="s-rate-sub">按全部发布记录计算</div>
+
+        </div>
+
+        <div class="kpi">
+
+            <div class="kpi-l">覆盖渠道 <span class="kpi-x"><i class="ic" data-ic="list" data-sz="20"></i></span></div>
+
+            <div class="kpi-r"><span class="kpi-v" id="s-ch">-</span><span class="kpi-u">个</span></div>
+
+            <div class="kpi-l">有发布记录的渠道数</div>
+
+        </div>
+
+    </div>
+
+
+
+    <section class="sec">
+
+        <div class="sec-h">
+
+            <span class="sec-ico"><i class="ic" data-ic="log" data-sz="20"></i></span>
+
+            <div class="sec-t"><b>发布记录</b><span>最新在前 · 含失败原因与文章链接</span></div>
+
+            <div class="sec-x"><span class="pill gray" id="p-range">全部</span></div>
+
+        </div>
+
+
+
+        <div class="toolbar">
+
+            <div class="search-wrap">
+
+                <i class="ic" data-ic="search"></i>
+
+                <input class="inp" id="q" type="text" placeholder="搜索标题或账号" oninput="onSearch()">
+
+            </div>
+
+            <select class="inp" id="plat" onchange="setPlat(this.value)" title="发布渠道">
+
+                <option value="">全部渠道</option>
+
+            </select>
+
+            <select class="inp" id="status" onchange="onStatus(this.value)" title="发布结果">
+
+                <option value="all">全部结果</option>
+
+                <option value="ok">仅成功</option>
+
+                <option value="bad">仅失败</option>
+
+            </select>
+
+            <div class="seg" id="days" title="时间范围">
+
+                <button data-d="0" class="on" onclick="setDays(0)">全部</button>
+
+                <button data-d="1" onclick="setDays(1)">今天</button>
+
+                <button data-d="7" onclick="setDays(7)">近7天</button>
+
+                <button data-d="30" onclick="setDays(30)">近30天</button>
+
+            </div>
+
+            <input type="date" id="d-pick" class="inp" onchange="setDate(this.value)" title="指定日期">
+
+            <span class="sp"></span>
+
+            <div class="colvis">
+
+                <button class="btn sm gray" onclick="toggleColvis(event)"><i class="ic" data-ic="columns"></i>列显示</button>
+
+                <div class="colvis-pop" id="colvis-pop" onclick="event.stopPropagation()">
+
+                    <label><input type="checkbox" checked onchange="toggleCol('plat',this.checked)">平台</label>
+
+                    <label><input type="checkbox" checked onchange="toggleCol('account',this.checked)">账号</label>
+
+                    <label><input type="checkbox" checked onchange="toggleCol('reason',this.checked)">失败原因</label>
+
+                </div>
+
+            </div>
+
+            <select class="inp" id="pl-size" onchange="setPageSize(this.value)" title="每页条数">
+
+                <option value="20">20 条/页</option>
+
+                <option value="50" selected>50 条/页</option>
+
+                <option value="100">100 条/页</option>
+
+            </select>
+
+            <button class="btn sm gray" id="pl-refresh" onclick="refreshPub()"><i class="ic" data-ic="refresh"></i>刷新</button>
+
+            <div class="chips-row" id="chips"></div>
+
+        </div>
+
+
+
+        <div class="tbl-wrap"><div class="tbl-scroll">
+
+            <table class="tbl">
+
+                <thead><tr>
+
+                    <th class="sortable num" data-sort="time" data-w="118" onclick="setSort('time')">时间 <i class="ic sort-ic" data-ic="sortDesc" data-sz="16"></i></th>
+
+                    <th>文章标题</th>
+
+                    <th class="sortable" data-sort="plat" data-col="plat" data-w="104" onclick="setSort('plat')">平台 <i class="ic sort-ic" data-ic="sortAsc" data-sz="16"></i></th>
+
+                    <th data-col="account" data-w="110">账号</th>
+
+                    <th data-w="80">方式</th>
+
+                    <th class="sortable" data-sort="result" data-w="82" onclick="setSort('result')">结果 <i class="ic sort-ic" data-ic="sortAsc" data-sz="16"></i></th>
+
+                    <th data-col="reason" data-w="164">失败原因</th>
+
+                    <th class="col-op">操作</th>
+
+                </tr></thead>
+
+                <tbody id="tbody">
+
+                    <tr><td class="num"><div class="skel" style="height:14px;width:72px;margin-left:auto"></div></td><td><div class="skel" style="height:14px;width:62%"></div></td><td><div class="skel" style="height:14px;width:52px"></div></td><td><div class="skel" style="height:14px;width:64px"></div></td><td><div class="skel" style="height:14px;width:44px"></div></td><td><div class="skel" style="height:14px;width:48px"></div></td><td><div class="skel" style="height:14px;width:112px"></div></td><td><div class="skel" style="height:14px;width:40px"></div></td></tr>
+
+                    <tr><td class="num"><div class="skel" style="height:14px;width:72px;margin-left:auto"></div></td><td><div class="skel" style="height:14px;width:58%"></div></td><td><div class="skel" style="height:14px;width:52px"></div></td><td><div class="skel" style="height:14px;width:64px"></div></td><td><div class="skel" style="height:14px;width:44px"></div></td><td><div class="skel" style="height:14px;width:48px"></div></td><td><div class="skel" style="height:14px;width:112px"></div></td><td><div class="skel" style="height:14px;width:40px"></div></td></tr>
+
+                    <tr><td class="num"><div class="skel" style="height:14px;width:72px;margin-left:auto"></div></td><td><div class="skel" style="height:14px;width:66%"></div></td><td><div class="skel" style="height:14px;width:52px"></div></td><td><div class="skel" style="height:14px;width:64px"></div></td><td><div class="skel" style="height:14px;width:44px"></div></td><td><div class="skel" style="height:14px;width:48px"></div></td><td><div class="skel" style="height:14px;width:112px"></div></td><td><div class="skel" style="height:14px;width:40px"></div></td></tr>
+
+                    <tr><td class="num"><div class="skel" style="height:14px;width:72px;margin-left:auto"></div></td><td><div class="skel" style="height:14px;width:54%"></div></td><td><div class="skel" style="height:14px;width:52px"></div></td><td><div class="skel" style="height:14px;width:64px"></div></td><td><div class="skel" style="height:14px;width:44px"></div></td><td><div class="skel" style="height:14px;width:48px"></div></td><td><div class="skel" style="height:14px;width:112px"></div></td><td><div class="skel" style="height:14px;width:40px"></div></td></tr>
+
+                    <tr><td class="num"><div class="skel" style="height:14px;width:72px;margin-left:auto"></div></td><td><div class="skel" style="height:14px;width:60%"></div></td><td><div class="skel" style="height:14px;width:52px"></div></td><td><div class="skel" style="height:14px;width:64px"></div></td><td><div class="skel" style="height:14px;width:44px"></div></td><td><div class="skel" style="height:14px;width:48px"></div></td><td><div class="skel" style="height:14px;width:112px"></div></td><td><div class="skel" style="height:14px;width:40px"></div></td></tr>
+
+                    <tr><td class="num"><div class="skel" style="height:14px;width:72px;margin-left:auto"></div></td><td><div class="skel" style="height:14px;width:64%"></div></td><td><div class="skel" style="height:14px;width:52px"></div></td><td><div class="skel" style="height:14px;width:64px"></div></td><td><div class="skel" style="height:14px;width:44px"></div></td><td><div class="skel" style="height:14px;width:48px"></div></td><td><div class="skel" style="height:14px;width:112px"></div></td><td><div class="skel" style="height:14px;width:40px"></div></td></tr>
+
+                    <tr><td class="num"><div class="skel" style="height:14px;width:72px;margin-left:auto"></div></td><td><div class="skel" style="height:14px;width:56%"></div></td><td><div class="skel" style="height:14px;width:52px"></div></td><td><div class="skel" style="height:14px;width:64px"></div></td><td><div class="skel" style="height:14px;width:44px"></div></td><td><div class="skel" style="height:14px;width:48px"></div></td><td><div class="skel" style="height:14px;width:112px"></div></td><td><div class="skel" style="height:14px;width:40px"></div></td></tr>
+
+                    <tr><td class="num"><div class="skel" style="height:14px;width:72px;margin-left:auto"></div></td><td><div class="skel" style="height:14px;width:68%"></div></td><td><div class="skel" style="height:14px;width:52px"></div></td><td><div class="skel" style="height:14px;width:64px"></div></td><td><div class="skel" style="height:14px;width:44px"></div></td><td><div class="skel" style="height:14px;width:48px"></div></td><td><div class="skel" style="height:14px;width:112px"></div></td><td><div class="skel" style="height:14px;width:40px"></div></td></tr>
+
+                </tbody>
+
+            </table>
+
+        </div></div>
+
+        <div class="pager" id="pager"></div>
+
+    </section>
+
+  </main>
+
+</div>
+
+
+
+<script src="/static/icons.js?v={{ asset_ver }}"></script>
+
+<script src="/static/layout.js?v={{ asset_ver }}"></script>
+
+<script>
+
+const PLAT = { souhu:['搜狐','blue'], baijiahao:['百家号','brand'], meipian:['美篇','ok'], lieju:['列表网','warn'], wuba:['58同城','bad'], douyin_imgtext:['抖音图文','violet'], '抖音视频':['抖音视频','violet'], other:['其他','gray'] };
+
+function platName(p) { return (PLAT[p] && PLAT[p][0]) || (p ? p : '其他'); }
+
+const MODE = { '任务发布': '自动', '手动发布': '手动', '手动标记': '标记' };
+
+let PER = 50;                                   // 每页条数(默认 50, 可选 20/100)
+
+let ALL = [], filtered = [], page = 1, days = 0, datePick = '', q = '', platF = '', statusF = 'all';
+
+const COLS = ['plat', 'account', 'reason'];     // 可切换显隐的列
+
+let sortKey = 'time', sortDir = 2;              // 默认: 时间倒序
+
+let cols = { plat: true, account: true, reason: true };
+
+let pages = 1;
+
+
+
+function onSearch() { q = document.getElementById('q').value.trim().toLowerCase(); page = 1; render(); }
+
+function onStatus(v) { statusF = v || 'all'; page = 1; render(); }
+
+function setDays(d) {
+
+    days = d; datePick = ''; platF = '';
+
+    document.getElementById('d-pick').value = '';
+
+    document.querySelectorAll('.seg button[data-d]').forEach(b => b.classList.toggle('on', +b.dataset.d === d));
+
+    const ps = document.getElementById('plat'); if (ps) ps.value = '';
+
+    page = 1; renderChips(); render();
+
+}
+
+function setDate(v) {
+
+    if (!v) return;
+
+    datePick = v; days = 0; platF = '';
+
+    document.querySelectorAll('.seg button[data-d]').forEach(b => b.classList.remove('on'));
+
+    const ps = document.getElementById('plat'); if (ps) ps.value = '';
+
+    page = 1; renderChips(); render();
+
+}
+
+function setPlat(p) {
+
+    platF = p || '';
+
+    const ps = document.getElementById('plat'); if (ps) ps.value = platF;
+
+    page = 1; renderChips(); render();
+
+}
+
+
+
+function applyFilter() {
+
+    let f = ALL;
+
+    if (q) f = f.filter(l => ((l.title || '') + ' ' + (l.account || '')).toLowerCase().includes(q));
+
+    if (platF) f = f.filter(l => l.platform === platF);
+
+    if (statusF === 'ok') f = f.filter(l => l.success);
+
+    else if (statusF === 'bad') f = f.filter(l => !l.success);
+
+    if (datePick) f = f.filter(l => (l.time || '').startsWith(datePick));
+
+    else if (days) {
+
+        const cut = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
+
+        f = f.filter(l => (l.time || '') >= cut);
+
+    }
+
+    filtered = f;
+
+}
+
+
+
+// 渠道筛选: 下拉(精确选择) + 快捷 chips(分布与一键筛选), 两者共用 setPlat
+
+function renderChips() {
+
+    const plats = [...new Set(ALL.map(l => l.platform).filter(Boolean))];
+
+    const el = document.getElementById('chips');
+
+    if (el) {
+
+        el.innerHTML =
+
+            `<button class="chip-btn ${platF === '' ? 'on' : ''}" onclick="setPlat('')">全部渠道</button>` +
+
+            plats.map(p => {
+
+                return `<button class="chip-btn ${platF === p ? 'on' : ''}" onclick="setPlat('${p}')">${platName(p)}<b>${ALL.filter(l => l.platform === p).length}</b></button>`; }).join('');
+
+    }
+
+    const sel = document.getElementById('plat');
+
+    if (sel) {
+
+        sel.innerHTML = '<option value="">全部渠道</option>' + plats.map(p =>
+
+            `<option value="${esc(p)}">${esc(platName(p))} (${ALL.filter(l => l.platform === p).length})</option>`).join('');
+
+        sel.value = platF;
+
+    }
+
+}
+
+
+
+// ============ 行内片段 ============
+
+function plRow(l) {
+
+    const c = PLAT[l.platform] || PLAT.other;
+
+    const mode = MODE[l.mode] || l.mode || '';
+
+    const reason = (!l.success && l.error) ? friendlyErr(l.error) : '';
+
+    const link = l.url ? `<a class="file-link" href="${l.url}" target="_blank"><i class="ic" data-ic="external" data-sz="16"></i>查看</a>` : '';
+
+    const tt = l.title || '';
+
+    return `<tr>
+
+        <td class="num">${(l.time || '').slice(5, 16) || '<span class="t-sub">未记录</span>'}</td>
+
+        <td class="strong t-title" title="${esc(tt)}">${tt ? `${esc(tt.slice(0, 40))}${tt.length > 40 ? '…' : ''}` : '<span class="t-sub">未记录</span>'}</td>
+
+        <td data-col="plat"><span class="pill gray">${esc(platName(l.platform))}</span></td>
+
+        <td data-col="account">${esc(l.account || '') || '<span class="t-sub">未记录</span>'}</td>
+
+        <td><span class="t-sub">${mode ? esc(mode + '发布') : '未记录'}</span></td>
+
+        <td><span class="pill ${l.success ? 'ok' : 'bad'}">${l.success ? '成功' : '失败'}</span></td>
+
+        <td data-col="reason">${reason ? `<span class="t-sub t-ell" title="${esc(reason)}">${esc(reason)}</span>` : '<span class="t-sub">无</span>'}</td>
+
+        <td class="col-op">${link || '<span class="t-sub">无链接</span>'}</td>
+
+    </tr>`;
+
+}
+
+
+
+// 空态整行(表格内必须走 tr/td, 否则浏览器会把 div 提到表格外)
+
+function emptyRow(title, sub, icon, btnText, btnFn) {
+
+    const n = document.querySelectorAll('table.tbl thead th').length || 8;
+
+    const btn = btnText ? `<button class="btn gray sm" onclick="${btnFn}">${btnText}</button>` : '';
+
+    return `<tr><td class="empty-cell" colspan="${n}">
+
+        <div class="empty">
+
+            <div class="e-ic"><i class="ic" data-ic="${icon}" data-sz="20"></i></div>
+
+            <div class="e-t">${title}</div>
+
+            <div class="e-s">${sub}</div>
+
+            ${btn}
+
+        </div></td></tr>`;
+
+}
+
+
+
+// 错误态整行: 红条 + 重试按钮(.empty.err 形态由主题层提供)
+
+function errRow(msg) {
+
+    const n = document.querySelectorAll('table.tbl thead th').length || 8;
+
+    return `<tr><td class="err-cell" colspan="${n}">
+
+        <div class="empty err">
+
+            <div class="e-ic"><i class="ic" data-ic="alert" data-sz="20"></i></div>
+
+            <div class="e-t">发布记录加载失败</div>
+
+            <div class="e-s">${esc(msg)}</div>
+
+            <button class="btn gray sm" onclick="refreshPub()">重试</button>
+
+        </div></td></tr>`;
+
+}
+
+
+
+// 加载态: 8 行骨架(表头之下), 避免数据到达前一片空白
+
+function skelRows(n) {
+
+    const cell = (w, right) => `<td class="${right ? 'num' : ''}"><div class="skel" style="height:14px;width:${w}${right ? ';margin-left:auto' : ''}"></div></td>`;
+
+    let h = '';
+
+    for (let i = 0; i < n; i++) {
+
+        h += '<tr>' + cell('72px', 1) + cell('62%') + cell('52px') + cell('64px')
+
+           + cell('44px') + cell('48px') + cell('112px') + cell('40px') + '</tr>';
+
+    }
+
+    return h;
+
+}
+
+
+
+// ============ 排序 / 列显隐 ============
+
+function sortRows(list) {
+
+    if (!sortKey || !sortDir) return list;
+
+    const mul = sortDir === 2 ? -1 : 1;
+
+    if (sortKey === 'plat') {
+
+        // 万级数据: 先取一次键再排序(避免 localeCompare 反复建排序器)
+
+        const dec = list.map(l => [String(platName(l.platform)), l]);
+
+        dec.sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0) * mul);
+
+        return dec.map(p => p[1]);
+
+    }
+
+    return list.slice().sort((x, y) => {
+
+        if (sortKey === 'time') return ((x.time_ts || 0) - (y.time_ts || 0)) * mul;
+
+        if (sortKey === 'result') return ((x.success ? 1 : 0) - (y.success ? 1 : 0)) * mul;
+
+        return 0;
+
+    });
+
+}
+
+
+
+// 表头排序: 时间默认倒序, 切换列默认升序, 再点切换升降
+
+function setSort(key) {
+
+    if (sortKey !== key) { sortKey = key; sortDir = 1; }
+
+    else sortDir = sortDir === 1 ? 2 : 1;
+
+    page = 1;
+
+    render();
+
+}
+
+
+
+function renderSortIcons() {
+
+    document.querySelectorAll('table.tbl thead th.sortable').forEach(th => {
+
+        const on = sortKey === th.getAttribute('data-sort') && sortDir > 0;
+
+        th.classList.toggle('on', on);
+
+        const i = th.querySelector('.sort-ic');
+
+        if (!i) return;
+
+        const name = (on && sortDir === 2) ? 'sortDesc' : 'sortAsc';
+
+        if (i.getAttribute('data-ic') !== name) {
+
+            i.setAttribute('data-ic', name);
+
+            i.removeAttribute('data-ic-done');
+
+            i.innerHTML = '';
+
+        }
+
+    });
+
+    if (window.ICONS) ICONS.mount(document);
+
+}
+
+
+
+function toggleColvis(e) {
+
+    if (e) e.stopPropagation();
+
+    const pop = document.getElementById('colvis-pop');
+
+    if (pop) pop.classList.toggle('on');
+
+}
+
+
+
+function toggleCol(name, on) {
+
+    cols[name] = !!on;
+
+    applyCols();
+
+}
+
+
+
+function applyCols() {
+
+    COLS.forEach(k => {
+
+        const show = cols[k] !== false;
+
+        document.querySelectorAll('table.tbl thead th[data-col="' + k + '"], #tbody td[data-col="' + k + '"]')
+
+            .forEach(el => { el.style.display = show ? '' : 'none'; });
+
+    });
+
+    document.querySelectorAll('table.tbl thead th[data-w]').forEach(th => {
+
+        th.style.width = th.getAttribute('data-w') + 'px';
+
+    });
+
+}
+
+
+
+// 页头右侧的「当前范围」标签(与筛选状态保持同步)
+
+function renderRange() {
+
+    const _c3 = document.getElementById('p-range2');
+
+    if (_c3) {
+
+        const _days = (typeof days !== 'undefined') ? days : 0;
+
+        _c3.textContent = (typeof datePick !== 'undefined' && datePick) ? datePick : (_days ? '近' + _days + '天' : '全部');
+
+    }
+
+}
+
+
+
+// ============ 渲染(只渲染当前页) ============
+
+function render() {
+
+    applyFilter();
+
+    pages = Math.max(1, Math.ceil(filtered.length / PER));
+
+    if (page > pages) page = pages;
+
+    if (page < 1) page = 1;
+
+    const slice = sortRows(filtered).slice((page - 1) * PER, page * PER);
+
+    document.getElementById('p-range').textContent =
+
+        ((q ? `“${q}” ` : '') + (platF ? platName(platF) + ' · ' : '') + (datePick ? datePick : (days ? `近${days}天` : ''))) || '全部';
+
+    const tb = document.getElementById('tbody');
+
+    if (!ALL.length) tb.innerHTML = emptyRow('暂无发布记录', '发布任务执行后，记录会在这里按时间倒序显示', 'log', '刷新', 'refreshPub()');
+
+    else if (!filtered.length) tb.innerHTML = emptyRow('没有匹配的发布记录', '换个筛选条件试试', 'search', '清除筛选', 'clearFilter()');
+
+    else tb.innerHTML = slice.map(plRow).join('');
+
+    if (window.ICONS) ICONS.mount(tb);
+
+    renderSortIcons();
+
+    applyCols();
+
+    renderPager(filtered.length, pages);
+
+    renderRange();
+
+}
+
+
+
+function pageNumbers(cur, total) {
+
+    if (total <= 7) { const a = []; for (let i = 1; i <= total; i++) a.push(i); return a; }
+
+    const set = new Set([1, total, cur, cur - 1, cur + 1]);
+
+    const nums = Array.from(set).filter(n => n >= 1 && n <= total).sort((a, b) => a - b);
+
+    const out = [];
+
+    let prev = 0;
+
+    nums.forEach(n => { if (n - prev > 1) out.push('…'); out.push(n); prev = n; });
+
+    return out;
+
+}
+
+
+
+function renderPager(total, totalPages) {
+
+    const el = document.getElementById('pager');
+
+    if (!el) return;
+
+    const p = page;
+
+    const from = total ? (p - 1) * PER + 1 : 0;
+
+    const to = Math.min(p * PER, total);
+
+    let btns = `<button class="pg-btn" ${p <= 1 ? 'disabled' : ''} onclick="goPage(${p - 1})" title="上一页"><i class="ic" data-ic="chevronLeft"></i></button>`;
+
+    pageNumbers(p, totalPages).forEach(n => {
+
+        btns += (n === '…')
+
+            ? '<span class="pg-gap">…</span>'
+
+            : `<button class="pg-btn ${n === p ? 'on' : ''}" onclick="goPage(${n})">${n}</button>`;
+
+    });
+
+    btns += `<button class="pg-btn" ${p >= totalPages ? 'disabled' : ''} onclick="goPage(${p + 1})" title="下一页"><i class="ic" data-ic="chevronRight"></i></button>`;
+
+    el.innerHTML = `<span class="pg-info">共 <b>${total}</b> 条 · 第 <b>${p}</b>/<b>${totalPages}</b> 页</span>
+
+        <span class="pg-range">${from}-${to}</span>
+
+        <span class="sp"></span>
+
+        <div class="pg-btns">${btns}</div>`;
+
+    if (window.ICONS) ICONS.mount(el);
+
+}
+
+
+
+// 翻页: 先出骨架再渲染当前页
+
+function goPage(p) {
+
+    if (p < 1 || p > pages || p === page) return;
+
+    page = p;
+
+    const tb = document.getElementById('tbody');
+
+    if (tb) { tb.innerHTML = skelRows(8); if (window.ICONS) ICONS.mount(tb); }
+
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+
+        render();
+
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    }));
+
+}
+
+
+
+function setPageSize(v) {
+
+    PER = parseInt(v, 10) || 50;
+
+    page = 1;
+
+    render();
+
+}
+
+
+
+function clearFilter() {
+
+    const qi = document.getElementById('q'); if (qi) qi.value = '';
+
+    const ss = document.getElementById('status'); if (ss) ss.value = 'all';
+
+    q = ''; statusF = 'all'; datePick = ''; days = 0; platF = '';
+
+    document.querySelectorAll('.seg button[data-d]').forEach(b => b.classList.toggle('on', +b.dataset.d === 0));
+
+    const dp = document.getElementById('d-pick'); if (dp) dp.value = '';
+
+    page = 1; renderChips(); render();
+
+}
+
+
+
+function refreshPub() {
+
+    const btn = document.getElementById('pl-refresh');
+
+    const ic = btn ? btn.querySelector('.ic') : null;
+
+    if (btn) btn.classList.add('loading');
+
+    if (ic) ic.classList.add('spin');
+
+    Promise.resolve(load()).finally(() => {
+
+        if (btn) btn.classList.remove('loading');
+
+        if (ic) ic.classList.remove('spin');
+
+    });
+
+}
+
+
+
+async function load() {
+
+    const tb0 = document.getElementById('tbody');
+
+    if (tb0) { tb0.innerHTML = skelRows(8); if (window.ICONS) ICONS.mount(tb0); }
+
+    let logs = [];
+
+    try {
+
+        const r = await fetch('/api/publish-log');
+
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+
+        logs = (await r.json()).logs || [];
+
+    } catch (e) {
+
+        const tb = document.getElementById('tbody');
+
+        if (tb) { tb.innerHTML = errRow('网络或服务异常，请稍后重试'); if (window.ICONS) ICONS.mount(tb); }
+
+        const pg = document.getElementById('pager'); if (pg) pg.innerHTML = '';
+
+        return;
+
+    }
+
+    ALL = logs;
+
+    const today = new Date().toISOString().slice(0, 10);
+
+    const ok = logs.filter(l => l.success);
+
+    document.getElementById('s-today').textContent = ok.filter(l => (l.time || '').startsWith(today)).length;
+
+    document.getElementById('s-all').textContent = ok.length;
+
+    const ratePct = logs.length ? Math.round(ok.length / logs.length * 100) : 0;
+
+    const _c1 = document.getElementById('pc-pub-total'); if (_c1) _c1.textContent = logs.length;
+
+    const _c2 = document.getElementById('pc-pub-rate'); if (_c2) _c2.textContent = logs.length ? ratePct + '%' : '-';
+
+    renderRange();
+
+    document.getElementById('s-rate').textContent = logs.length ? ratePct + '%' : '-';
+
+    const rb = document.getElementById('s-rate-bar');
+
+    if (rb) { rb.style.width = ratePct + '%'; rb.className = 'sg ' + (ratePct >= 80 ? 'ok' : ratePct >= 50 ? 'warn' : 'bad'); }
+
+    document.getElementById('s-ch').textContent = new Set(ok.map(l => l.platform)).size;
+
+    renderChips(); render();
+
+}
+
+window.addEventListener('load', load);
+
+
+
+// ============ 初始化 ============
+
+document.addEventListener('click', () => {
+
+    const pop = document.getElementById('colvis-pop');
+
+    if (pop) pop.classList.remove('on');
+
+});
+
+</script>
+
+</body>
+
+</html>
+

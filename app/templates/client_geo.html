@@ -1,0 +1,2092 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN" class="theme-light">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>GEO 监测 · GEO 优化系统</title>
+
+<link rel="stylesheet" href="/static/client_style.css?v={{ asset_ver }}">
+
+<link rel="stylesheet" href="/static/ds.css?v={{ asset_ver }}">
+
+<link rel="stylesheet" href="/static/theme-light.css?v={{ asset_ver }}">
+
+<style>
+
+/* ============================================================
+
+   客户工作台 · GEO 监测(影响力报告) · 页内样式
+
+   近黑 #08080A + 铜金 #B08D57; 只用 var(--*) token
+
+   圆角 ≤8px / 无渐变 无发光 无玻璃拟态 无 3D / 间距 4-8-12-16-20-24-32
+
+   通用组件(.phead/.kpi/.sec/.tbl/.toolbar/.pager/.pill/.empty/.btn/.skel)
+
+   全部来自 theme-light.css, 此处只留本页必要的 6 类补丁:
+
+   1) 栅格与卡片节奏 2) 图表容器(空态/加载态) 3) 宿主遗留渐变收敛
+
+   4) 表格列宽与空/错误态 5) 报告头右侧的综合影响力指数 6) 引用份额卡
+
+   ============================================================ */
+
+
+
+/* 1) 栅格: KPI 宽屏固定 4 列、窄屏 2×2(不留空洞); 两行 bento 分栏等高 */
+
+html.theme-light .kpi-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+html.theme-light .bento-2 { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: stretch; }
+
+html.theme-light .bento-2 > .sec { display: flex; flex-direction: column; margin-bottom: 16px; }
+
+html.theme-light .bento-2 > .sec > .sec-b { flex: 1; }
+
+@media (max-width: 1120px) { html.theme-light .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; } }
+
+
+
+/* 2) 图表: 容器相对定位; 空态为覆盖层(保留 canvas 尺寸, 数据到达后无需重建实例);
+
+      加载态为骨架块, 由各 render 函数在数据落地后移除 */
+
+.chart-wrap { position: relative; }
+
+.chart-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: var(--card); }
+
+.chart-empty[hidden] { display: none; }
+
+.chart-empty .empty { padding: 20px 16px; max-height: 200px; }
+
+.chart-skel { position: absolute; inset: 8px; border-radius: 8px; }
+
+
+
+/* 3) 宿主遗留渐变一律改 token 纯色(viz-bar 填充 / 运行进度条) + 按钮 loading 走语义色 */
+
+html.theme-light .viz-bar .sg { background: var(--brand); }
+
+html.theme-light .viz-bar .sg.ok { background: var(--ok); }
+
+html.theme-light .viz-bar .sg.warn { background: var(--warn); }
+
+html.theme-light .viz-bar .sg.bad { background: var(--bad); }
+
+html.theme-light .cl-runbar > i { background: var(--brand); }
+
+html.theme-light body .btn.loading::before, html.theme-light body .cl-btn.loading::before {
+
+    content: ''; width: 12px; height: 12px; border-radius: 50%; margin-right: 8px; box-sizing: border-box;
+
+    border: 2px solid currentColor; border-right-color: transparent; opacity: .6; animation: tl-spin .7s linear infinite;
+
+}
+
+
+
+/* 4) 表格: 区块内不再套第二层边框; 列宽定值; 空/错误态按主题层形态补齐 */
+
+html.theme-light .sec > .tbl-wrap { border: none; border-radius: 0; }
+
+html.theme-light table.tbl td.empty-cell { padding: 0; border-bottom: none; }
+
+html.theme-light .toolbar select.inp { width: auto; min-width: 116px; }
+
+html.theme-light table.tbl.mx-tbl { min-width: 720px; }
+
+/* 引用来源表 3 列: 定宽布局, 标题列吃掉剩余宽度(省略号依赖 t-title), 窄屏不再横向滚动 */
+
+html.theme-light table.tbl.src-tbl { table-layout: fixed; min-width: 0; }
+
+html.theme-light table.tbl.src-tbl td.t-title { max-width: none; }
+
+html.theme-light .col-mx { width: 116px; }
+
+html.theme-light .col-cov { width: 104px; }
+
+html.theme-light .col-eng { width: 120px; }
+
+html.theme-light .col-src { width: 104px; }
+
+html.theme-light .mx-scroll { max-height: 528px; overflow: auto; }
+
+html.theme-light .src-scroll { max-height: 396px; overflow: auto; }
+
+html.theme-light .lnk { display: inline-flex; align-items: center; gap: 8px; color: var(--brand); text-decoration: none; font-size: 12px; }
+
+html.theme-light .lnk:hover { text-decoration: underline; }
+
+/* 表格行内的「文字按钮」规则会把空态/错误态引导按钮刷成透明, 这里显式还原为描边次级按钮 */
+
+html.theme-light body table.tbl td.empty-cell .empty .btn:not(.plain):not(.text):not([disabled]) {
+
+    background: transparent !important; border: 1px solid var(--line-strong) !important; color: var(--ink2) !important;
+
+}
+
+html.theme-light body table.tbl td.empty-cell .empty .btn:not(.plain):not(.text):not([disabled]):hover {
+
+    background: transparent !important; border-color: var(--brand) !important; color: var(--brand) !important;
+
+}
+
+/* 错误态 = 红色提示条 + 重试按钮(形态交给主题层 .empty.err, 这里补条内间距与图标规格) */
+
+html.theme-light body .empty.err { gap: 12px !important; padding: 12px 16px !important; }
+
+html.theme-light body .empty.err .e-ic { margin: 0; }
+
+html.theme-light body .empty.err .e-ic svg, html.theme-light body .empty.err .e-ic .svg-ic {
+
+    width: 20px !important; height: 20px !important;
+
+}
+
+html.theme-light body .empty.err .btn { margin-top: 0; }
+
+/* KPI 缺数据时的文字态: 数字位降级为说明文字, 不挤 24px 行高 */
+
+html.theme-light .kpi-v.txt { font-size: 14px; font-weight: 500; color: var(--ink3); }
+
+/* 首访空态卡: 高度收在 200px 以内 */
+
+html.theme-light #geo-empty .empty { padding: 24px 16px; max-height: 200px; }
+
+
+
+/* 5) 报告头: 左栏可伸缩, 右侧「综合影响力指数」分块不被挤压 */
+
+html.theme-light .phead-l { flex: 1 1 auto; min-width: 0; }
+
+html.theme-light .phead-r { flex: 0 0 auto; align-items: flex-end; }
+
+html.theme-light .phead-score { text-align: right; min-width: 208px; }
+
+html.theme-light .phead-score .ps-t { font-size: 12px; color: var(--ink3); }
+
+html.theme-light .phead-score .ps-n { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 4px; }
+
+html.theme-light .phead-score .ps-n b { font-size: 24px; font-weight: 600; letter-spacing: -.01em; color: var(--ink); font-variant-numeric: tabular-nums; }
+
+html.theme-light .phead-score .ps-n span { font-size: 12px; color: var(--ink3); }
+
+html.theme-light .phead-score .ps-s { font-size: 12px; color: var(--ink3); margin-top: 4px; max-width: 240px; line-height: 1.5; }
+
+
+
+/* 6) 引用份额卡: 环形图 + 数值侧栏 */
+
+html.theme-light .sov-body { display: flex; align-items: center; gap: 16px; }
+
+html.theme-light .sov-side { flex: 1; min-width: 0; }
+
+html.theme-light .sov-v { display: flex; align-items: baseline; gap: 0; }
+
+html.theme-light .sov-v b { font-size: 24px; font-weight: 600; letter-spacing: -.01em; color: var(--brand); font-variant-numeric: tabular-nums; }
+
+html.theme-light .sov-v span { font-size: 12px; color: var(--ink3); }
+
+html.theme-light .sov-m { font-size: 12px; color: var(--ink3); margin-top: 8px; line-height: 1.6; }
+
+/* 窄屏: 区块头单行放不下副标题时收起副标题(标题与右侧指标优先), 与客户首页一致 */
+
+@media (max-width: 1200px) {
+
+    html.theme-light body .sec-t span { display: none; }
+
+}
+
+</style>
+
+</head>
+
+<body class="cl" data-page="geo">
+
+
+
+<header class="topbar" id="topbar">
+
+  <div class="tb-brand"><span class="tb-logo">G</span><span class="tb-name">GEO 优化系统</span><span class="tb-env" id="tb-env">客户工作台</span></div>
+
+  <div class="tb-right">
+
+    <span class="tb-chip" id="model-tag">模型 · 未就绪</span>
+
+    <span class="tb-chip" id="run-tag">空闲</span>
+
+    <div class="tb-user" id="tb-user-btn"><span class="tb-av" id="tb-av">客</span><span class="tb-uname" id="tb-uname">客户</span><i class="ic" data-ic="chevronDown" data-sz="16"></i></div>
+
+  </div>
+
+  <div class="tb-menu" id="tb-menu"><button onclick="doLogout()"><i class="ic" data-ic="logout"></i>退出登录</button></div>
+
+</header>
+
+
+
+<div class="cl-app">
+
+<aside class="cl-side" id="sidebar"></aside>
+
+<main class="cl-main">
+
+  <nav class="crumb" id="crumb"></nav>
+
+
+
+  <!-- ===== 报告头: 品牌 + 报告口径 + 综合影响力 + 监测入口 ===== -->
+
+  <div class="phead">
+
+    <div class="phead-l">
+
+      <div class="phead-eyebrow">数据洞察 · 影响力报告</div>
+
+      <div class="phead-h1" id="r-title">品牌 AI 搜索影响力报告</div>
+
+      <div class="phead-sub" id="r-concl">正在生成报告结论…</div>
+
+      <div class="phead-chips">
+
+        <span class="phead-chip">报告编号 <b id="r-no">读取中</b></span>
+
+        <span class="phead-chip">数据周期 <b id="r-range">读取中</b></span>
+
+        <span class="phead-chip">监测样本 <b id="r-sample">0</b> 次</span>
+
+        <span class="phead-chip">覆盖引擎 <b>豆包 · DeepSeek · 千问 · 元宝</b></span>
+
+        <span hidden><b id="pc-no">未生成</b><b id="pc-sample">0</b></span>
+
+      </div>
+
+    </div>
+
+    <div class="phead-r">
+
+      <div class="phead-score">
+
+        <div class="ps-t">综合影响力指数</div>
+
+        <div class="ps-n"><b id="idx-v">0</b><span>分</span><span class="pill gray" id="idx-grade">待评级</span></div>
+
+        <div class="ps-s" id="idx-tip">四大指标加权 · 满分 100</div>
+
+      </div>
+
+      <button class="btn" id="run-btn2" onclick="runGEO()"><i class="ic" data-ic="radar"></i><span>跑一轮监测</span></button>
+
+    </div>
+
+  </div>
+
+
+
+  <!-- ===== 首访空态: 从未跑过监测时出现, 高度 < 200px ===== -->
+
+  <section class="sec" id="geo-empty" hidden>
+
+    <div class="sec-b">
+
+      <div class="empty">
+
+        <div class="e-ic"><i class="ic" data-ic="radar" data-sz="20"></i></div>
+
+        <div class="e-t">还没有 GEO 监测数据</div>
+
+        <div class="e-s">监测会模拟真实用户向四大 AI 引擎提问，记录品牌是否被提及与引用；一轮约 40 分钟，完成后本页自动刷新</div>
+
+        <button class="btn" onclick="runGEO()"><i class="ic" data-ic="radar"></i><span>跑一轮监测</span></button>
+
+      </div>
+
+    </div>
+
+  </section>
+
+
+
+  <!-- ===== 加载失败: 红条 + 重试 ===== -->
+
+  <div id="geo-err" hidden>
+
+    <div class="empty err">
+
+      <div class="e-ic"><i class="ic" data-ic="alert" data-sz="20"></i></div>
+
+      <div class="e-t">报告数据加载失败</div>
+
+      <div class="e-s">监测接口未返回有效数据，请检查网络后重试</div>
+
+      <button class="btn gray sm" onclick="load()"><i class="ic" data-ic="refresh"></i><span>重试</span></button>
+
+    </div>
+
+  </div>
+
+
+
+  <!-- ===== 监测进度(运行中) ===== -->
+
+  <section class="sec" id="runbox" style="display:none">
+
+    <div class="sec-h">
+
+      <span class="sec-ico"><i class="ic" data-ic="clock" data-sz="20"></i></span>
+
+      <div class="sec-t"><b>监测进行中</b><span>约 40 分钟 · 模拟真实用户提问节奏 · 完成后自动刷新报告，可离开此页</span></div>
+
+      <div class="sec-x"><span class="pill warn">运行中</span></div>
+
+    </div>
+
+    <div class="sec-b">
+
+      <div class="cl-runbar"><i></i></div>
+
+      <div id="runlog" style="font-size:12px;color:var(--ink3);margin-top:8px"></div>
+
+      <div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <button class="btn gray sm" id="geo-stop-btn" onclick="stopGEO()"><i class="ic" data-ic="close"></i><span>停止本轮监测</span></button>
+        <span style="font-size:12px;color:var(--ink3)">已采样的数据会保留；停止后本页自动刷新</span>
+      </div>
+
+    </div>
+
+  </section>
+
+
+
+  <!-- ===== KPI: 数值与单位拆开, 数字等宽 ===== -->
+
+  <div class="kpi-grid">
+
+    <div class="kpi">
+
+      <div class="kpi-l">品牌提及率 <span class="kpi-x"><i class="ic" data-ic="radar"></i></span></div>
+
+      <div class="kpi-r"><span class="kpi-v" id="m-mention">0</span><span class="kpi-u">%</span></div>
+
+      <div class="viz-bar thin" style="margin-top:8px"><span class="sg ok" id="b-mention" style="width:0%"></span></div>
+
+      <div class="kpi-l" style="margin-top:8px">样本 <b id="k-q">0</b> 次问答 · AI 提到您品牌的比例</div>
+
+    </div>
+
+    <div class="kpi">
+
+      <div class="kpi-l">首位推荐率 <span class="kpi-x"><i class="ic" data-ic="target"></i></span></div>
+
+      <div class="kpi-r"><span class="kpi-v" id="m-top">0</span><span class="kpi-u">%</span></div>
+
+      <div class="viz-bar thin" style="margin-top:8px"><span class="sg ok" id="b-top" style="width:0%"></span></div>
+
+      <div class="kpi-l" style="margin-top:8px">出现在 AI 回答顶部推荐位的比例</div>
+
+    </div>
+
+    <div class="kpi">
+
+      <div class="kpi-l">前三上榜率 <span class="kpi-x"><i class="ic" data-ic="list"></i></span></div>
+
+      <div class="kpi-r"><span class="kpi-v" id="m-top3">0</span><span class="kpi-u">%</span></div>
+
+      <div class="viz-bar thin" style="margin-top:8px"><span class="sg brand" id="b-top3" style="width:0%"></span></div>
+
+      <div class="kpi-l" style="margin-top:8px">品牌进入 AI 回答前三推荐的比例</div>
+
+    </div>
+
+    <div class="kpi">
+
+      <div class="kpi-l">内容被引率 <span class="kpi-x"><i class="ic" data-ic="link"></i></span></div>
+
+      <div class="kpi-r"><span class="kpi-v" id="m-cite">0</span><span class="kpi-u">%</span></div>
+
+      <div class="viz-bar thin" style="margin-top:8px"><span class="sg warn" id="b-cite" style="width:0%"></span></div>
+
+      <div class="kpi-l" style="margin-top:8px">内容被 AI 引用为来源的比例</div>
+
+    </div>
+
+  </div>
+
+
+
+  <!-- ===== 趋势 / 引擎( ECharts ) ===== -->
+
+  <div class="bento-2" style="grid-template-columns:minmax(0,1.35fr) minmax(0,1fr)">
+
+    <section class="sec">
+
+      <div class="sec-h">
+
+        <span class="sec-ico"><i class="ic" data-ic="chartLine" data-sz="20"></i></span>
+
+        <div class="sec-t"><b>提及率趋势</b><span>按监测日期 · 被提及构成与提及率走势</span></div>
+
+        <div class="sec-x"><span class="pill gray" id="trend-side"></span></div>
+
+      </div>
+
+      <div class="sec-b">
+
+        <div class="chart-wrap" id="geo-trend">
+
+          <div class="chart" id="ch-trend" style="height:224px"></div>
+
+          <div class="chart-empty" id="em-trend" hidden>
+
+            <div class="empty">
+
+              <div class="e-ic"><i class="ic" data-ic="chartLine" data-sz="20"></i></div>
+
+              <div class="e-t" id="em-trend-t">暂无趋势数据</div>
+
+              <div class="e-s" id="em-trend-s">完成一轮监测后，这里按日期展示品牌在 AI 回答中的提及率走势</div>
+
+              <button class="btn" onclick="runGEO()"><i class="ic" data-ic="radar"></i><span>跑一轮监测</span></button>
+
+            </div>
+
+          </div>
+
+          <div class="skel chart-skel" id="sk-trend"></div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+    <section class="sec">
+
+      <div class="sec-h">
+
+        <span class="sec-ico"><i class="ic" data-ic="chartBar" data-sz="20"></i></span>
+
+        <div class="sec-t"><b>各 AI 引擎表现</b><span>按品牌提及率排序 · 右侧为内容被引率</span></div>
+
+        <div class="sec-x"><span class="pill gray" id="eng-side"></span></div>
+
+      </div>
+
+      <div class="sec-b">
+
+        <div class="chart-wrap" id="eng-list">
+
+          <div class="chart" id="ch-engine" style="height:224px"></div>
+
+          <div class="chart-empty" id="em-engine" hidden>
+
+            <div class="empty">
+
+              <div class="e-ic"><i class="ic" data-ic="chartBar" data-sz="20"></i></div>
+
+              <div class="e-t" id="em-eng-t">暂无引擎数据</div>
+
+              <div class="e-s" id="em-eng-s">完成一轮监测后，这里按品牌提及率排序展示各 AI 引擎表现</div>
+
+              <button class="btn" onclick="runGEO()"><i class="ic" data-ic="radar"></i><span>跑一轮监测</span></button>
+
+            </div>
+
+          </div>
+
+          <div class="skel chart-skel" id="sk-engine"></div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+  </div>
+
+
+
+  <!-- ===== 引用份额(环形图) / 引用来源记录(表格) ===== -->
+
+  <div class="bento-2">
+
+    <section class="sec">
+
+      <div class="sec-h">
+
+        <span class="sec-ico"><i class="ic" data-ic="chartPie" data-sz="20"></i></span>
+
+        <div class="sec-t"><b>AI 引用份额</b><span>Share of Voice · 您的内容占全部引用来源的比例</span></div>
+
+      </div>
+
+      <div class="sec-b">
+
+        <div class="sov-body">
+
+          <div class="chart-wrap" id="sov-chart" style="flex:0 0 208px">
+
+            <div class="chart" id="ch-sov" style="height:200px"></div>
+
+            <div class="chart-empty" id="em-sov" hidden>
+
+              <div class="empty">
+
+                <div class="e-ic"><i class="ic" data-ic="chartPie" data-sz="20"></i></div>
+
+                <div class="e-t" id="em-sov-t">暂无引用来源</div>
+
+                <div class="e-s" id="em-sov-s">完成一轮监测后，这里显示 AI 引用来源中来自您内容的比例</div>
+
+              </div>
+
+            </div>
+
+            <div class="skel chart-skel" id="sk-sov"></div>
+
+          </div>
+
+          <div class="sov-side">
+
+            <div class="sov-v"><b id="sov-v">0</b><span>% 引用份额</span></div>
+
+            <div class="sov-m">AI 引用来源中，来自您的内容 <b id="sov-ours">0</b> 条 · 其他来源 <b id="sov-rival">0</b> 条</div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+    <section class="sec">
+
+      <div class="sec-h">
+
+        <span class="sec-ico"><i class="ic" data-ic="link" data-sz="20"></i></span>
+
+        <div class="sec-t"><b>引用来源记录</b><span id="src-sub">AI 回答原文引用您的文章记录</span></div>
+
+        <div class="sec-x"><span class="pill gray"><i class="ic" data-ic="check" data-sz="16"></i>累计 <b id="honor-n">0</b> 次</span></div>
+
+      </div>
+
+      <div class="sec-b flush">
+
+        <div class="tbl-wrap"><div class="tbl-scroll src-scroll">
+
+          <table class="tbl src-tbl">
+
+            <thead><tr>
+
+              <th>标题</th>
+
+              <th class="col-eng">引擎</th>
+
+              <th class="col-src">外链</th>
+
+            </tr></thead>
+
+            <tbody id="cited-list">
+
+              <tr><td><div class="skel" style="height:12px;width:72%"></div></td><td><div class="skel" style="height:12px;width:64px"></div></td><td><div class="skel" style="height:12px;width:48px"></div></td></tr>
+
+              <tr><td><div class="skel" style="height:12px;width:64%"></div></td><td><div class="skel" style="height:12px;width:64px"></div></td><td><div class="skel" style="height:12px;width:48px"></div></td></tr>
+
+              <tr><td><div class="skel" style="height:12px;width:80%"></div></td><td><div class="skel" style="height:12px;width:64px"></div></td><td><div class="skel" style="height:12px;width:48px"></div></td></tr>
+
+              <tr><td><div class="skel" style="height:12px;width:58%"></div></td><td><div class="skel" style="height:12px;width:64px"></div></td><td><div class="skel" style="height:12px;width:48px"></div></td></tr>
+
+              <tr><td><div class="skel" style="height:12px;width:70%"></div></td><td><div class="skel" style="height:12px;width:64px"></div></td><td><div class="skel" style="height:12px;width:48px"></div></td></tr>
+
+              <tr><td><div class="skel" style="height:12px;width:66%"></div></td><td><div class="skel" style="height:12px;width:64px"></div></td><td><div class="skel" style="height:12px;width:48px"></div></td></tr>
+
+              <tr><td><div class="skel" style="height:12px;width:76%"></div></td><td><div class="skel" style="height:12px;width:64px"></div></td><td><div class="skel" style="height:12px;width:48px"></div></td></tr>
+
+              <tr><td><div class="skel" style="height:12px;width:62%"></div></td><td><div class="skel" style="height:12px;width:64px"></div></td><td><div class="skel" style="height:12px;width:48px"></div></td></tr>
+
+            </tbody>
+
+          </table>
+
+        </div></div>
+
+      </div>
+
+    </section>
+
+  </div>
+
+
+
+  <!-- ===== 关键词战场矩阵(表格 + 筛选 + 分页) ===== -->
+
+  <section class="sec">
+
+    <div class="sec-h">
+
+      <span class="sec-ico"><i class="ic" data-ic="heat" data-sz="20"></i></span>
+
+      <div class="sec-t"><b>关键词战场矩阵</b><span>每条查询词在四大引擎中的占位层级</span></div>
+
+      <div class="sec-x">
+
+        <span class="pill gray"><i class="ic" data-ic="target" data-sz="16"></i>覆盖率 <b id="mtx-cov">未统计</b></span>
+
+        <span class="pill gray" id="mtx-count">加载中</span>
+
+      </div>
+
+    </div>
+
+    <div class="sec-b flush">
+
+      <div class="toolbar">
+
+        <select class="inp" id="mx-engine" onchange="onMxFilter()" title="按引擎筛选">
+
+          <option value="all">全部引擎</option>
+
+          <option value="yuanbao">腾讯元宝</option>
+
+          <option value="deepseek">DeepSeek</option>
+
+          <option value="qwen">通义千问</option>
+
+          <option value="doubao">豆包</option>
+
+        </select>
+
+        <select class="inp" id="mx-hit" onchange="onMxFilter()" title="按命中情况筛选">
+
+          <option value="all">全部命中情况</option>
+
+          <option value="hit">已命中（首 / 前 / 提）</option>
+
+          <option value="top">首位推荐</option>
+
+          <option value="top3">进入前三</option>
+
+          <option value="cited">仅被提及</option>
+
+          <option value="none">未命中</option>
+
+        </select>
+
+        <span class="pill gray" title="当前筛选命中的查询词数与其中已命中的数量"><i class="ic" data-ic="filter" data-sz="16"></i>命中 <b id="mx-hit-n">0</b> 条</span>
+
+        <span class="sp"></span>
+
+        <select class="inp" id="mx-size" onchange="setMxSize(this.value)" title="每页条数">
+
+          <option value="20">20 条/页</option>
+
+          <option value="50" selected>50 条/页</option>
+
+          <option value="100">100 条/页</option>
+
+        </select>
+
+        <button class="btn sm gray" onclick="load()"><i class="ic" data-ic="refresh"></i><span>刷新</span></button>
+
+      </div>
+
+      <div class="tbl-wrap"><div class="tbl-scroll mx-scroll">
+
+        <table class="tbl mx-tbl">
+
+          <thead><tr>
+
+            <th>查询词</th>
+
+            <th class="col-mx">腾讯元宝</th>
+
+            <th class="col-mx">DeepSeek</th>
+
+            <th class="col-mx">通义千问</th>
+
+            <th class="col-mx">豆包</th>
+
+            <th class="col-cov num">覆盖率</th>
+
+          </tr></thead>
+
+          <tbody id="mtx">
+
+            <tr><td><div class="skel" style="height:12px;width:70%"></div></td><td><div class="skel" style="height:12px;width:32px"></div></td><td><div class="skel" style="height:12px;width:32px"></div></td><td><div class="skel" style="height:12px;width:32px"></div></td><td><div class="skel" style="height:12px;width:32px"></div></td><td class="num"><div class="skel" style="height:12px;width:40px;margin-left:auto"></div></td></tr>
+
+            <tr><td><div class="skel" style="height:12px;width:62%"></div></td><td><div class="skel" style="height:12px;width:32px"></div></td><td><div class="skel" style="height:12px;width:32px"></div></td><td><div class="skel" style="height:12px;width:32px"></div></td><td><div class="skel" style="height:12px;width:32px"></div></td><td class="num"><div class="skel" style="height:12px;width:40px;margin-left:auto"></div></td></tr>
+
+            <tr><td><div class="skel" style="height:12px;width:76%"></div></td><td><div class="skel" style="height:12px;width:32px"></div></td><td><div class="skel" style="height:12px;width:32px"></div></td><td><div class="skel" style="height:12px;width:32px"></div></td><td><div class="skel" style="height:12px;width:32px"></div></td><td class="num"><div class="skel" style="height:12px;width:40px;margin-left:auto"></div></td></tr>
+
+            <tr><td><div class="skel" style="height:12px;width:58%"></div></td><td><div class="skel" style="height:12px;width:32px"></div></td><td><div class="skel" style="height:12px;width:32px"></div></td><td><div class="skel" style="height:12px;width:32px"></div></td><td><div class="skel" style="height:12px;width:32px"></div></td><td class="num"><div class="skel" style="height:12px;width:40px;margin-left:auto"></div></td></tr>
+
+            <tr><td><div class="skel" style="height:12px;width:68%"></div></td><td><div class="skel" style="height:12px;width:32px"></div></td><td><div class="skel" style="height:12px;width:32px"></div></td><td><div class="skel" style="height:12px;width:32px"></div></td><td><div class="skel" style="height:12px;width:32px"></div></td><td class="num"><div class="skel" style="height:12px;width:40px;margin-left:auto"></div></td></tr>
+
+            <tr><td><div class="skel" style="height:12px;width:64%"></div></td><td><div class="skel" style="height:12px;width:32px"></div></td><td><div class="skel" style="height:12px;width:32px"></div></td><td><div class="skel" style="height:12px;width:32px"></div></td><td><div class="skel" style="height:12px;width:32px"></div></td><td class="num"><div class="skel" style="height:12px;width:40px;margin-left:auto"></div></td></tr>
+
+            <tr><td><div class="skel" style="height:12px;width:72%"></div></td><td><div class="skel" style="height:12px;width:32px"></div></td><td><div class="skel" style="height:12px;width:32px"></div></td><td><div class="skel" style="height:12px;width:32px"></div></td><td><div class="skel" style="height:12px;width:32px"></div></td><td class="num"><div class="skel" style="height:12px;width:40px;margin-left:auto"></div></td></tr>
+
+            <tr><td><div class="skel" style="height:12px;width:66%"></div></td><td><div class="skel" style="height:12px;width:32px"></div></td><td><div class="skel" style="height:12px;width:32px"></div></td><td><div class="skel" style="height:12px;width:32px"></div></td><td><div class="skel" style="height:12px;width:32px"></div></td><td class="num"><div class="skel" style="height:12px;width:40px;margin-left:auto"></div></td></tr>
+
+          </tbody>
+
+        </table>
+
+      </div></div>
+
+      <div class="pager" id="mx-pager"></div>
+
+    </div>
+
+  </section>
+
+</main>
+
+</div>
+
+
+
+<script src="/static/icons.js?v={{ asset_ver }}"></script>
+
+
+<script src="/static/layout.js?v={{ asset_ver }}"></script>
+
+<script>
+
+/* ============================================================
+
+   客户工作台 · GEO 监测(影响力报告) · 页内脚本
+
+   行为链不变: load / runGEO / pollRun / b0 / setRate / rc / ENG / CST
+
+   数据来源不变: /api/geo/dashboard · /api/geo/run · /api/geo/status · /api/me
+
+   呈现: 表格行 tr/td; 提及率趋势 / 各引擎表现 / AI 引用份额 由 ECharts 5.5.1(本地) 渲染
+
+   ============================================================ */
+
+const ENG = { yuanbao: '腾讯元宝', deepseek: 'DeepSeek', qwen: '通义千问', doubao: '豆包' };
+
+const MX_KEYS = ['yuanbao', 'deepseek', 'qwen', 'doubao'];
+
+const rc = r => r >= 50 ? 'var(--ok)' : (r > 0 ? 'var(--warn)' : 'var(--ink3)');
+
+/* 关键词矩阵单元格语义: 首 / 前 / 提 / 未(+ 本轮未取到有效回答) */
+
+const CST = {
+
+    top:   { cls: 'ok',    t: '首', d: '首位推荐' },
+
+    top3:  { cls: 'brand', t: '前', d: '进入前三' },
+
+    cited: { cls: 'warn',  t: '提', d: '仅被提及' },
+
+    none:  { cls: 'gray',  t: '未', d: '未被提及' },
+
+    err:   { cls: 'bad',   t: '错', d: '本轮未取到有效回答' }
+
+};
+
+const HIT_LV = ['top', 'top3', 'cited'];
+
+
+
+/* ---------- 监测运行: 接口与按钮行为保持不变 ---------- */
+
+function setRunBtn(txt, ic) {
+
+    const b = document.getElementById('run-btn2');
+
+    if (!b) return;
+
+    b.innerHTML = '<i class="ic" data-ic="' + (ic || 'radar') + '"></i><span>' + esc(txt) + '</span>';
+
+    if (window.ICONS) ICONS.mount(b);
+
+}
+
+async function runGEO() {
+
+    const b = document.getElementById('run-btn2');
+
+    b.disabled = true; b.classList.add('loading'); setRunBtn('监测运行中', 'refresh');
+
+    document.getElementById('runbox').style.display = 'block';
+
+    await fetch('/api/geo/run', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+
+        body: JSON.stringify({ engines: ['yuanbao','deepseek','qwen','doubao'], rounds: 1, limit: 0, concurrency: 4, interval: 30 }) });
+
+    pollRun();
+
+}
+
+let pollTimer = null;
+
+function pollRun() {
+
+    pollTimer = setInterval(async () => {
+
+        try {
+
+            const s = await (await fetch('/api/geo/status')).json();
+
+            document.getElementById('runlog').textContent = (s.log_tail || []).slice(-1)[0] || '';
+
+            if (!s.running) { clearInterval(pollTimer); document.getElementById('runbox').style.display = 'none'; b0(); load(); }
+
+        } catch (e) { }
+
+    }, 8000);
+
+}
+
+function b0() {
+
+    const b = document.getElementById('run-btn2');
+
+    if (b) { b.disabled = false; b.classList.remove('loading'); }
+
+    setRunBtn('跑一轮监测', 'radar');
+
+}
+
+/* 停止本轮监测：后端 geo_monitor.request_stop 早就在轮询循环里生效
+   （每个引擎间隙 + 每轮间隙检查 stop），只是页面一直没有入口。 */
+async function stopGEO() {
+
+    if (!confirm('确定停止本轮监测？已采样的数据会保留。')) return;
+
+    const b = document.getElementById('geo-stop-btn');
+
+    if (b) { b.disabled = true; b.querySelector('span').textContent = '正在停止…'; }
+
+    try { await fetch('/api/geo/stop', { method: 'POST' }); } catch (e) { }
+
+}
+
+
+
+/* ============================================================
+
+   图表基础: token 色板 / 提示框 / 自适应 / 加载骨架回收
+
+   ============================================================ */
+
+const CH = { trend: null, engine: null, sov: null };
+
+const CH_FONT = '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif';
+
+/* 趋势图底柱「未提及」的低饱和红: 满高度饱和红会压过折线与被提及柱, 按验收要求写死色值 */
+
+const TREND_REST = '#7A4A47';
+
+/* 环形图分类色: 品牌金色阶 + 单灰(末档留给「其他」) */
+
+const SOV_PALETTE = ['#B08D57', '#D6B473', '#8A6C42', '#C9A063', '#6E5734', '#71717A'];
+
+
+
+function tok(name, fb) {
+
+    try {
+
+        const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
+        return v || fb;
+
+    } catch (e) { return fb; }
+
+}
+
+function palette() {
+
+    return {
+
+        c1: tok('--c1', '#B08D57'), c2: tok('--c2', '#D6B473'), c6: tok('--c6', '#71717A'),
+
+        ok: tok('--ok', '#4E9A6B'), bad: tok('--bad', '#C25B54'), accent: tok('--accent', '#D6B473'),
+
+        grid: tok('--c-grid', '#1F1F24'), axis: tok('--c-axis', '#3A3A42'),
+
+        ink: tok('--ink', '#F4F4F5'), ink2: tok('--ink2', '#A1A1AA'), ink3: tok('--ink3', '#8A8A94'),
+
+        line: tok('--line', '#29292F'), card: tok('--card', '#141417')
+
+    };
+
+}
+
+function chartTip(C) {
+
+    return {
+
+        backgroundColor: C.card, borderColor: C.line, borderWidth: 1, padding: [8, 12],
+
+        textStyle: { color: C.ink, fontSize: 12, fontFamily: CH_FONT },
+
+        /* canvas 阴影读不到 CSS 变量, 数值与 var(--shadow-lg) 同档; 其余颜色一律走 token */
+
+        shadowBlur: 8, shadowColor: 'rgba(0,0,0,.45)',
+
+        extraCssText: 'box-shadow: var(--shadow-lg);border-radius: var(--r);'
+
+    };
+
+}
+
+function dropSkel(id) { const el = document.getElementById(id); if (el) el.remove(); }
+
+function setOverlay(prefix, title, sub) {
+
+    const t = document.getElementById(prefix + '-t'); if (t) t.textContent = title;
+
+    const s = document.getElementById(prefix + '-s'); if (s) s.textContent = sub;
+
+}
+
+function initCharts() {
+
+    if (typeof echarts === 'undefined') return;
+
+    const t = document.getElementById('ch-trend');
+
+    const e = document.getElementById('ch-engine');
+
+    const s = document.getElementById('ch-sov');
+
+    if (t) CH.trend = echarts.init(t, null, { renderer: 'canvas' });
+
+    if (e) CH.engine = echarts.init(e, null, { renderer: 'canvas' });
+
+    if (s) CH.sov = echarts.init(s, null, { renderer: 'canvas' });
+
+    const all = () => [CH.trend, CH.engine, CH.sov];
+
+    let timer = null;
+
+    const doResize = () => { all().forEach(c => { try { c && c.resize(); } catch (err) { } }); };
+
+    const debounced = () => { if (timer) clearTimeout(timer); timer = setTimeout(doResize, 120); };
+
+    window.addEventListener('resize', debounced);
+
+    if (window.ResizeObserver) {
+
+        const ro = new ResizeObserver(debounced);
+
+        ['ch-trend', 'ch-engine', 'ch-sov'].forEach(id => {
+
+            const el = document.getElementById(id);
+
+            if (el) ro.observe(el);
+
+        });
+
+    }
+
+}
+
+
+
+/* ===== 图 1: 提及率趋势(柱 = 被提及/未提及构成 · 折线 = 提及率) =====
+
+   左轴承载堆叠柱(0-100 构成), 右轴承载提及率折线(0-100%); 网格线只留在左轴, 避免双轴重线;
+
+   markPoint 标注峰值与最新值(同一天时只标一次) */
+
+function renderTrendChart(tr, hasRun) {
+
+    dropSkel('sk-trend');
+
+    const em = document.getElementById('em-trend');
+
+    if (!CH.trend) { if (em) em.hidden = false; return; }
+
+    if (!tr.length) {
+
+        if (em) em.hidden = false;
+
+        if (hasRun) setOverlay('em-trend', '近几轮监测均未被提及', 'AI 尚未在回答中提到您的品牌；持续发布内容并坚持监测，通常 2-4 周出现收录');
+
+        else setOverlay('em-trend', '暂无趋势数据', '完成一轮监测后，这里按日期展示品牌在 AI 回答中的提及率走势');
+
+        // 空态只保留空坐标系(canvas 常驻, 避免实例销毁重建)
+
+        CH.trend.setOption({
+
+            legend: { show: false }, graphic: [],
+
+            xAxis: { type: 'category', data: [] },
+
+            yAxis: [{ type: 'value', min: 0, max: 100 }, { type: 'value', min: 0, max: 100, show: false }],
+
+            series: []
+
+        }, true);
+
+        return;
+
+    }
+
+    if (em) em.hidden = true;
+
+
+
+    const C = palette();
+
+    const days = tr.map(t => (t.date || '').slice(5));
+
+    const rate = tr.map(t => t.mention_rate || 0);
+
+    const rest = rate.map(v => Math.max(0, Math.round((100 - v) * 10) / 10));
+
+    let peakIdx = 0;
+
+    rate.forEach((v, i) => { if (v > rate[peakIdx]) peakIdx = i; });
+
+    const lastIdx = rate.length - 1;
+
+    const marks = [{ coord: [peakIdx, rate[peakIdx]], label: { formatter: '峰值 ' + rate[peakIdx] + '%' } }];
+
+    if (lastIdx !== peakIdx) marks.push({ coord: [lastIdx, rate[lastIdx]], label: { formatter: '最新 ' + rate[lastIdx] + '%' } });
+
+
+
+    CH.trend.setOption({
+
+        color: [C.ok, TREND_REST, C.accent],
+
+        textStyle: { fontFamily: CH_FONT, fontSize: 12 },
+
+        animationDuration: 300, animationEasing: 'cubicOut',
+
+        legend: { data: ['被提及', '未提及', '提及率'], top: 0, right: 0, icon: 'roundRect', itemWidth: 10, itemHeight: 10, itemGap: 16, textStyle: { color: C.ink2, fontSize: 12 } },
+
+        grid: { left: 8, right: 8, top: 40, bottom: 8, containLabel: true },
+
+        tooltip: Object.assign(chartTip(C), {
+
+            trigger: 'axis',
+
+            axisPointer: { type: 'shadow', shadowStyle: { color: C.grid } },
+
+            formatter: function (ps) {
+
+                const t = tr[ps[0].dataIndex] || {};
+
+                let h = '<b>' + (t.date || '') + '</b>';
+
+                h += '<br/>' + ps[0].marker + ' 被提及 <b>' + (t.mention_rate || 0) + '%</b>';
+
+                h += '<br/>' + ps[1].marker + ' 未提及 <b>' + Math.max(0, 100 - (t.mention_rate || 0)) + '%</b>';
+
+                h += '<br/>' + ps[2].marker + ' 提及率 <b>' + (t.mention_rate || 0) + '%</b>';
+
+                h += '<br/><span style="color:' + C.ink3 + '">内容被引率 ' + (t.cite_rate || 0) + '%</span>';
+
+                return h;
+
+            }
+
+        }),
+
+        xAxis: {
+
+            type: 'category', data: days,
+
+            axisLine: { lineStyle: { color: C.axis } }, axisTick: { show: false },
+
+            axisLabel: { color: C.ink3, fontSize: 12 }, splitLine: { show: false }
+
+        },
+
+        yAxis: [
+
+            {
+
+                type: 'value', min: 0, max: 100,
+
+                axisLine: { show: false }, axisTick: { show: false },
+
+                splitLine: { lineStyle: { color: C.grid } },
+
+                axisLabel: { formatter: '{value}%', color: C.ink3, fontSize: 12 }
+
+            },
+
+            {
+
+                type: 'value', min: 0, max: 100,
+
+                axisLine: { show: false }, axisTick: { show: false },
+
+                splitLine: { show: false }, axisLabel: { show: false }
+
+            }
+
+        ],
+
+        series: [
+
+            /* 底柱(未提及)低饱和红 + z 低一档: 被提及柱与折线压在其上, 信息不被满高度底色吞掉 */
+
+            { name: '被提及', type: 'bar', stack: 'rate', barMaxWidth: 26, z: 3, itemStyle: { color: C.ok }, data: rate },
+
+            { name: '未提及', type: 'bar', stack: 'rate', barMaxWidth: 26, z: 2, itemStyle: { color: TREND_REST }, data: rest },
+
+            {
+
+                name: '提及率', type: 'line', yAxisIndex: 1, data: rate, symbol: 'circle', symbolSize: 6, z: 3,
+
+                lineStyle: { width: 2, color: C.accent }, itemStyle: { color: C.accent },
+
+                markPoint: {
+
+                    symbol: 'circle', symbolSize: 5, silent: true, z: 4,
+
+                    itemStyle: { color: C.accent, borderColor: C.card, borderWidth: 1 },
+
+                    /* 标注落在堆叠柱(未提及段)之上, 加 token 底色的标签底以保证可读性 */
+
+                    label: {
+
+                        show: true, position: 'top', distance: 8, color: C.ink2, fontSize: 12, fontFamily: CH_FONT,
+
+                        backgroundColor: C.card, borderColor: C.line, borderWidth: 1, borderRadius: 4, padding: [2, 6]
+
+                    },
+
+                    data: marks
+
+                }
+
+            }
+
+        ]
+
+    }, true);
+
+}
+
+
+
+/* ===== 图 2: 各 AI 引擎表现(横向条形 + 被引率标注) =====
+
+   系列 1 = 品牌提及率(柱, 最佳引擎用 --accent, 其余 --c1) / 系列 2 = 内容被引率(固定槽位标签)
+
+   被引标签落在 x=100 的固定槽位(grid.right 预留 76px), 再向右偏移 8px;
+
+   全 0 时整列关闭, 避免数值轴右侧出现游离文本; 最佳引擎的结论由页头胶囊承担(全 0 时不出现) */
+
+const ENG_LEGEND = ['品牌提及率', '内容被引率'];
+
+function renderEngineChart(engs, hasRun) {
+
+    dropSkel('sk-engine');
+
+    const em = document.getElementById('em-engine');
+
+    if (!CH.engine) { if (em) em.hidden = false; return; }
+
+    if (!engs.length || !hasRun) {
+
+        if (em) em.hidden = false;
+
+        setOverlay('em-eng', '暂无引擎数据', hasRun ? '本轮未取到各引擎的有效回答，可稍后重试' : '完成一轮监测后，这里按品牌提及率排序展示各 AI 引擎表现');
+
+        CH.engine.setOption({
+
+            legend: { show: false },
+
+            xAxis: { type: 'value', min: 0, max: 100 },
+
+            yAxis: { type: 'category', data: [] },
+
+            series: []
+
+        }, true);
+
+        return;
+
+    }
+
+    if (em) em.hidden = true;
+
+
+
+    const C = palette();
+
+    // y 轴 category 自下而上, 反转后第 1 名落在顶部
+
+    const rows = engs.map(([k, s]) => ({ name: ENG[k] || k, rate: s.mention_rate || 0, cite: s.cite_rate || 0 })).reverse();
+
+    const rate = rows.map(r => r.rate);
+
+    const cite = rows.map(r => r.cite);
+
+    const best = rate.indexOf(Math.max.apply(null, rate));
+
+    const hasCite = cite.some(v => v > 0);
+
+    CH.engine.setOption({
+
+        color: [C.c1, C.ink3],
+
+        textStyle: { fontFamily: CH_FONT, fontSize: 12 },
+
+        animationDuration: 300, animationEasing: 'cubicOut',
+
+        legend: { data: ENG_LEGEND, top: 0, right: 0, icon: 'roundRect', itemWidth: 10, itemHeight: 10, itemGap: 16, textStyle: { color: C.ink2, fontSize: 12 } },
+
+        grid: { left: 8, right: 76, top: 40, bottom: 8, containLabel: true },
+
+        tooltip: Object.assign(chartTip(C), {
+
+            trigger: 'item',
+
+            formatter: function (p) {
+
+                const r = rows[p.dataIndex] || {};
+
+                if (p.seriesName === ENG_LEGEND[1]) return '<b>' + (r.name || '') + '</b><br/>内容被引率 <b>' + (r.cite || 0) + '%</b>';
+
+                return '<b>' + (r.name || '') + '</b><br/>品牌提及率 <b>' + (r.rate || 0) + '%</b><br/>内容被引率 <b>' + (r.cite || 0) + '%</b>';
+
+            }
+
+        }),
+
+        xAxis: {
+
+            type: 'value', min: 0, max: 100,
+
+            axisLine: { show: false }, axisTick: { show: false },
+
+            splitLine: { lineStyle: { color: C.grid } },
+
+            /* 窄卡下 6 个 '20%' 会相互贴字: 绘图区 < 380px 时轴标签缩短为纯数字, resize 后按宽度重新取词 */
+
+            axisLabel: { formatter: v => (CH.engine && CH.engine.getWidth() < 380) ? '' + v : v + '%', color: C.ink3, fontSize: 12 }
+
+        },
+
+        yAxis: {
+
+            type: 'category', data: rows.map(r => r.name),
+
+            axisLine: { lineStyle: { color: C.axis } }, axisTick: { show: false },
+
+            splitLine: { show: false },
+
+            axisLabel: {
+
+                formatter: (n, i) => '{n|' + n + '}  {v|' + (rate[i] || 0) + '%}',
+
+                rich: {
+
+                    n: { color: C.ink2, fontSize: 12, fontFamily: CH_FONT },
+
+                    v: { color: C.ink3, fontSize: 12, fontFamily: CH_FONT }
+
+                }
+
+            }
+
+        },
+
+        series: [
+
+            {
+
+                name: ENG_LEGEND[0], type: 'bar', barMaxWidth: 16, barMinHeight: 2,
+
+                data: rate.map((v, i) => ({ value: v, itemStyle: { color: (i === best && v > 0) ? C.accent : C.c1 } }))
+
+            },
+
+            {
+
+                name: ENG_LEGEND[1], type: 'scatter', symbolSize: 0, silent: true, z: 3,
+
+                label: { show: hasCite, position: 'right', offset: [8, 0], color: C.ink2, fontSize: 12, fontFamily: CH_FONT },
+
+                data: cite.map((v, i) => ({ value: [100, i], label: { show: v > 0, formatter: '被引 ' + v + '%' } }))
+
+            }
+
+        ]
+
+    }, true);
+
+}
+
+
+
+/* ===== 图 3: AI 引用份额(环形图) =====
+
+   我们的被引 vs 其他来源; 总量为 0 时整卡走空态, 不画空环
+
+   环心文案用 title 承载(left:'center' + textAlign:'center', top:'middle'), 图例移到底部:
+
+   画布中心 = 环心, 中心文案与挖空区同心, 不再出现末字被环带裁掉 */
+
+function renderSovChart(sov) {
+
+    dropSkel('sk-sov');
+
+    const em = document.getElementById('em-sov');
+
+    if (!CH.sov) { if (em) em.hidden = false; return; }
+
+    const total = sov.total || 0, ours = sov.ours || 0;
+
+    if (!total) {
+
+        if (em) em.hidden = false;
+
+        CH.sov.setOption({ color: SOV_PALETTE, legend: { show: false }, title: { text: '' }, series: [] }, true);
+
+        return;
+
+    }
+
+    if (em) em.hidden = true;
+
+
+
+    const C = palette();
+
+    CH.sov.setOption({
+
+        color: SOV_PALETTE,
+
+        textStyle: { fontFamily: CH_FONT, fontSize: 12 },
+
+        animationDuration: 300, animationEasing: 'cubicOut',
+
+        /* 环心: 总数 + 单位. 与饼心同步(画布中心), left:'center' 由 title 按文本宽度自行居中
+
+           —— 不要再补 textAlign:'center', 那会把整块再左移半个文本宽; top 与饼心 50% 对齐 */
+
+        title: {
+
+            text: String(total), subtext: '来源引用', left: 'center', top: '38%',
+
+            textStyle: { color: C.c1, fontSize: 20, fontWeight: 600, fontFamily: CH_FONT },
+
+            subtextStyle: { color: C.ink3, fontSize: 12, fontFamily: CH_FONT }
+
+        },
+
+        legend: { show: true, data: ['我们的内容', '其他来源'], orient: 'horizontal', bottom: 0, left: 'center', icon: 'roundRect', itemWidth: 10, itemHeight: 10, itemGap: 16, textStyle: { color: C.ink2, fontSize: 12 } },
+
+        tooltip: Object.assign(chartTip(C), {
+
+            trigger: 'item',
+
+            formatter: p => '<b>' + p.name + '</b><br/>' + p.value + ' 条 · ' + p.percent + '%'
+
+        }),
+
+        series: [{
+
+            type: 'pie', radius: ['46%', '70%'], center: ['50%', '50%'], avoidLabelOverlap: false,
+
+            itemStyle: { borderColor: C.card, borderWidth: 2 },
+
+            label: { show: false }, labelLine: { show: false },
+
+            data: [
+
+                { name: '我们的内容', value: ours, itemStyle: { color: SOV_PALETTE[0] } },
+
+                { name: '其他来源', value: Math.max(0, total - ours), itemStyle: { color: SOV_PALETTE[5] } }
+
+            ]
+
+        }]
+
+    }, true);
+
+}
+
+
+
+/* ===== 表格: 空态 / 错误态整行(表格内必须是 tr/td, 否则浏览器会把 div 提到表格外) ===== */
+
+function emptyRow(cols, icon, title, sub, act) {
+
+    return '<tr><td class="empty-cell" colspan="' + cols + '">' +
+
+        '<div class="empty">' +
+
+        '<div class="e-ic"><i class="ic" data-ic="' + icon + '" data-sz="20"></i></div>' +
+
+        '<div class="e-t">' + title + '</div>' +
+
+        '<div class="e-s">' + sub + '</div>' +
+
+        (act || '') +
+
+        '</div></td></tr>';
+
+}
+
+function errorRow(cols) {
+
+    return '<tr><td class="empty-cell" colspan="' + cols + '">' +
+
+        '<div class="empty err">' +
+
+        '<div class="e-ic"><i class="ic" data-ic="alert" data-sz="20"></i></div>' +
+
+        '<div class="e-t">监测数据加载失败</div>' +
+
+        '<div class="e-s">请检查网络连接后重试</div>' +
+
+        '<button class="btn gray sm" onclick="load()"><i class="ic" data-ic="refresh"></i><span>重试</span></button>' +
+
+        '</div></td></tr>';
+
+}
+
+
+
+/* ===== 关键词战场矩阵: 内存态(筛选 / 分页) ===== */
+
+let MX_ALL = [];
+
+const mxState = { eng: 'all', hit: 'all', page: 1, size: 50 };
+
+
+
+function mxFiltered() {
+
+    const e = mxState.eng, h = mxState.hit;
+
+    return MX_ALL.filter(r => {
+
+        const lv = (e === 'all') ? r.lv : [r.lv[MX_KEYS.indexOf(e)] || 'none'];
+
+        const hit = lv.filter(v => HIT_LV.indexOf(v) >= 0).length;
+
+        if (h === 'all') return true;
+
+        if (h === 'hit') return hit > 0;
+
+        if (h === 'none') return hit === 0;
+
+        return lv.indexOf(h) >= 0;
+
+    });
+
+}
+
+function mxRow(r) {
+
+    return '<tr>' +
+
+        '<td class="strong t-title" title="' + esc(r.q) + '">' + esc(r.q) + '</td>' +
+
+        MX_KEYS.map((k, i) => {
+
+            const c = CST[r.lv[i]] || CST.none;
+
+            return '<td><span class="pill ' + c.cls + '" title="' + esc(ENG[k] || k) + ' · ' + c.d + '">' + c.t + '</span></td>';
+
+        }).join('') +
+
+        '<td class="num">' + Math.round(r.hit / MX_KEYS.length * 100) + '%</td>' +
+
+        '</tr>';
+
+}
+
+function mxPages(cur, total) {
+
+    if (total <= 7) { const a = []; for (let i = 1; i <= total; i++) a.push(i); return a; }
+
+    const set = new Set([1, total, cur, cur - 1, cur + 1]);
+
+    const nums = Array.from(set).filter(n => n >= 1 && n <= total).sort((a, b) => a - b);
+
+    const out = [];
+
+    let prev = 0;
+
+    nums.forEach(n => { if (n - prev > 1) out.push('…'); out.push(n); prev = n; });
+
+    return out;
+
+}
+
+function renderMxPager(total, pages) {
+
+    const el = document.getElementById('mx-pager');
+
+    if (!el) return;
+
+    const p = mxState.page;
+
+    const from = total ? (p - 1) * mxState.size + 1 : 0;
+
+    const to = Math.min(p * mxState.size, total);
+
+    let btns = '<button class="pg-btn" ' + (p <= 1 ? 'disabled' : '') + ' onclick="gotoMxPage(' + (p - 1) + ')" title="上一页"><i class="ic" data-ic="chevronLeft" data-sz="16"></i></button>';
+
+    mxPages(p, pages).forEach(n => {
+
+        btns += (n === '…')
+
+            ? '<span class="pg-gap">…</span>'
+
+            : '<button class="pg-btn ' + (n === p ? 'on' : '') + '" onclick="gotoMxPage(' + n + ')">' + n + '</button>';
+
+    });
+
+    btns += '<button class="pg-btn" ' + (p >= pages ? 'disabled' : '') + ' onclick="gotoMxPage(' + (p + 1) + ')" title="下一页"><i class="ic" data-ic="chevronRight" data-sz="16"></i></button>';
+
+    el.setAttribute('data-pages', pages);
+
+    el.innerHTML = '<span class="pg-info">共 <b>' + total + '</b> 条 · 第 <b>' + p + '</b>/<b>' + pages + '</b> 页</span>' +
+
+        '<span class="pg-range">' + from + '-' + to + '</span>' +
+
+        '<span class="sp"></span>' +
+
+        '<div class="pg-btns">' + btns + '</div>';
+
+    if (window.ICONS) ICONS.mount(el);
+
+}
+
+function renderMatrix() {
+
+    const tbody = document.getElementById('mtx');
+
+    if (!tbody) return;
+
+    const list = mxFiltered();
+
+    const pages = Math.max(1, Math.ceil(list.length / mxState.size));
+
+    if (mxState.page > pages) mxState.page = pages;
+
+    if (mxState.page < 1) mxState.page = 1;
+
+    const slice = list.slice((mxState.page - 1) * mxState.size, mxState.page * mxState.size);
+
+
+
+    if (!MX_ALL.length) {
+
+        tbody.innerHTML = emptyRow(6, 'heat', '暂无矩阵数据', '完成一轮监测后，每条查询词在四大引擎中的占位层级会显示在这里',
+
+            '<button class="btn gray sm" onclick="runGEO()"><i class="ic" data-ic="radar"></i><span>跑一轮监测</span></button>');
+
+    } else if (!list.length) {
+
+        tbody.innerHTML = emptyRow(6, 'search', '没有符合条件的查询词', '调整引擎或命中筛选后重试',
+
+            '<button class="btn gray sm" onclick="resetMxFilter()"><i class="ic" data-ic="refresh"></i><span>重置筛选</span></button>');
+
+    } else {
+
+        tbody.innerHTML = slice.map(mxRow).join('');
+
+    }
+
+    if (window.ICONS) ICONS.mount(tbody);
+
+    const hn = document.getElementById('mx-hit-n');
+
+    if (hn) hn.textContent = list.filter(r => r.hit > 0).length;
+
+    renderMxPager(list.length, pages);
+
+}
+
+function onMxFilter() {
+
+    mxState.eng = (document.getElementById('mx-engine') || {}).value || 'all';
+
+    mxState.hit = (document.getElementById('mx-hit') || {}).value || 'all';
+
+    mxState.page = 1;
+
+    renderMatrix();
+
+}
+
+function setMxSize(v) {
+
+    mxState.size = parseInt(v, 10) || 50;
+
+    mxState.page = 1;
+
+    renderMatrix();
+
+}
+
+function resetMxFilter() {
+
+    mxState.eng = 'all'; mxState.hit = 'all'; mxState.page = 1;
+
+    const e = document.getElementById('mx-engine'); if (e) e.value = 'all';
+
+    const h = document.getElementById('mx-hit'); if (h) h.value = 'all';
+
+    renderMatrix();
+
+}
+
+function gotoMxPage(n) {
+
+    const el = document.getElementById('mx-pager');
+
+    const pages = parseInt((el && el.getAttribute('data-pages')) || '1', 10);
+
+    if (n < 1 || n > pages || n === mxState.page) return;
+
+    mxState.page = n;
+
+    renderMatrix();
+
+}
+
+
+
+/* ===== 加载失败: 页面红条 + 表格错误行 + 图表覆盖层, 不允许与空态并存 ===== */
+
+function renderError() {
+
+    const box = document.getElementById('geo-err');
+
+    if (box) box.hidden = false;
+
+    const empty = document.getElementById('geo-empty');
+
+    if (empty) empty.hidden = true;
+
+
+
+    document.getElementById('r-concl').textContent = '监测报告加载失败：接口未返回有效数据，请点击重试。';
+
+    document.getElementById('r-no').textContent = '未生成';
+
+    document.getElementById('r-range').textContent = '未监测';
+
+    document.getElementById('r-sample').textContent = '0';
+
+    [['m-mention', 'b-mention'], ['m-top', 'b-top'], ['m-top3', 'b-top3'], ['m-cite', 'b-cite']].forEach(pair => {
+
+        const el = document.getElementById(pair[0]);
+
+        if (el) {
+
+            el.textContent = '未监测'; el.classList.add('txt');
+
+            const u = el.parentNode ? el.parentNode.querySelector('.kpi-u') : null;
+
+            if (u) u.hidden = true;
+
+        }
+
+        const bar = document.getElementById(pair[1]);
+
+        if (bar) bar.style.width = '0%';
+
+    });
+
+    document.getElementById('idx-v').textContent = '0';
+
+    const gEl = document.getElementById('idx-grade');
+
+    gEl.textContent = '待评级'; gEl.className = 'pill gray';
+
+    document.getElementById('idx-tip').textContent = '四大指标加权 · 满分 100';
+
+    document.getElementById('sov-v').textContent = '0';
+
+    document.getElementById('sov-ours').textContent = '0';
+
+    document.getElementById('sov-rival').textContent = '0';
+
+
+
+    MX_ALL = [];
+
+    const mtx = document.getElementById('mtx');
+
+    if (mtx) mtx.innerHTML = errorRow(6);
+
+    const cited = document.getElementById('cited-list');
+
+    if (cited) cited.innerHTML = errorRow(3);
+
+    if (window.ICONS) { ICONS.mount(mtx); ICONS.mount(cited); }
+
+    const hn = document.getElementById('mx-hit-n'); if (hn) hn.textContent = '0';
+
+    const cov = document.getElementById('mtx-cov'); if (cov) cov.textContent = '未统计';
+
+    const cnt = document.getElementById('mtx-count'); if (cnt) cnt.textContent = '未统计';
+
+    const pager = document.getElementById('mx-pager');
+
+    if (pager) { pager.innerHTML = ''; pager.setAttribute('data-pages', '1'); }
+
+    const hEl = document.getElementById('honor-n'); if (hEl) hEl.textContent = '0';
+
+
+
+    dropSkel('sk-trend'); dropSkel('sk-engine'); dropSkel('sk-sov');
+
+    /* 图表复位到空坐标系: 不残留上一次的数据, 提示由覆盖层承担 */
+
+    if (CH.trend) CH.trend.setOption({
+
+        legend: { show: false }, graphic: [], xAxis: { type: 'category', data: [] },
+
+        yAxis: [{ type: 'value', min: 0, max: 100 }, { type: 'value', min: 0, max: 100, show: false }], series: []
+
+    }, true);
+
+    if (CH.engine) CH.engine.setOption({
+
+        legend: { show: false }, xAxis: { type: 'value', min: 0, max: 100 },
+
+        yAxis: { type: 'category', data: [] }, series: []
+
+    }, true);
+
+    if (CH.sov) CH.sov.setOption({ color: SOV_PALETTE, legend: { show: false }, title: { text: '' }, series: [] }, true);
+
+    const emT = document.getElementById('em-trend');
+
+    if (emT) emT.hidden = false;
+
+    setOverlay('em-trend', '趋势数据加载失败', '请点击上方「重试」重新拉取监测报告');
+
+    const emE = document.getElementById('em-engine');
+
+    if (emE) emE.hidden = false;
+
+    setOverlay('em-eng', '引擎数据加载失败', '请点击上方「重试」重新拉取监测报告');
+
+    const emS = document.getElementById('em-sov');
+
+    if (emS) emS.hidden = false;
+
+    setOverlay('em-sov', '引用来源加载失败', '请点击上方「重试」重新拉取监测报告');
+
+}
+
+
+
+/* ============================================================
+
+   主流程: 报告数据加载与渲染
+
+   ============================================================ */
+
+async function load() {
+
+    // 接口与请求参数保持不变; 4xx/5xx 必须落到错误态(否则接口挂了会被当成"没有数据"渲染空态)
+
+    let d = null, ok = true;
+
+    try {
+
+        const r = await fetch('/api/geo/dashboard');
+
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+
+        d = await r.json();
+
+    } catch (e) { ok = false; }
+
+    const me = await (await fetch('/api/me')).json();
+
+    document.getElementById('r-title').textContent = (me.tenant_name || '品牌') + ' · AI 搜索影响力报告';
+
+    if (!ok || !d) { renderError(); return; }
+
+    const errBox = document.getElementById('geo-err');
+
+    if (errBox) errBox.hidden = true;
+
+
+
+    const o = d.overall || {};
+
+    const sov = d.sov || {};
+
+    const hasRun = (o.valid || 0) > 0;          // 是否跑过监测(有有效回答)
+
+
+
+    // ---- 报告头 ----
+
+    document.getElementById('r-no').textContent = d.date ? 'GEO-' + d.date.replace(/-/g, '') : '未生成';
+
+    const _trAll = d.trend || [];
+
+    // 全 0 视为暂无数据(显示空态); 只要有一天为正, 就保留完整时间线(含 0 值日)
+
+    const tr = _trAll.some(t => t.mention_rate > 0) ? _trAll : [];
+
+    const _ds = _trAll.map(t => (t.date || '').slice(5)).filter(Boolean);
+
+    document.getElementById('r-range').textContent = _ds.length ? (_ds[0] + ' ~ ' + _ds[_ds.length - 1]) : (d.date ? d.date.slice(5) : '未监测');
+
+    document.getElementById('r-sample').textContent = o.valid || 0;
+
+    const _pcNo = document.getElementById('pc-no'); if (_pcNo) _pcNo.textContent = d.date ? 'GEO-' + d.date.replace(/-/g, '').slice(2) : '未生成';
+
+    const _pcS = document.getElementById('pc-sample'); if (_pcS) _pcS.textContent = o.valid || 0;
+
+    const _kq = document.getElementById('k-q'); if (_kq) _kq.textContent = o.valid || 0;
+
+
+
+    // ---- 四项指标(数值只放数字, 单位由 .kpi-u 独立承担) ----
+
+    const setRate = (vid, bid, v) => {
+
+        const el = document.getElementById(vid);
+
+        if (el) {
+
+            const u = el.parentNode ? el.parentNode.querySelector('.kpi-u') : null;
+
+            if (v == null) {
+
+                el.textContent = '未监测'; el.classList.add('txt');
+
+                if (u) u.hidden = true;
+
+            } else {
+
+                el.textContent = v; el.classList.remove('txt');
+
+                if (u) u.hidden = false;
+
+            }
+
+        }
+
+        const b = document.getElementById(bid);
+
+        if (b && v != null) b.style.width = Math.min(100, Math.max(0, v)) + '%';
+
+    };
+
+    setRate('m-mention', 'b-mention', o.mention_rate);
+
+    setRate('m-top', 'b-top', o.top_rate);
+
+    setRate('m-top3', 'b-top3', o.top3_rate);
+
+    setRate('m-cite', 'b-cite', o.cite_rate);
+
+    [['m-mention', o.mention_rate], ['m-top', o.top_rate], ['m-top3', o.top3_rate], ['m-cite', o.cite_rate]]
+
+        .forEach(pair => { const el = document.getElementById(pair[0]); if (el && pair[1] > 0) el.style.color = rc(pair[1]); });
+
+
+
+    // ---- 综合影响力指数(满分 100) ----
+
+    const idx = Math.round((o.mention_rate || 0) * .4 + (o.top_rate || 0) * .25 + (o.top3_rate || 0) * .2 + (o.cite_rate || 0) * .15);
+
+    document.getElementById('idx-v').textContent = idx;
+
+    const grade = idx >= 70 ? ['S', 'ok', '行业标杆：AI 搜索已形成强品牌心智'] :
+
+                  idx >= 50 ? ['A', 'brand', '表现优秀：核心词稳居 AI 推荐位'] :
+
+                  idx >= 30 ? ['B', 'warn', '稳步上升：部分词已进 AI 视野'] :
+
+                              ['C', 'gray', '起步阶段：AI 收录需要周期，坚持发布 + 监测'];
+
+    const gEl = document.getElementById('idx-grade');
+
+    gEl.textContent = grade[0] + ' 级';
+
+    gEl.className = 'pill ' + grade[1];
+
+    document.getElementById('idx-tip').textContent = grade[2];
+
+
+
+    // ---- 结论句 ----
+
+    document.getElementById('r-concl').textContent = hasRun
+
+        ? '截至 ' + (d.date || '未监测') + '，已采样 ' + (o.valid || 0) + ' 次问答：品牌提及率 ' + (o.mention_rate || 0) +
+
+          '%、首位推荐率 ' + (o.top_rate || 0) + '%、内容被引率 ' + (o.cite_rate || 0) + '%；AI 引用来源 ' + (sov.total || 0) +
+
+          ' 条，其中 ' + (sov.ours || 0) + ' 条来自您的内容。综合评级 ' + grade[0] + ' 级 —— ' + grade[2] + '。'
+
+        : '尚未完成监测：点击右上角「跑一轮监测」，系统会模拟真实用户向四大 AI 引擎提问，采样品牌提及与引用情况并生成本报告。';
+
+
+
+    // ---- 引用份额 ----
+
+    document.getElementById('sov-v').textContent = sov.rate || 0;
+
+    document.getElementById('sov-ours').textContent = sov.ours || 0;
+
+    document.getElementById('sov-rival').textContent = Math.max(0, (sov.total || 0) - (sov.ours || 0));
+
+    renderSovChart(sov);
+
+
+
+    // ---- 各引擎表现(按提及率排序) ----
+
+    const pe = d.per_engine || {};
+
+    const engs = Object.keys(ENG).map(k => [k, pe[k] || { mention_rate: 0, cite_rate: 0 }])
+
+        .sort((a, b) => (b[1].mention_rate || 0) - (a[1].mention_rate || 0));
+
+    const rates = engs.map(e => (e[1] && e[1].mention_rate) || 0);
+
+    const bestRate = Math.max.apply(null, [0].concat(rates));
+
+    const flat = rates.length > 1 && rates.every(v => v === rates[0]);
+
+    // 全 0 或完全并列时「最佳」结论无意义: 前者给中性提示, 后者交给 :empty 收起胶囊
+
+    document.getElementById('eng-side').textContent = (!hasRun || !bestRate) ? (hasRun ? '均未被提及' : '') : (flat ? '' : '最佳：' + (ENG[engs[0][0]] || engs[0][0]));
+
+    renderEngineChart(engs, hasRun);
+
+
+
+    // ---- 趋势 ----
+
+    renderTrendChart(tr, hasRun);
+
+
+
+    // ---- 首访空态 ----
+
+    const emp = document.getElementById('geo-empty');
+
+    if (emp) emp.hidden = hasRun;
+
+    const trendSide = document.getElementById('trend-side');
+
+    if (trendSide) trendSide.textContent = hasRun ? (_trAll.length ? '共 ' + _trAll.length + ' 个监测日' : '') : '';
+
+
+
+    // ---- 关键词战场矩阵 ----
+
+    const mtx = d.matrix || {};
+
+    MX_ALL = Object.entries(mtx).map(entry => {
+
+        const lv = MX_KEYS.map(k => entry[1][k] || 'none');
+
+        return { q: entry[0], lv: lv, hit: lv.filter(v => HIT_LV.indexOf(v) >= 0).length };
+
+    });
+
+    const cells = MX_ALL.length * MX_KEYS.length;
+
+    const hits = MX_ALL.reduce((s, r) => s + r.hit, 0);
+
+    document.getElementById('mtx-cov').textContent = cells ? Math.round(hits / cells * 100) + '%' : '未统计';
+
+    document.getElementById('mtx-count').textContent = MX_ALL.length ? MX_ALL.length + ' 条查询词' : '暂无查询词';
+
+    mxState.page = 1;
+
+    renderMatrix();
+
+
+
+    // ---- 引用来源记录(表格) ----
+
+    const co = d.cited_ours || [];
+
+    document.getElementById('honor-n').textContent = co.length || 0;
+
+    const _sub = document.getElementById('src-sub');
+
+    if (_sub) _sub.textContent = co.length > 50 ? 'AI 回答原文引用您的文章 · 仅展示最近 50 条' : 'AI 回答原文引用您的文章记录';
+
+    const cited = document.getElementById('cited-list');
+
+    cited.innerHTML = co.length ? co.slice(0, 50).map(c => `
+
+        <tr>
+
+            <td class="strong t-title" title="${esc(c.title)}">${esc(c.title || '未记录标题')}</td>
+
+            <td><span class="pill gray">${esc(ENG[c.engine] || c.engine || '未知引擎')}</span></td>
+
+            <td>${c.url ? `<a class="lnk" href="${esc(c.url)}" target="_blank" rel="noopener"><i class="ic" data-ic="external" data-sz="16"></i>原文</a>` : '<span class="t-sub">未记录</span>'}</td>
+
+        </tr>`).join('')
+
+        : emptyRow(3, 'link', hasRun ? '暂未被 AI 原文引用' : '暂无引用记录',
+
+            hasRun ? '文章发布后 1-4 周进入 AI 索引，持续发布与监测会逐步出现引用' : '完成一轮监测后，AI 回答中引用您文章的记录会显示在这里',
+
+            '<button class="btn gray sm" onclick="runGEO()"><i class="ic" data-ic="radar"></i><span>跑一轮监测</span></button>');
+
+    if (window.ICONS) ICONS.mount(cited);
+
+}
+
+
+
+/* ===== 初始化: 图表实例就绪后拉取报告; 运行中的监测继续轮询(行为不变) ===== */
+
+window.addEventListener('load', () => { initCharts(); load(); });
+
+
+
+(async () => {
+
+    try {
+
+        const s = await (await fetch('/api/geo/status')).json();
+
+        if (s.running) {
+
+            const b = document.getElementById('run-btn2');
+
+            b.disabled = true; setRunBtn('监测运行中', 'refresh');
+
+            document.getElementById('runbox').style.display = 'block';
+
+            pollRun();
+
+        }
+
+    } catch (e) { }
+
+})();
+
+</script>
+
+</body>
+
+</html>
+

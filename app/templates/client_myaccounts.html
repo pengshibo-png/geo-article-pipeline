@@ -1,0 +1,1476 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN" class="theme-light">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>账号授权中心 - GEO优化系统</title>
+
+<link rel="stylesheet" href="/static/style.css?v={{ asset_ver }}">
+
+<link rel="stylesheet" href="/static/client_style.css?v={{ asset_ver }}">
+
+<link rel="stylesheet" href="/static/ds.css?v={{ asset_ver }}">
+
+<link rel="stylesheet" href="/static/theme-light.css?v={{ asset_ver }}">
+
+<style>
+
+/* ============================================================
+
+   账号授权中心 · 页内样式(近黑 #08080A + 铜金 #B08D57)
+
+   规则: 只用 var(--*) token / 圆角 ≤8px / 无渐变 无发光 无玻璃 / 间距 4-8-12-16-20-24-32
+
+   表格骨架(.tbl/.toolbar/.pager/.colvis/.empty/.skel)全部来自 theme-light.css
+
+   ============================================================ */
+
+
+
+/* 1) 外壳栅格 + 顶栏租户 chip 收紧(与 settings/dash 一致) */
+
+html.theme-light .cl-app { display: grid; }
+
+#tb-tenant {
+
+    width: auto !important; height: 22px !important; padding: 0 2px !important;
+
+    border: none !important; background: transparent !important; box-shadow: none !important;
+
+    color: var(--ink2); font-size: 12px;
+
+}
+
+#tb-tenant option { background: var(--card); color: var(--ink); }
+
+
+
+/* 2) 旧主题的按钮位移与光晕一律去掉; loading 态转为语义色文字按钮 */
+
+html.theme-light .btn:hover, html.theme-light .btn:active,
+
+html.theme-light .cl-btn:hover, html.theme-light .cl-btn:active { transform: none !important; box-shadow: none !important; }
+
+html.theme-light body .btn.loading::before, html.theme-light body .cl-btn.loading::before {
+
+    content: ''; width: 12px; height: 12px; border-radius: 50%; margin-right: 6px; box-sizing: border-box;
+
+    border: 2px solid currentColor; border-right-color: transparent; opacity: .6; animation: tl-spin .7s linear infinite;
+
+}
+
+html.theme-light .viz-bar .sg.ok { background: var(--ok); }
+
+
+
+/* 3) 页头右侧说明不折行 + 区块内表格去二层边框(外层 .sec 已提供) */
+
+.phead-r .pr-l { white-space: nowrap; }
+
+html.theme-light .sec > .sec-b > .tbl-wrap { border: none; border-radius: 0; }
+
+html.theme-light .tbl td.empty-cell { padding: 0; border-bottom: none; }
+
+/* 表格内空态/错误态按钮: 覆盖第 21 节「行内文字按钮」规则(需同权重 4 个 :not 才压得住), 还原可见描边 */
+
+html.theme-light body table.tbl tbody td .empty .btn:not(.plain):not(.text):not(.danger):not(.ghost) {
+
+    background: transparent !important; border: 1px solid var(--line-strong) !important; color: var(--ink2) !important;
+
+}
+
+html.theme-light body table.tbl tbody td .empty .btn:not(.plain):not(.text):not(.danger):not(.ghost):hover {
+
+    border-color: var(--brand) !important; color: var(--brand) !important; background: transparent !important;
+
+}
+
+html.theme-light body table.tbl tbody td .empty .btn.danger {
+
+    background: transparent !important; border: 1px solid var(--bad) !important; color: var(--bad) !important;
+
+}
+
+
+
+/* 4) 工具条控件宽度(宿主 select 自带箭头底图, 这里只收宽度) */
+
+html.theme-light .toolbar select.inp { width: auto; min-width: 116px; }
+
+
+
+/* 5) 表格区块脚注条: 保存按钮 + 结果提示 + 说明 */
+
+.sec-f { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 16px; border-top: 1px solid var(--line); }
+
+.sec-f .save-note { font-size: 13px; font-weight: 500; }
+
+.sec-f .save-hint { margin-left: auto; font-size: 12px; color: var(--ink3); }
+
+.sec-f .save-hint b { color: var(--ink2); font-weight: 600; }
+
+
+
+/* 6) 专用通道添加区: 分段选择 + 2 列表单卡网格 */
+
+.ac-tabs { display: inline-flex; border: 1px solid var(--line-strong); border-radius: var(--r-input); overflow: hidden; }
+
+.ac-tab {
+
+    height: 32px; display: inline-flex; align-items: center; gap: 8px; padding: 0 14px; border: none;
+
+    border-right: 1px solid var(--line); background: var(--card); color: var(--ink2);
+
+    font: inherit; font-size: 13px; cursor: pointer;
+
+}
+
+.ac-tab:last-child { border-right: none; }
+
+.ac-tab:hover { color: var(--brand); }
+
+.ac-tab.on { background: var(--brand-soft); color: var(--brand); font-weight: 500; }
+
+.ac-form { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; margin-top: 16px; }
+
+.ac-form .ff { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+
+.ac-form .ff-act { align-items: flex-start; }
+
+.ac-form label { font-size: 12px; color: var(--ink2); }
+
+.ac-form textarea.cl-input { min-height: 64px; height: auto; line-height: 1.6; resize: vertical; }
+
+.plat-tip { display: flex; gap: 8px; margin-top: 12px; padding: 12px 14px; background: var(--bg-deep); border: 1px solid var(--line-soft); border-radius: var(--r); font-size: 12px; color: var(--ink2); line-height: 1.7; }
+
+.plat-tip .ic { flex: none; margin-top: 2px; color: var(--ink3); }
+
+.plat-tip b { color: var(--ink); font-weight: 600; }
+
+@media (max-width: 900px) { .ac-form { grid-template-columns: 1fr; } }
+
+</style>
+
+</head>
+
+<body class="cl" data-page="auth">
+
+
+
+<header class="topbar" id="topbar">
+
+  <div class="tb-brand"><span class="tb-logo">G</span><span class="tb-name">GEO优化系统</span><span class="tb-env" id="tb-env">运营管理端</span></div>
+
+  <div class="tb-right">
+
+    <span class="tb-chip" id="model-tag">模型 · —</span>
+
+    <span class="tb-chip" id="run-tag">空闲</span>
+
+    <span class="tb-chip"><select class="cl-tsel" id="tb-tenant" style="height:24px;border:none;background:transparent"></select></span>
+
+    <div class="tb-user" id="tb-user-btn"><span class="tb-av" id="tb-av">管</span><span class="tb-uname" id="tb-uname">—</span><i class="ic" data-ic="chevronDown" data-sz="14"></i></div>
+
+  </div>
+
+  <div class="tb-menu" id="tb-menu"><button onclick="doLogout()"><i class="ic" data-ic="logout"></i>退出登录</button></div>
+
+</header>
+
+
+
+<div class="cl-app">
+
+<aside class="cl-side" id="sidebar"></aside>
+
+<main class="cl-main">
+
+  <nav class="crumb" id="crumb"></nav>
+
+
+
+  <div class="phead">
+
+    <div class="phead-l">
+
+      <div class="phead-eyebrow">发布分发 · 账号</div>
+
+      <div class="phead-h1">账号授权中心</div>
+
+      <div class="phead-sub">自媒体账号勾选启用 + 专用通道接入（美篇扫码 / 列表网 Cookie）· 额度与启用状态即时生效</div>
+
+      <div class="phead-chips">
+
+        <span class="phead-chip"><i class="ic" data-ic="link" data-sz="16"></i>账号库 <b id="pc-acc">-</b> 个</span>
+
+        <span class="phead-chip"><i class="ic" data-ic="check" data-sz="16"></i>已启用 <b id="pc-on">-</b> 个</span>
+
+        <span class="phead-chip"><i class="ic" data-ic="shield" data-sz="16"></i>专用通道 <b id="pc-ch">-</b> 个</span>
+
+      </div>
+
+    </div>
+
+    <div class="phead-r">
+
+      <div class="pr-l">账号同步</div>
+
+      <button class="btn" onclick="syncSave(this)"><i class="ic" data-ic="check"></i>保存启用与额度</button>
+
+    </div>
+
+  </div>
+
+
+
+  <!-- KPI -->
+
+  <div class="kpi-grid">
+
+    <div class="kpi">
+
+      <div class="kpi-l">账号库总量 <span class="kpi-x"><i class="ic" data-ic="link" data-sz="20"></i></span></div>
+
+      <div class="kpi-r"><span class="kpi-v" id="k-acc">-</span><span class="kpi-u">个</span></div>
+
+      <div class="kpi-l">来自账号管理端同步</div>
+
+    </div>
+
+    <div class="kpi">
+
+      <div class="kpi-l">已启用账号 <span class="kpi-x"><i class="ic" data-ic="check" data-sz="20"></i></span></div>
+
+      <div class="kpi-r"><span class="kpi-v" id="k-on">-</span><span class="kpi-u">个</span></div>
+
+      <div class="viz-bar thin"><span class="sg ok" id="k-on-bar" style="width:0%"></span></div>
+
+      <div class="kpi-l" id="k-on-sub">勾选后参与发布</div>
+
+    </div>
+
+    <div class="kpi">
+
+      <div class="kpi-l">在线状态 <span class="kpi-x"><i class="ic" data-ic="eye" data-sz="20"></i></span></div>
+
+      <div class="kpi-r"><span class="kpi-v" id="k-online">-</span><span class="kpi-u">个在线</span></div>
+
+      <div class="kpi-l" id="k-online-sub">掉线账号需重新登录</div>
+
+    </div>
+
+    <div class="kpi">
+
+      <div class="kpi-l">专用通道账号 <span class="kpi-x"><i class="ic" data-ic="shield" data-sz="20"></i></span></div>
+
+      <div class="kpi-r"><span class="kpi-v" id="k-ch">-</span><span class="kpi-u">个</span></div>
+
+      <div class="kpi-l">美篇 / 列表网 Cookie 通道</div>
+
+    </div>
+
+  </div>
+
+
+
+  <!-- ===== 账号库(勾选启用 与 每日额度) ===== -->
+
+  <section class="sec">
+
+    <div class="sec-h">
+
+      <span class="sec-ico"><i class="ic" data-ic="link" data-sz="20"></i></span>
+
+      <div class="sec-t"><b>账号库</b><span>勾选启用 与 每日额度 · 授权登录在蚁小二客户端管理</span></div>
+
+      <div class="sec-x"><span class="pill gray" id="yx-stat">加载中…</span></div>
+
+    </div>
+
+    <div class="sec-b flush">
+
+      <div class="toolbar">
+
+        <div class="search-wrap">
+
+          <i class="ic" data-ic="search"></i>
+
+          <input class="inp" id="yx-q" type="text" placeholder="搜索账号名 / 平台" oninput="yxFilter()">
+
+        </div>
+
+        <select class="inp" id="pf" onchange="setPF(this.value)" title="平台筛选"></select>
+
+        <select class="inp" id="yx-status" onchange="yxFilter()" title="在线状态">
+
+          <option value="all">全部状态</option>
+
+          <option value="online">在线</option>
+
+          <option value="offline">掉线</option>
+
+        </select>
+
+        <span class="sp"></span>
+
+        <div class="colvis">
+
+          <button class="btn sm gray" onclick="tColvis(event,'colvis-yx')"><i class="ic" data-ic="columns"></i>列显示</button>
+
+          <div class="colvis-pop" id="colvis-yx" onclick="event.stopPropagation()">
+
+            <label><input type="checkbox" checked onchange="tCol('yx','plat',this.checked)">平台</label>
+
+            <label><input type="checkbox" checked onchange="tCol('yx','limit',this.checked)">每日额度</label>
+
+          </div>
+
+        </div>
+
+        <select class="inp" id="yx-size" onchange="tSize('yx',this.value)" title="每页条数">
+
+          <option value="20">20 条/页</option>
+
+          <option value="50" selected>50 条/页</option>
+
+          <option value="100">100 条/页</option>
+
+        </select>
+
+        <button class="btn sm gray" id="yx-refresh" onclick="yxRefresh()"><i class="ic" data-ic="refresh"></i>刷新</button>
+
+      </div>
+
+      <div class="tbl-wrap"><div class="tbl-scroll">
+
+        <table class="tbl" id="yx-tbl">
+
+          <thead><tr>
+
+            <th class="col-check"><input type="checkbox" id="yx-all" onchange="yxToggleAll(this)" title="全选/取消全选"></th>
+
+            <th class="sortable" data-sort="name" onclick="tSort('yx','name')">账号名 <i class="ic sort-ic" data-ic="sortAsc" data-sz="16"></i></th>
+
+            <th class="sortable" data-sort="plat" data-col="plat" onclick="tSort('yx','plat')">平台 <i class="ic sort-ic" data-ic="sortAsc" data-sz="16"></i></th>
+
+            <th class="num" data-w="100">粉丝</th>
+
+            <th class="sortable" data-sort="status" data-w="110" onclick="tSort('yx','status')">状态 <i class="ic sort-ic" data-ic="sortAsc" data-sz="16"></i></th>
+
+            <th class="num" data-col="limit" data-w="160">每日额度</th>
+
+          </tr></thead>
+
+          <tbody id="yx-list">
+
+            <tr><td class="empty-cell" colspan="6"><div class="skel" style="height:14px;margin:14px 16px"></div></td></tr>
+
+            <tr><td class="empty-cell" colspan="6"><div class="skel" style="height:14px;margin:14px 16px"></div></td></tr>
+
+            <tr><td class="empty-cell" colspan="6"><div class="skel" style="height:14px;margin:14px 16px"></div></td></tr>
+
+            <tr><td class="empty-cell" colspan="6"><div class="skel" style="height:14px;margin:14px 16px"></div></td></tr>
+
+            <tr><td class="empty-cell" colspan="6"><div class="skel" style="height:14px;margin:14px 16px"></div></td></tr>
+
+            <tr><td class="empty-cell" colspan="6"><div class="skel" style="height:14px;margin:14px 16px"></div></td></tr>
+
+            <tr><td class="empty-cell" colspan="6"><div class="skel" style="height:14px;margin:14px 16px"></div></td></tr>
+
+            <tr><td class="empty-cell" colspan="6"><div class="skel" style="height:14px;margin:14px 16px"></div></td></tr>
+
+          </tbody>
+
+        </table>
+
+      </div></div>
+
+      <div class="pager" id="yx-pager"></div>
+
+    </div>
+
+    <div class="sec-f">
+
+      <button class="btn gray" onclick="syncSave(this)"><i class="ic" data-ic="check"></i>保存启用与额度</button>
+
+      <span class="save-note" id="yx-ok"></span>
+
+      <span class="save-hint">授权登录在蚁小二客户端管理；这里决定<b>是否启用</b>和<b>每日额度</b>（0 = 登记型，不参与发布）</span>
+
+    </div>
+
+  </section>
+
+
+
+  <!-- ===== 添加专用通道账号 ===== -->
+
+  <section class="sec">
+
+    <div class="sec-h">
+
+      <span class="sec-ico"><i class="ic" data-ic="plus" data-sz="20"></i></span>
+
+      <div class="sec-t"><b>添加专用通道账号</b><span>美篇扫码 / 列表网 Cookie / 其他登记</span></div>
+
+      <div class="sec-x"><span class="pill gray">凭据仅本客户可见</span></div>
+
+    </div>
+
+    <div class="sec-b">
+
+      <div class="ac-tabs">
+
+        <button class="ac-tab on" data-p="meipian" onclick="setPlat('meipian')"><i class="ic" data-ic="file" data-sz="16"></i>美篇</button>
+
+        <button class="ac-tab" data-p="lieju" onclick="setPlat('lieju')"><i class="ic" data-ic="list" data-sz="16"></i>列表网</button>
+
+        <button class="ac-tab" data-p="other" onclick="setPlat('other')"><i class="ic" data-ic="grid" data-sz="16"></i>其他平台</button>
+
+      </div>
+
+      <div class="ac-form">
+
+        <div class="ff">
+
+          <label for="a-name">账号名称</label>
+
+          <input class="cl-input" id="a-name" placeholder="如：美篇·大号 / 列表网·上海站">
+
+        </div>
+
+        <div class="ff" id="f-cookie" style="display:none">
+
+          <label for="a-cookie">Cookie</label>
+
+          <textarea class="cl-input" id="a-cookie" rows="2" placeholder="粘贴完整Cookie（须含 lieju_passport）"></textarea>
+
+        </div>
+
+        <div class="ff" id="f-zone" style="display:none">
+
+          <label for="a-zone">区域</label>
+
+          <input class="cl-input" id="a-zone" placeholder="如：奉贤">
+
+        </div>
+
+        <div class="ff" id="f-limit">
+
+          <label for="a-limit">日额度（0 = 登记型，不参与发布）</label>
+
+          <input class="cl-input" id="a-limit" type="number" value="0" min="0">
+
+        </div>
+
+        <div class="ff ff-act">
+
+          <label>&nbsp;</label>
+
+          <button class="btn" onclick="addAccount()"><i class="ic" data-ic="plus"></i>添加</button>
+
+        </div>
+
+      </div>
+
+      <div class="plat-tip" id="plat-tip"></div>
+
+    </div>
+
+  </section>
+
+
+
+  <!-- ===== 我的专用通道账号 ===== -->
+
+  <section class="sec">
+
+    <div class="sec-h">
+
+      <span class="sec-ico"><i class="ic" data-ic="shield" data-sz="20"></i></span>
+
+      <div class="sec-t"><b>我的专用通道账号</b><span>美篇 / 列表网 / 58 / 搜狐 / 百家号扫码登录 · Cookie 加密存储</span></div>
+
+      <div class="sec-x"><span class="pill gray" id="ac-stat"></span><span id="qr-tip" style="display:none;margin-left:8px"></span></div>
+
+    </div>
+
+    <div class="sec-b flush">
+
+      <div class="toolbar">
+
+        <div class="search-wrap">
+
+          <i class="ic" data-ic="search"></i>
+
+          <input class="inp" id="ac-q" type="text" placeholder="搜索账号名" oninput="acFilter()">
+
+        </div>
+
+        <select class="inp" id="ac-plat" onchange="acFilter()" title="平台筛选">
+
+          <option value="全部">全部平台</option>
+
+          <option value="meipian">美篇</option>
+
+          <option value="lieju">列表网</option>
+
+          <option value="souhu">搜狐</option>
+
+          <option value="baijiahao">百家号</option>
+
+          <option value="wuba">58同城</option>
+
+        </select>
+
+        <select class="inp" id="ac-status" onchange="acFilter()" title="状态筛选">
+
+          <option value="all">全部状态</option>
+
+          <option value="ok">已验证</option>
+
+          <option value="unverified">待验证</option>
+
+          <option value="off">已停用</option>
+
+        </select>
+
+        <span class="sp"></span>
+
+        <div class="colvis">
+
+          <button class="btn sm gray" onclick="tColvis(event,'colvis-ac')"><i class="ic" data-ic="columns"></i>列显示</button>
+
+          <div class="colvis-pop" id="colvis-ac" onclick="event.stopPropagation()">
+
+            <label><input type="checkbox" checked onchange="tCol('ac','plat',this.checked)">平台</label>
+
+            <label><input type="checkbox" checked onchange="tCol('ac','limit',this.checked)">每日额度</label>
+
+          </div>
+
+        </div>
+
+        <select class="inp" id="ac-size" onchange="tSize('ac',this.value)" title="每页条数">
+
+          <option value="20">20 条/页</option>
+
+          <option value="50" selected>50 条/页</option>
+
+          <option value="100">100 条/页</option>
+
+        </select>
+
+        <button class="btn sm gray" id="ac-refresh" onclick="acRefresh()"><i class="ic" data-ic="refresh"></i>刷新</button>
+
+      </div>
+
+      <div class="tbl-wrap"><div class="tbl-scroll">
+
+        <table class="tbl" id="ac-tbl">
+
+          <thead><tr>
+
+            <th class="sortable" data-sort="name" onclick="tSort('ac','name')">账号名 <i class="ic sort-ic" data-ic="sortAsc" data-sz="16"></i></th>
+
+            <th class="sortable" data-sort="plat" data-col="plat" data-w="120" onclick="tSort('ac','plat')">平台 <i class="ic sort-ic" data-ic="sortAsc" data-sz="16"></i></th>
+
+            <th class="sortable" data-sort="status" data-w="120" onclick="tSort('ac','status')">状态 <i class="ic sort-ic" data-ic="sortAsc" data-sz="16"></i></th>
+
+            <th class="num" data-col="limit" data-w="170">每日额度</th>
+
+            <th class="col-op">操作</th>
+
+          </tr></thead>
+
+          <tbody id="ac-list">
+
+            <tr><td class="empty-cell" colspan="5"><div class="skel" style="height:14px;margin:14px 16px"></div></td></tr>
+
+            <tr><td class="empty-cell" colspan="5"><div class="skel" style="height:14px;margin:14px 16px"></div></td></tr>
+
+            <tr><td class="empty-cell" colspan="5"><div class="skel" style="height:14px;margin:14px 16px"></div></td></tr>
+
+            <tr><td class="empty-cell" colspan="5"><div class="skel" style="height:14px;margin:14px 16px"></div></td></tr>
+
+            <tr><td class="empty-cell" colspan="5"><div class="skel" style="height:14px;margin:14px 16px"></div></td></tr>
+
+            <tr><td class="empty-cell" colspan="5"><div class="skel" style="height:14px;margin:14px 16px"></div></td></tr>
+
+            <tr><td class="empty-cell" colspan="5"><div class="skel" style="height:14px;margin:14px 16px"></div></td></tr>
+
+            <tr><td class="empty-cell" colspan="5"><div class="skel" style="height:14px;margin:14px 16px"></div></td></tr>
+
+          </tbody>
+
+        </table>
+
+      </div></div>
+
+      <div class="pager" id="ac-pager"></div>
+
+    </div>
+
+  </section>
+
+
+
+</main>
+
+</div>
+
+<script src="/static/icons.js?v={{ asset_ver }}"></script>
+
+<script src="/static/layout.js?v={{ asset_ver }}"></script>
+
+<script>
+
+const $ = id => document.getElementById(id);
+
+const escA = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+
+
+/* ══════════════ 通用表格件(排序 / 筛选 / 分页 / 列显隐 / 骨架 / 空态 / 错误态) ══════════════ */
+
+const TST = {
+
+  yx: { sortKey: '', sortDir: 0, page: 1, size: 50, q: '', status: 'all', cols: { plat: true, limit: true } },
+
+  ac: { sortKey: '', sortDir: 0, page: 1, size: 50, q: '', plat: '全部', status: 'all', cols: { plat: true, limit: true } }
+
+};
+
+function tSort(t, k) {
+
+  const s = TST[t];
+
+  if (s.sortKey !== k) { s.sortKey = k; s.sortDir = 1; }
+
+  else if (s.sortDir === 1) { s.sortDir = 2; }
+
+  else if (s.sortDir === 2) { s.sortDir = 0; s.sortKey = ''; }
+
+  else { s.sortDir = 1; }
+
+  s.page = 1;
+
+  t === 'yx' ? yxRender() : acRender();
+
+}
+
+function tSortIcons(t) {
+
+  const s = TST[t];
+
+  document.querySelectorAll('#' + t + '-tbl thead th.sortable').forEach(th => {
+
+    const on = s.sortKey === th.getAttribute('data-sort') && s.sortDir > 0;
+
+    th.classList.toggle('on', on);
+
+    const i = th.querySelector('.sort-ic');
+
+    if (!i) return;
+
+    const nm = (on && s.sortDir === 2) ? 'sortDesc' : 'sortAsc';
+
+    if (i.getAttribute('data-ic') !== nm) { i.setAttribute('data-ic', nm); i.removeAttribute('data-ic-done'); i.innerHTML = ''; }
+
+  });
+
+  if (window.ICONS) ICONS.mount(document);
+
+}
+
+function tSize(t, v) { TST[t].size = parseInt(v, 10) || 50; TST[t].page = 1; t === 'yx' ? yxRender() : acRender(); }
+
+function tGoto(t, n) {
+
+  const pg = $(t + '-pager');
+
+  const pages = parseInt((pg && pg.getAttribute('data-pages')) || '1', 10);
+
+  if (n < 1 || n > pages || n === TST[t].page) return;
+
+  TST[t].page = n;
+
+  t === 'yx' ? yxRender() : acRender();
+
+}
+
+function tPageNums(cur, total) {
+
+  if (total <= 7) { const a = []; for (let i = 1; i <= total; i++) a.push(i); return a; }
+
+  const set = new Set([1, total, cur, cur - 1, cur + 1]);
+
+  const nums = Array.from(set).filter(n => n >= 1 && n <= total).sort((a, b) => a - b);
+
+  const out = []; let prev = 0;
+
+  nums.forEach(n => { if (n - prev > 1) out.push('…'); out.push(n); prev = n; });
+
+  return out;
+
+}
+
+function tPager(t, total, pages) {
+
+  const el = $(t + '-pager');
+
+  if (!el) return;
+
+  const s = TST[t], p = s.page;
+
+  const from = total ? (p - 1) * s.size + 1 : 0;
+
+  const to = Math.min(p * s.size, total);
+
+  let btns = `<button class="pg-btn" ${p <= 1 ? 'disabled' : ''} onclick="tGoto('${t}',${p - 1})" title="上一页">‹</button>`;
+
+  tPageNums(p, pages).forEach(n => {
+
+    btns += (n === '…') ? '<span class="pg-gap">…</span>'
+
+      : `<button class="pg-btn ${n === p ? 'on' : ''}" onclick="tGoto('${t}',${n})">${n}</button>`;
+
+  });
+
+  btns += `<button class="pg-btn" ${p >= pages ? 'disabled' : ''} onclick="tGoto('${t}',${p + 1})" title="下一页">›</button>`;
+
+  el.setAttribute('data-pages', pages);
+
+  el.innerHTML = `<span class="pg-info">共 <b>${total}</b> 条 · 第 <b>${p}</b>/<b>${pages}</b> 页</span>
+
+    <span class="pg-range">${from}-${to}</span><span class="sp"></span><div class="pg-btns">${btns}</div>`;
+
+}
+
+function tCol(t, name, on) { TST[t].cols[name] = !!on; tApplyCols(t); }
+
+function tApplyCols(t) {
+
+  const s = TST[t];
+
+  Object.keys(s.cols).forEach(k => {
+
+    const show = s.cols[k] !== false;
+
+    document.querySelectorAll('#' + t + '-tbl thead th[data-col="' + k + '"], #' + t + '-list td[data-col="' + k + '"]')
+
+      .forEach(el => { el.style.display = show ? '' : 'none'; });
+
+  });
+
+  document.querySelectorAll('#' + t + '-tbl thead th[data-w]').forEach(th => { th.style.width = th.getAttribute('data-w') + 'px'; });
+
+}
+
+function tColvis(e, id) {
+
+  if (e) e.stopPropagation();
+
+  document.querySelectorAll('.colvis-pop').forEach(p => { if (p.id !== id) p.classList.remove('on'); });
+
+  const pop = $(id);
+
+  if (pop) pop.classList.toggle('on');
+
+}
+
+/* 表格内空态 / 错误态整行(必须走 tr/td) */
+
+function tRow(t, cls, icon, title, sub, btn) {
+
+  const cols = document.querySelectorAll('#' + t + '-tbl thead th').length || 6;
+
+  return `<tr><td class="empty-cell" colspan="${cols}"><div class="${cls}">
+
+      <div class="e-ic"><i class="ic" data-ic="${icon}" data-sz="20"></i></div>
+
+      <div class="e-t">${title}</div>
+
+      <div class="e-s">${sub}</div>${btn || ''}
+
+    </div></td></tr>`;
+
+}
+
+function emptyYX(title, sub, icon, btn) { return tRow('yx', 'empty', icon, title, sub, btn); }
+
+function emptyAC(title, sub, icon, btn) { return tRow('ac', 'empty', icon, title, sub, btn); }
+
+
+
+/* ═══ 蚁小二账号库 ═══ */
+
+let YX = [], PF = '全部';
+
+async function yxLoad(){
+
+  try{
+
+    const d = await (await fetch('/api/yxer-accounts')).json();
+
+    YX = d.accounts || [];
+
+    const mine = await (await fetch('/api/my-accounts')).json();
+
+    const mymap = new Map((mine.accounts || []).filter(a => a.yxer_id).map(a => [a.yxer_id, a]));
+
+    YX.forEach(a => { a._on = mymap.has(a.id); a._lim = mymap.has(a.id) ? (mymap.get(a.id).limit ?? 0) : 0; });
+
+    const plats = [...new Set(YX.map(a => a.platform))];
+
+    $('pf').innerHTML = ['全部', ...plats].map(p => `<option value="${escA(p)}" ${p === PF ? 'selected' : ''}>${p === '全部' ? '全部平台' : escA(p)}</option>`).join('');
+
+    yxRender();
+
+  }catch(e){
+
+    YX = [];
+
+    const tb = $('yx-list');
+
+    if (tb) tb.innerHTML = tRow('yx', 'empty err', 'alert', '账号库加载失败', escA(e.message || '接口异常'), '<button class="btn gray sm" onclick="yxLoad()"><i class="ic" data-ic="refresh" data-sz="16"></i>重试</button>');
+
+    if (window.ICONS) ICONS.mount(tb);
+
+  }
+
+}
+
+function setPF(p){ PF = p; yxLoad(); }
+
+function yxFilter(){
+
+  const s = TST.yx;
+
+  s.q = ($('yx-q') || {}).value || '';
+
+  s.status = ($('yx-status') || {}).value || 'all';
+
+  s.page = 1;
+
+  yxRender();
+
+}
+
+function yxRow(a){
+
+  return `<tr class="${a._on ? 'on' : ''}">
+
+    <td class="col-check"><input type="checkbox" class="yx-ck" ${a._on ? 'checked' : ''} onchange="YX[${YX.indexOf(a)}]._on=this.checked;this.closest('tr').classList.toggle('on',this.checked);yxSync()"></td>
+
+    <td class="strong" title="${escA(a.name)}">${escA(a.name)}</td>
+
+    <td data-col="plat"><span class="pill brand">${escA(a.platform || '未知平台')}</span></td>
+
+    <td class="num">${a.fans || 0}</td>
+
+    <td><span class="pill ${a.online ? 'ok' : 'bad'}">${a.online ? '在线' : '掉线'}</span></td>
+
+    <td class="num" data-col="limit"><input type="number" min="0" max="1000" value="${a._lim ?? 0}" id="lim-${escA(a.id)}" title="0 = 登记型，不参与发布" onchange="YX[${YX.indexOf(a)}]._lim=this.value;yxSync()" style="width:76px;text-align:right"></td>
+
+  </tr>`;
+
+}
+
+function yxSync(){
+
+  const onN = YX.filter(a => a._on).length;
+
+  $('yx-stat').textContent = `共${YX.length}个 · 勾选${onN}个`;
+
+  const onlineN = YX.filter(a => a.online).length;
+
+  const pct = YX.length ? Math.round(onN / YX.length * 100) : 0;
+
+  if ($('k-acc')) $('k-acc').textContent = YX.length;
+
+  if ($('k-on')) $('k-on').textContent = onN;
+
+  if ($('k-on-bar')) $('k-on-bar').style.width = pct + '%';
+
+  if ($('k-on-sub')) $('k-on-sub').textContent = '启用率 ' + pct + '% · 勾选后参与发布';
+
+  if ($('k-online')) $('k-online').textContent = onlineN;
+
+  if ($('k-online-sub')) $('k-online-sub').textContent = (YX.length - onlineN) ? (YX.length - onlineN) + ' 个掉线需重新登录' : '全部账号在线';
+
+  if ($('pc-acc')) $('pc-acc').textContent = YX.length;
+
+  if ($('pc-on')) $('pc-on').textContent = onN;
+
+}
+
+function yxToggleAll(el){
+
+  const list = yxSorted();
+
+  list.forEach(a => { a._on = el.checked; });
+
+  yxRender();
+
+}
+
+function yxSorted(){
+
+  const s = TST.yx, plat = PF || '全部';
+
+  const q = (s.q || '').trim().toLowerCase();
+
+  let list = YX.filter(a => (plat === '全部' || a.platform === plat)
+
+    && (s.status === 'all' || (s.status === 'online' ? !!a.online : !a.online))
+
+    && (!q || (String(a.name) + ' ' + String(a.platform)).toLowerCase().indexOf(q) >= 0));
+
+  const k = s.sortKey, d = s.sortDir;
+
+  if (k && d) {
+
+    const m = d === 2 ? -1 : 1;
+
+    list = list.slice().sort((x, y) => {
+
+      if (k === 'name') return String(x.name || '').localeCompare(String(y.name || ''), 'zh-Hans-CN') * m;
+
+      if (k === 'plat') return String(x.platform || '').localeCompare(String(y.platform || ''), 'zh-Hans-CN') * m;
+
+      if (k === 'status') return ((x.online ? 1 : 0) - (y.online ? 1 : 0)) * m;
+
+      return 0;
+
+    });
+
+  }
+
+  return list;
+
+}
+
+function yxRender(){
+
+  const tb = $('yx-list');
+
+  if (!tb) return;
+
+  const s = TST.yx;
+
+  const list = yxSorted();
+
+  const pages = Math.max(1, Math.ceil(list.length / s.size));
+
+  if (s.page > pages) s.page = pages;
+
+  if (s.page < 1) s.page = 1;
+
+  const slice = list.slice((s.page - 1) * s.size, s.page * s.size);
+
+  if (!YX.length) {
+
+    tb.innerHTML = emptyYX('账号库暂无授权账号', '在蚁小二客户端完成授权后，账号会同步到这里', 'link',
+
+      '<button class="btn gray sm" onclick="yxLoad()"><i class="ic" data-ic="refresh" data-sz="16"></i>刷新账号库</button>');
+
+  } else if (!list.length) {
+
+    tb.innerHTML = emptyYX('没有匹配的账号', '调整平台、状态或关键词筛选后重试', 'search');
+
+  } else {
+
+    tb.innerHTML = slice.map(yxRow).join('');
+
+  }
+
+  if (window.ICONS) ICONS.mount(tb);
+
+  tSortIcons('yx');
+
+  tApplyCols('yx');
+
+  tPager('yx', list.length, pages);
+
+  const all = $('yx-all');
+
+  if (all) { all.checked = slice.length > 0 && slice.every(a => a._on); all.indeterminate = !all.checked && slice.some(a => a._on); }
+
+  yxSync();
+
+}
+
+async function yxRefresh(){
+
+  const btn = $('yx-refresh'), ic = btn ? btn.querySelector('.ic') : null;
+
+  if (ic) ic.classList.add('spin');
+
+  try { await yxLoad(); } finally { if (ic) ic.classList.remove('spin'); }
+
+}
+
+async function syncSave(btn){
+
+  if (btn) { btn.classList.add('loading'); btn.disabled = true; }
+
+  const note = $('yx-ok');
+
+  try{
+
+    const items = YX.filter(a => a._on).map(a => {
+
+      const el = document.getElementById('lim-' + a.id);
+
+      return {id: a.id, name: a.name, platform: a.platform, limit: +((el ? el.value : a._lim) ?? 0) || 0};
+
+    });
+
+    const r = await fetch('/api/yxer-accounts/sync', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({items})});
+
+    const j = await r.json();
+
+    note.textContent = r.ok ? `已启用 ${j.count} 个` : (j.error || '保存失败');
+
+    note.style.color = r.ok ? 'var(--ok)' : 'var(--bad)';
+
+    setTimeout(() => { note.textContent = ''; }, 3000);
+
+  }catch(e){
+
+    note.textContent = '保存失败：' + e.message;
+
+    note.style.color = 'var(--bad)';
+
+  }finally{
+
+    if (btn) { btn.classList.remove('loading'); btn.disabled = false; }
+
+  }
+
+}
+
+
+
+/* ═══ 专用通道（美篇/列表网）═══ */
+
+let PLAT = 'meipian';
+
+const PLATN = { meipian: ['美篇', 'var(--brand-soft)'], lieju: ['列表网', 'var(--warn-bg)'], souhu: ['搜狐', 'var(--brand-soft)'], baijiahao: ['百家号', 'var(--ok-bg)'], wuba: ['58同城', 'var(--bad-bg)'] };
+
+const TIPS = {
+
+  meipian: '点「扫码登录」→ 系统打开<b>独立 Chrome 窗口</b>，扫码登上后<b>自动抓 Cookie 完成绑定</b>。每个美篇号有独立浏览器 profile，互不影响；也可点「改Cookie」手动粘贴。',
+
+  lieju: '点「扫码登录」→ 系统打开独立浏览器窗口，登录后自动抓 Cookie；或点「改Cookie」手动粘贴（须含 lieju_passport）。',
+
+  wuba: '点「扫码登录」打开 58 登录窗口，登上后自动抓 Cookie 完成绑定。',
+
+  souhu: '点「扫码登录」打开搜狐号登录窗口，登上后自动抓 Cookie 完成绑定。',
+
+  baijiahao: '点「扫码登录」打开百家号登录窗口，登上后自动抓 Cookie 完成绑定。',
+
+  other: '登记型账号（无浏览器适配器），发布配置由管理员完成。日额度 0 = 登记型，不参与发布。',
+
+};
+
+function setPlat(p){
+
+  PLAT = p;
+
+  document.querySelectorAll('.ac-tab').forEach(b => b.classList.toggle('on', b.dataset.p === p));
+
+  $('f-cookie').style.display = p === 'lieju' ? '' : 'none';
+
+  $('f-zone').style.display = p === 'lieju' ? '' : 'none';
+
+  $('plat-tip').innerHTML = '<i class="ic" data-ic="info" data-sz="16"></i><span>' + (TIPS[p] || '') + '</span>';
+
+  if (window.ICONS) ICONS.mount($('plat-tip'));
+
+}
+
+function focusAdd(){ const el = $('a-name'); if (el) { el.scrollIntoView({block: 'center'}); el.focus(); } }
+
+async function addAccount(){
+
+  const name = $('a-name').value.trim();
+
+  if (!name){ alert('请填账号名称'); return; }
+
+  const btn = event && event.target ? event.target.closest('.btn') : null;
+
+  const body = {platform: PLAT === 'other' ? 'souhu' : PLAT, name};
+
+  if (PLAT === 'lieju'){
+
+    body.cookie = $('a-cookie').value.trim();
+
+    body.zone = $('a-zone').value.trim();
+
+  }
+
+  body.limit = +$('a-limit').value || 0;
+
+  if (btn) { btn.classList.add('loading'); btn.disabled = true; }
+
+  try{
+
+    const r = await fetch('/api/my-accounts/add', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
+
+    const j = await r.json();
+
+    if (!r.ok){ alert(j.error || '添加失败'); return; }
+
+    alert(j.msg || '已添加');
+
+    $('a-name').value = ''; $('a-cookie').value = '';
+
+    acLoad();
+
+  } finally {
+
+    if (btn) { btn.classList.remove('loading'); btn.disabled = false; }
+
+  }
+
+}
+
+let AC = [];
+
+async function acLoad(){
+
+  const tb = $('ac-list');
+
+  try{
+
+    const d = await (await fetch('/api/my-accounts')).json();
+
+    AC = (d.accounts || []).filter(a => !a.yxer_id);  // 只显示专用通道
+
+  }catch(e){
+
+    AC = [];
+
+    if (tb) tb.innerHTML = tRow('ac', 'empty err', 'alert', '专用通道账号加载失败', escA(e.message || '接口异常'), '<button class="btn gray sm" onclick="acLoad()"><i class="ic" data-ic="refresh" data-sz="16"></i>重试</button>');
+
+    if (window.ICONS) ICONS.mount(tb);
+
+    return;
+
+  }
+
+  $('ac-stat').textContent = AC.length ? AC.length + ' 个通道' : '';
+
+  if ($('k-ch')) $('k-ch').textContent = AC.length;   // KPI: 专用通道数
+
+  if ($('pc-ch')) $('pc-ch').textContent = AC.length;
+
+  acRender();
+
+}
+
+function acStatus(a){ return a.enabled ? (a.verified ? 'ok' : 'unverified') : 'off'; }
+
+function acSorted(){
+
+  const s = TST.ac, q = (s.q || '').trim().toLowerCase();
+
+  let list = AC.filter(a => (s.plat === '全部' || a.platform === s.plat)
+
+    && (s.status === 'all' || acStatus(a) === s.status)
+
+    && (!q || String(a.name || '').toLowerCase().indexOf(q) >= 0));
+
+  const k = s.sortKey, d = s.sortDir;
+
+  if (k && d) {
+
+    const m = d === 2 ? -1 : 1;
+
+    const rank = a => ({off: 0, unverified: 1, ok: 2}[acStatus(a)]);
+
+    list = list.slice().sort((x, y) => {
+
+      if (k === 'name') return String(x.name || '').localeCompare(String(y.name || ''), 'zh-Hans-CN') * m;
+
+      if (k === 'plat') return String(PLATN[x.platform] ? PLATN[x.platform][0] : x.platform).localeCompare(String(PLATN[y.platform] ? PLATN[y.platform][0] : y.platform), 'zh-Hans-CN') * m;
+
+      if (k === 'status') return (rank(x) - rank(y)) * m;
+
+      return 0;
+
+    });
+
+  }
+
+  return list;
+
+}
+
+// 支持扫码登录的平台（有浏览器适配器的）
+const QR_PLATS = ['meipian', 'lieju', 'wuba', 'souhu', 'baijiahao'];
+
+function acRow(a){
+
+  const pn = PLATN[a.platform] || [a.platform, 'var(--bg-deep)'];
+
+  const st = !a.enabled ? ['pill bad', '已停用']
+           : (!a.has_cookie ? ['pill warn', '未绑定']
+             : (a.verified ? ['pill ok', '已验证'] : ['pill warn', '待验证']));
+
+  const ops = [
+
+    QR_PLATS.includes(a.platform) ? `<button class="btn sm" onclick="qrLogin('${a.id}')"><i class="ic" data-ic="link" data-sz="16"></i>扫码登录</button>` : '',
+
+    QR_PLATS.includes(a.platform) ? `<button class="btn sm gray" onclick="verify('${a.id}')"><i class="ic" data-ic="check" data-sz="16"></i>验证</button>` : '',
+
+    QR_PLATS.includes(a.platform) ? `<button class="btn sm gray" onclick="editCk('${a.id}', '${escA(a.name)}')"><i class="ic" data-ic="file" data-sz="16"></i>改Cookie</button>` : '',
+
+    `<button class="btn sm gray" onclick="tg('${a.id}')">${a.enabled ? '停用' : '启用'}</button>`,
+
+    `<button class="btn sm danger" onclick="del('${a.id}')"><i class="ic" data-ic="trash" data-sz="16"></i>删除</button>`
+
+  ].filter(Boolean).join('');
+
+  return `<tr>
+
+    <td class="strong" title="${escA(a.name)}">${escA(a.name)}</td>
+
+    <td data-col="plat"><span class="pill" style="background:${pn[1]};color:var(--ink2)">${escA(pn[0])}</span></td>
+
+    <td><span class="${st[0]}">${st[1]}</span></td>
+
+    <td class="num" data-col="limit"><input type="number" min="0" max="1000" value="${a.limit ?? 0}" onchange="setLim('${a.id}', this.value)" title="0 = 登记型，不参与发布" style="width:72px;text-align:right"></td>
+
+    <td class="col-op"><div class="row-act">${ops}</div></td>
+
+  </tr>`;
+
+}
+
+function acRender(){
+
+  const tb = $('ac-list');
+
+  if (!tb) return;
+
+  const s = TST.ac;
+
+  const list = acSorted();
+
+  const pages = Math.max(1, Math.ceil(list.length / s.size));
+
+  if (s.page > pages) s.page = pages;
+
+  if (s.page < 1) s.page = 1;
+
+  const slice = list.slice((s.page - 1) * s.size, s.page * s.size);
+
+  if (!AC.length) {
+
+    tb.innerHTML = emptyAC('还没有专用通道账号', '用上方添加美篇 / 列表网账号，或从其他平台登记导入',
+
+      'shield', '<button class="btn gray sm" onclick="focusAdd()"><i class="ic" data-ic="plus" data-sz="16"></i>添加账号</button>');
+
+  } else if (!list.length) {
+
+    tb.innerHTML = emptyAC('没有符合条件的账号', '调整平台、状态或关键词筛选后重试', 'search');
+
+  } else {
+
+    tb.innerHTML = slice.map(acRow).join('');
+
+  }
+
+  if (window.ICONS) ICONS.mount(tb);
+
+  tSortIcons('ac');
+
+  tApplyCols('ac');
+
+  tPager('ac', list.length, pages);
+
+}
+
+function acFilter(){
+
+  const s = TST.ac;
+
+  s.q = ($('ac-q') || {}).value || '';
+
+  s.plat = ($('ac-plat') || {}).value || '全部';
+
+  s.status = ($('ac-status') || {}).value || 'all';
+
+  s.page = 1;
+
+  acRender();
+
+}
+
+async function acRefresh(){
+
+  const btn = $('ac-refresh'), ic = btn ? btn.querySelector('.ic') : null;
+
+  if (ic) ic.classList.add('spin');
+
+  try { await acLoad(); } finally { if (ic) ic.classList.remove('spin'); }
+
+}
+
+async function setLim(id, v){
+
+  const a = AC.find(x => x.id === id);
+
+  if (a) a.limit = +v || 0;
+
+  const r = await fetch('/api/my-accounts/limit', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id, limit: +v || 0})});
+
+  if (!r.ok) alert('设置失败');
+
+}
+
+async function editCk(id, name){
+
+  const ck = prompt(`修改「${name}」的Cookie：\n\n从列表网浏览器 F12 → 网络 → 任意请求 → 复制完整Cookie（须含 lieju_passport）\n粘贴到下面：`);
+
+  if (!ck || !ck.trim()) return;
+
+  const r = await fetch('/api/my-accounts/cookie', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id, cookie: ck.trim()})});
+
+  const j = await r.json();
+
+  if (!r.ok){ alert(j.error || '更新失败'); return; }
+
+  alert(j.msg || 'Cookie已更新');
+
+  acLoad();
+
+}
+
+async function verify(id){
+
+  const btn = event?.target?.closest ? event.target.closest('.btn') : null;
+
+  if (btn){ btn.disabled = true; btn.classList.add('loading'); }
+
+  try{
+
+    const r = await fetch('/api/my-accounts/verify', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id})});
+
+    const text = await r.text();
+
+    let j;
+
+    try { j = JSON.parse(text); } catch(e2) {
+
+      if (r.status === 401) { alert('登录已过期，请重新登录'); location.href = '/login'; return; }
+
+      alert('服务器异常(HTTP ' + r.status + ')，Chrome可能被占用，稍后再试');
+
+      return;
+
+    }
+
+    alert(r.ok ? (j.msg || '验证通过') : (j.error || j.msg || '验证失败'));
+
+  }catch(e){ alert('验证请求失败: ' + e.message); }
+
+  if (btn){ btn.disabled = false; btn.classList.remove('loading'); }
+
+  acLoad();
+
+}
+
+// ── 扫码登录（专用通道：美篇/列表网/58/搜狐/百家号）────────────────────────
+
+let QR_TIMER = null, QR_LID = null;
+
+function qrTip(html){ const el = document.getElementById('qr-tip'); if (!el) return; el.innerHTML = html; el.style.display = html ? '' : 'none'; }
+
+async function qrLogin(id){
+
+  const r = await fetch('/api/my-accounts/login', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({id})});
+
+  const j = await r.json().catch(() => null);
+
+  if (!j || !j.ok){ alert((j && j.error) || '启动扫码失败'); return; }
+
+  QR_LID = j.login_id;
+
+  qrTip(`<span class="pill warn">扫码中…</span> <button class="btn sm gray" onclick="qrConfirm()">我扫完了</button> <button class="btn sm gray" onclick="qrCancel()">取消</button>`);
+
+  alert('已打开浏览器窗口，请在里面扫码 / 登录。\n登上后系统会自动抓取 Cookie 并完成绑定（5 分钟内有效）。');
+
+  if (QR_TIMER) clearInterval(QR_TIMER);
+
+  QR_TIMER = setInterval(qrPoll, 2000);
+
+}
+
+async function qrPoll(){
+
+  if (!QR_LID) return;
+
+  const r = await fetch('/api/my-accounts/login-status?login_id=' + encodeURIComponent(QR_LID));
+
+  const j = await r.json().catch(() => null);
+
+  if (!j) return;
+
+  if (j.status === 'done'){ qrStop(); alert('绑定成功：' + (j.message || 'Cookie 已加密保存')); acLoad(); return; }
+
+  if (['timeout','error','canceled','gone'].includes(j.status)){ qrStop(); alert('扫码未完成：' + (j.message || j.status)); acLoad(); }
+
+}
+
+function qrStop(){ if (QR_TIMER) clearInterval(QR_TIMER); QR_TIMER = null; QR_LID = null; qrTip(''); }
+
+async function qrConfirm(){ if (QR_LID) await fetch('/api/my-accounts/login-confirm', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({login_id: QR_LID})}); }
+
+async function qrCancel(){ if (QR_LID) await fetch('/api/my-accounts/login-cancel', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({login_id: QR_LID})}); qrStop(); }
+
+async function tg(id){
+
+  await fetch('/api/my-accounts/toggle', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id})});
+
+  acLoad();
+}
+
+async function del(id){
+
+  if (!confirm('确定删除该账号？')) return;
+
+  await fetch('/api/my-accounts/delete', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id})});
+
+  acLoad();
+
+}
+
+
+
+/* 点击空白处收起列显隐弹层 */
+
+document.addEventListener('click', () => { document.querySelectorAll('.colvis-pop').forEach(p => p.classList.remove('on')); });
+
+
+
+setPlat('meipian');
+
+yxLoad();
+
+acLoad();
+
+</script>
+
+</body>
+
+</html>
+

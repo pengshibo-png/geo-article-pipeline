@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN" class="theme-light">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>文章生成 · GEO优化系统</title>
+
+<link rel="stylesheet" href="/static/client_style.css?v={{ asset_ver }}">
+
+<link rel="stylesheet" href="/static/ds.css?v={{ asset_ver }}">
+
+<link rel="stylesheet" href="/static/theme-light.css?v={{ asset_ver }}">
+
+<style>
+
+/* ============================================================
+
+   文章生成 · 共用页(运营端 /gen + 客户工作台)
+
+   theme-light.css 已提供 顶栏/面包屑/页头/KPI/区块/按钮/标签/终端 全套,
+
+   此处只保留: 外壳补丁、本页专属组件(参数表单行/分段控件/日志终端/产出列表)
+
+   约束: 只用 var(--*) token / 圆角 ≤ 8px / 无渐变 · 无发光 · 无玻璃拟态
+
+   ============================================================ */
+
+
+
+/* 1) 外壳栅格: theme-light 只给了列宽, display 由本页补(与 dash/settings 一致) */
+
+.cl-app { display: grid; }
+
+.phead-r .pr-l { white-space: nowrap; }
+
+/* 旧壳按钮的悬浮位移/光晕, 浅色版一律去掉 */
+
+html.theme-light body .cl-btn:hover, html.theme-light body .cl-btn:active { transform: none; box-shadow: none; }
+
+/* 进度条填充: ds.css 的 .sg 仍是深色期渐变, 这里改纯 token 色 */
+
+html.theme-light .viz-bar .sg { background: var(--brand); }
+
+
+
+/* 2) 生成控制区: 左=参数表单卡(1.15fr), 右=运行状态卡(0.85fr, 吸顶) */
+
+html.theme-light .bento-2.gn-top { grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr); align-items: start; }
+
+html.theme-light .bento-2.gn-top > .sec { margin-bottom: 0; }
+
+html.theme-light body .sticky-col { position: sticky; top: 64px; }
+
+
+
+/* 3) 参数行: 标签定宽 + 控件区; 行间用 --line-soft 分隔 */
+
+.gn-frow { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line-soft); }
+
+.gn-frow:first-child { padding-top: 0; }
+
+.gn-frow:last-child { border-bottom: none; padding-bottom: 0; }
+
+.gn-fl { flex: none; width: 64px; padding-top: 7px; font-size: 12px; font-weight: 500; color: var(--ink3); }
+
+.gn-ctl { flex: 1; min-width: 0; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+.gn-tip { font-size: 12px; color: var(--ink3); margin-top: 8px; line-height: 1.6; }
+
+
+
+/* 4) 分段控件(.cmsg 类名被 JS 用于状态切换, 不可改名): 统一 .seg 形态, 高 32 */
+
+.gn-seg { display: flex; border: 1px solid var(--line-strong); border-radius: var(--r-input); overflow: hidden; width: fit-content; max-width: 100%; }
+
+.gn-seg .cmsg { height: 32px; border: none; background: var(--card); color: var(--ink2); padding: 0 12px; font-family: inherit; font-size: 12px; font-weight: 500; cursor: pointer; white-space: nowrap; }
+
+.gn-seg .cmsg + .cmsg { border-left: 1px solid var(--line); }
+
+.gn-seg .cmsg:hover { color: var(--brand); }
+
+.gn-seg .cmsg.on { background: var(--brand-soft); color: var(--brand); font-weight: 500; }
+
+/* 数量快捷卡(JS 依赖 .gnc 类名): 次级按钮形态 */
+
+.gnc { height: 32px; padding: 0 12px; border: 1px solid var(--line-strong); background: var(--card); border-radius: var(--r-btn); font-family: inherit; font-size: 12px; font-weight: 500; color: var(--ink2); cursor: pointer; white-space: nowrap; }
+
+.gnc:hover { border-color: var(--brand); color: var(--brand); }
+
+.gnc.on { background: var(--brand-soft); border-color: var(--brand); color: var(--brand); font-weight: 500; }
+
+/* 数量输入 */
+
+.gn-num { width: 84px; height: 32px; padding: 0 10px; font-family: inherit; font-size: 13px; color: var(--ink); outline: none; font-variant-numeric: tabular-nums; }
+
+/* 页脚操作行 */
+
+.gn-foot { display: flex; align-items: center; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
+
+.gn-chk { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink2); cursor: pointer; }
+
+
+
+/* 5) 生成日志终端(浅色化由 theme-light.css 第 13 节承担, 这里只留布局) */
+
+.gn-term { height: 360px; overflow-y: auto; position: relative; padding: 16px 18px; font-size: 12px; line-height: 1.85; }
+
+.gn-term .ln { white-space: pre-wrap; word-break: break-all; }
+
+.c-ok { color: var(--ok); } .c-bad { color: var(--bad); } .c-w { color: var(--warn); } .c-dim { color: var(--ink4); }
+
+.c-a { color: var(--accent); } .c-b { color: var(--brand-ink); } .c-c { color: var(--warn); } .c-tag { color: var(--ink4); }
+
+
+
+/* 6) 本批产出列表 */
+
+#arts { max-height: 520px; overflow-y: auto; }
+
+.gn-art { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--bg-soft); margin-bottom: 8px; animation: gn-fi .3s; }
+
+.gn-art:last-child { margin-bottom: 0; }
+
+.gn-art .grow { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 500; color: var(--ink); }
+
+@keyframes gn-fi { from { opacity: 0; transform: translateY(6px); } }
+
+
+
+/* 7) 调度区表单行: 标签在上, 控件 32px */
+
+.as-row { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+
+.as-f { display: flex; flex-direction: column; gap: 4px; }
+
+.as-f > label { font-size: 12px; color: var(--ink3); }
+
+.as-f > select, .as-f > input { height: 32px; }
+
+#as-mode { width: 132px; } #as-time { width: 124px; } #as-every { width: 112px; } #as-count { width: 112px; }
+
+.as-chk { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink2); cursor: pointer; padding-bottom: 7px; }
+
+.as-ok { font-size: 12px; font-weight: 600; color: var(--ok); padding-bottom: 7px; }
+
+
+
+/* 8) 日志/产出双栏: 右卡与左卡等高 + 空态在卡内居中(消除右列死区) */
+
+html.theme-light body[data-page="gen"] .bento-2.wide-left { align-items: stretch; }
+
+html.theme-light body[data-page="gen"] .bento-2.wide-left > .sec:last-child { display: flex; flex-direction: column; }
+
+html.theme-light body[data-page="gen"] .bento-2.wide-left > .sec:last-child > .sec-b { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; }
+
+html.theme-light body[data-page="gen"] .bento-2.wide-left > .sec:last-child #arts { flex: 1 1 auto; min-height: 232px; }
+
+html.theme-light body[data-page="gen"] #arts > .empty { min-height: 100%; }
+
+html.theme-light body[data-page="gen"] #arts > .empty .btn { margin-top: 8px; }
+
+html.theme-light body[data-page="gen"] #term > .empty { height: 100%; justify-content: center; }
+
+</style>
+
+</head>
+
+<body class="cl" data-page="gen">
+
+
+
+<header class="topbar" id="topbar">
+
+  <div class="tb-brand"><span class="tb-logo">G</span><span class="tb-name">GEO 优化系统</span><span class="tb-env" id="tb-env">客户工作台</span></div>
+
+  <div class="tb-right">
+
+    <span class="tb-chip" id="model-tag">模型 · 未设置</span>
+
+    <span class="tb-chip" id="run-tag">空闲</span>
+
+    <div class="tb-user" id="tb-user-btn"><span class="tb-av" id="tb-av">客</span><span class="tb-uname" id="tb-uname">未登录</span><i class="ic" data-ic="chevronDown" data-sz="16"></i></div>
+
+  </div>
+
+  <div class="tb-menu" id="tb-menu"><button onclick="doLogout()"><i class="ic" data-ic="logout"></i>退出登录</button></div>
+
+</header>
+
+
+
+<div class="cl-app">
+
+<aside class="cl-side" id="sidebar"></aside>
+
+<main class="cl-main">
+
+<nav class="crumb" id="crumb"></nav>
+
+
+
+    <div class="phead">
+
+        <div class="phead-l">
+
+            <div class="phead-eyebrow">内容生产 · 流水线</div>
+
+            <div class="phead-h1">文章生成</div>
+
+            <div class="phead-sub">选题 → AI 并发生成 → 审稿 → 修改 → 配图 → 待发布</div>
+
+            <div class="phead-chips">
+
+                <span class="phead-chip"><span class="dot" style="background:var(--ok)"></span>状态 <b id="pc-run">待启动</b></span>
+
+                <span class="phead-chip">批次 <b id="pc-batch">-</b></span>
+
+            </div>
+
+        </div>
+
+        <div class="phead-r">
+
+            <div class="pr-l">批量生产</div>
+
+            <button class="btn" onclick="document.getElementById('go').click()"><i class="ic" data-ic="play" data-sz="16"></i>开始生成</button>
+
+        </div>
+
+    </div>
+
+
+
+    <!-- 文章生成计划 -->
+
+    <section class="sec">
+
+        <div class="sec-h">
+
+            <span class="sec-ico"><i class="ic" data-ic="clock" data-sz="20"></i></span>
+
+            <div class="sec-t"><b>文章生成计划</b><span>到点自动从标题库取题生成文章（品牌资料/联系方式模式按租户配置）· 只生成不发布</span></div>
+
+            <div class="sec-x"><span class="pill gray" id="as-side">加载中…</span></div>
+
+        </div>
+
+        <div class="sec-b">
+
+            <div class="as-row">
+
+                <label class="as-chk"><input type="checkbox" id="as-en"> 启用每日自动生成</label>
+
+                <div class="as-f"><label for="as-mode">节奏模式</label>
+
+                    <select id="as-mode" class="inp" onchange="asMode()">
+
+                        <option value="daily">每日定时</option>
+
+                        <option value="interval">每 N 分钟</option>
+
+                    </select></div>
+
+                <div class="as-f" id="as-daily"><label for="as-time">生成时间</label>
+
+                    <input type="time" id="as-time" value="03:00" class="inp"></div>
+
+                <div class="as-f" id="as-interval" style="display:none"><label for="as-every">间隔（分钟）</label>
+
+                    <input type="number" id="as-every" value="60" min="1" max="10080" class="inp"></div>
+
+                <div class="as-f"><label for="as-count">每次数量（篇）</label>
+
+                    <input type="number" id="as-count" value="30" min="1" max="500" class="inp"></div>
+
+                <button class="btn sm gray" id="as-save" onclick="asSave()"><i class="ic" data-ic="check" data-sz="16"></i>保存计划</button>
+
+                <span class="as-ok" id="as-ok"></span>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+
+    <!-- 生成控制: 左=参数表单卡, 右=运行状态/进度卡 -->
+
+    <div class="bento-2 gn-top" style="margin-bottom:16px">
+
+        <section class="sec">
+
+            <div class="sec-h">
+
+                <span class="sec-ico"><i class="ic" data-ic="spark" data-sz="20"></i></span>
+
+                <div class="sec-t"><b>生成参数</b><span>数量 · 模型 · 并发 · 速度档 · 联系方式策略</span></div>
+
+            </div>
+
+            <div class="sec-b">
+
+                <div class="gn-frow">
+
+                    <span class="gn-fl">生成数量</span>
+
+                    <div id="chips" class="gn-ctl">
+
+                        <button class="gnc" onclick="setN(10)">10 篇</button>
+
+                        <button class="gnc" onclick="setN(20)">20 篇</button>
+
+                        <button class="gnc" onclick="setN(30)">30 篇</button>
+
+                        <input type="number" id="gen-n" min="1" max="500" value="10" oninput="eta()" class="gn-num" style="width:84px">
+
+                    </div>
+
+                </div>
+
+                <div class="gn-frow">
+
+                    <span class="gn-fl">模型</span>
+
+                    <div class="gn-ctl" style="flex-direction:column;align-items:flex-start">
+
+                        <div class="gn-seg" id="mdl-seg">
+
+                            <button class="cmsg" onclick="setMDL('ds-pro')">DeepSeek-V4-Pro</button>
+
+                            <button class="cmsg" onclick="setMDL('glm53flash')">智谱 GLM-5.3-flash</button>
+
+                        </div>
+
+                        <div id="mdl-tip" class="gn-tip"></div>
+
+                    </div>
+
+                </div>
+
+                <div class="gn-frow">
+
+                    <span class="gn-fl">并发</span>
+
+                    <div class="gn-ctl">
+
+                        <div class="gn-seg" id="conc-seg">
+
+                            <button class="cmsg" onclick="setCONC(4)">4路</button>
+
+                            <button class="cmsg" onclick="setCONC(10)">10路</button>
+
+                            <button class="cmsg" onclick="setCONC(20)">20路</button>
+
+                        </div>
+
+                        <input type="number" id="conc-custom" min="1" max="50" value="4" oninput="setCONC(this.value, true)" class="gn-num" style="width:72px">
+
+                        <span style="font-size:12px;color:var(--ink3)">路</span>
+
+                    </div>
+
+                </div>
+
+                <div class="gn-frow">
+
+                    <span class="gn-fl">速度档</span>
+
+                    <div class="gn-ctl" style="flex-direction:column;align-items:flex-start">
+
+                        <div class="gn-seg" id="spd-seg">
+
+                            <button class="cmsg" onclick="setSPD('max')">质量优先</button>
+
+                            <button class="cmsg" onclick="setSPD('balanced')">均衡推荐</button>
+
+                            <button class="cmsg" onclick="setSPD('speed')">极速</button>
+
+                        </div>
+
+                        <div id="spd-tip" class="gn-tip"></div>
+
+                    </div>
+
+                </div>
+
+                <div class="gn-frow">
+
+                    <span class="gn-fl">联系方式</span>
+
+                    <div class="gn-ctl" style="flex-direction:column;align-items:flex-start">
+
+                        <div class="gn-seg" id="cm-seg">
+
+                            <button class="cmsg on" onclick="setCM('revise')">AI 改写删除</button>
+
+                            <button class="cmsg" onclick="setCM('strip')">自动过滤</button>
+
+                            <button class="cmsg" onclick="setCM('keep')">保留座机</button>
+
+                        </div>
+
+                        <div id="cm-tip" class="gn-tip"></div>
+
+                    </div>
+
+                </div>
+
+                <div class="gn-tip" style="margin-top:2px">模型 / 并发 / 速度档 /「仅生成不发布」为**预留项，暂不改变执行**：实际模型与并发取「系统设置」配置，发布一律由「文章档案」手动触发（写稿流水线本身不发布）。</div>
+
+                <div class="gn-foot">
+
+                    <label class="gn-chk"><input type="checkbox" id="gen-nopub"> 仅生成不发布</label>
+
+                    <button class="btn" id="go" onclick="runGen()" style="margin-left:auto">开始生成</button>
+
+                </div>
+
+            </div>
+
+        </section>
+
+        <section class="sec sticky-col">
+
+            <div class="sec-h">
+
+                <span class="sec-ico"><i class="ic" data-ic="gauge" data-sz="20"></i></span>
+
+                <div class="sec-t"><b>运行状态</b><span>本批进度 · 每 2 秒自动刷新</span></div>
+
+                <div class="sec-x"><span class="pill brand">实时</span></div>
+
+            </div>
+
+            <div class="sec-b">
+
+                <div class="kpi-grid" style="grid-template-columns:repeat(2,minmax(0,1fr));margin-bottom:0">
+
+                    <div class="kpi">
+
+                        <div class="kpi-l">本批总数 <span class="kpi-x"><i class="ic" data-ic="list" data-sz="20"></i></span></div>
+
+                        <div class="kpi-r"><span class="kpi-v" id="s-total">0</span><span class="kpi-u">篇</span></div>
+
+                        <div class="kpi-l" style="margin-top:12px">本轮生成计划量</div>
+
+                    </div>
+
+                    <div class="kpi">
+
+                        <div class="kpi-l">已完成 <span class="kpi-x"><i class="ic" data-ic="check" data-sz="20"></i></span></div>
+
+                        <div class="kpi-r"><span class="kpi-v" id="s-done">0</span><span class="kpi-u">篇</span></div>
+
+                        <div class="viz-bar thin" style="margin-top:12px"><span class="sg brand" style="width:0%" id="bar"></span></div>
+
+                        <div class="kpi-l" style="margin-top:8px"><span id="cur">等待启动</span> · <b id="pct" style="color:var(--brand)">0%</b></div>
+
+                    </div>
+
+                    <div class="kpi">
+
+                        <div class="kpi-l">成功产出 <span class="kpi-x"><i class="ic" data-ic="archive" data-sz="20"></i></span></div>
+
+                        <div class="kpi-r"><span class="kpi-v" id="s-ok">0</span><span class="kpi-u">篇</span></div>
+
+                        <div class="kpi-l" style="margin-top:12px">通过全流程校验</div>
+
+                    </div>
+
+                    <div class="kpi">
+
+                        <div class="kpi-l">失败 <span class="kpi-x"><i class="ic" data-ic="alert" data-sz="20"></i></span></div>
+
+                        <div class="kpi-r"><span class="kpi-v" id="s-fail">0</span><span class="kpi-u">篇</span></div>
+
+                        <div class="kpi-l" style="margin-top:12px">可重跑补产</div>
+
+                    </div>
+
+                </div>
+
+                <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--line-soft);font-size:12px;color:var(--ink3);line-height:1.7">
+
+                    <span id="eta"></span>
+
+                </div>
+
+            </div>
+
+        </section>
+
+    </div>
+
+
+
+    <!-- 日志 + 产出 -->
+
+    <div class="bento-2 wide-left">
+
+        <section class="sec" style="margin-bottom:0">
+
+            <div class="sec-h">
+
+                <span class="sec-ico"><i class="ic" data-ic="log" data-sz="20"></i></span>
+
+                <div class="sec-t"><b>生成日志 · 实时</b><span>每个并发通道逐条输出 · 鼠标悬停暂停自动滚动</span></div>
+
+                <div class="sec-x"><span class="pill ok"><span class="st-dot live"></span>LIVE</span><span class="pill gray" id="log-n">-</span></div>
+
+            </div>
+
+            <div class="sec-b">
+
+                <div class="gn-term" id="term">
+
+                    <div class="empty"><div class="e-ic"><i class="ic" data-ic="log" data-sz="24"></i></div><div class="e-t">等待启动</div><div class="e-s">点击「开始生成」后，这里会逐条输出每个并发通道的实时日志</div></div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+        <section class="sec" style="margin-bottom:0">
+
+            <div class="sec-h">
+
+                <span class="sec-ico"><i class="ic" data-ic="archive" data-sz="20"></i></span>
+
+                <div class="sec-t"><b>本批产出</b><span>完成的文章实时出现在这里</span></div>
+
+                <div class="sec-x"><span class="pill gray" id="art-n">-</span></div>
+
+            </div>
+
+            <div class="sec-b">
+
+                <div id="arts">
+
+                    <div class="empty"><div class="e-ic"><i class="ic" data-ic="archive" data-sz="24"></i></div><div class="e-t">暂无产出</div><div class="e-s">完成的文章会实时出现在这里</div><button class="btn" onclick="runGen()"><i class="ic" data-ic="play" data-sz="16"></i>开始生成</button></div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+    </div>
+
+
+
+</main>
+
+</div>
+
+<script src="/static/icons.js?v={{ asset_ver }}"></script>
+
+<script src="/static/layout.js?v={{ asset_ver }}"></script>
+
+<script>
+
+let timer = null, lastLogN =  0, stick = true, CM = localStorage.getItem('gen_cm') || 'revise';
+
+let MDL = localStorage.getItem('gen_mdl') || 'ds-pro';
+
+let CONC = parseInt(localStorage.getItem('gen_conc')) || 4;
+
+let SPD = localStorage.getItem('gen_spd') || 'balanced';
+
+const SPD_TIP = {
+
+    max: '精细模式 · 质量最佳 · 约 4 分钟/篇',
+
+    balanced: '标准模式 · 全流程质检 · 约 2 分钟/篇',
+
+    speed: '快速模式 · 保留基础校验 · 约 1 分钟/篇',
+
+};
+
+const MDL_TIP = {
+
+    'ds-pro': '主力模型 · 秒级响应',
+
+    glm53flash: '智谱GLM-5.3-flash 兜底(不思考, 快)',
+
+};
+
+function setMDL(m) {
+
+    MDL = m; localStorage.setItem('gen_mdl', m);
+
+    const mk = { 'ds-pro': 'DeepSeek', glm53flash: 'flash' }[m] || m;
+
+    document.querySelectorAll('#mdl-seg .cmsg').forEach(b => b.classList.toggle('on', b.textContent.includes(mk) && !(m !== 'glm53' && b.textContent.includes('5.3 深度'))));
+
+    document.getElementById('mdl-tip').textContent = MDL_TIP[m];
+
+    eta();
+
+}
+
+function setSPD(s) {
+
+    SPD = s; localStorage.setItem('gen_spd', s);
+
+    document.querySelectorAll('#spd-seg .cmsg').forEach(b => {
+
+        const k = b.textContent.includes('质量') ? 'max' : b.textContent.includes('均衡') ? 'balanced' : 'speed';
+
+        b.classList.toggle('on', k === s);
+
+    });
+
+    document.getElementById('spd-tip').textContent = SPD_TIP[s];
+
+    eta();
+
+}
+
+function setCONC(n, isCustom) {
+
+    n = Math.max(1, Math.min(50, parseInt(n) || 4));
+
+    CONC = n; localStorage.setItem('gen_conc', n);
+
+    document.querySelectorAll('#conc-seg .cmsg').forEach(b => b.classList.toggle('on', parseInt(b.textContent) === n));
+
+    const ci = document.getElementById('conc-custom');
+
+    if (!isCustom) ci.value = n;
+
+    eta();
+
+}
+
+const CM_TIP = {
+
+    revise: '号码被检出生成时AI直接改写成"官方热线"引导语（推荐，语句自然）',
+
+    strip: '不走审核，程序把号码批量替换成"品牌官方热线"（最快）',
+
+    keep: '保留座机 / 400 / 95 热线（手机号一律删除，任何模式都不放行）',
+
+};
+
+function setCM(m) {
+
+    CM = m; localStorage.setItem('gen_cm', m);
+
+    document.querySelectorAll('#cm-seg .cmsg').forEach(b => b.classList.toggle('on', b.textContent.trim().includes(m === 'revise' ? 'AI' : m === 'strip' ? '过滤' : '保留')));
+
+    document.getElementById('cm-tip').textContent = CM_TIP[m];
+
+}
+
+
+
+function setN(n) { document.getElementById('gen-n').value = n; eta(); }
+
+function eta() {
+
+    const n = Math.max(1, Math.min(500, parseInt(document.getElementById('gen-n').value) || 1));
+
+    let per53 = { max: 4, balanced: 2, speed: 1 }[SPD];  // GLM-5.3各速度档
+
+    const per52 = 2.5;                                   // 经济档约2.5分钟/篇(无思考档)
+
+    // 每篇耗时: 按已知档位取值, 未知模型按均衡档估算(避免 NaN/超长小数)
+
+    const perByModel = { glm53: per53, glm52: per52, 'ds-pro': per53, deepseek: per53, turbo: 5, mixed: (per53 + 1 + per52) / 3 };
+
+    const per = Math.round((perByModel[MDL] || per53) * 10) / 10;
+
+    const eff = MDL === 'mixed' ? Math.max(1, CONC) : CONC;  // mixed两池合计还是CONC路
+
+    const m = n * per / eff;
+
+    const txt = m < 60 ? `${Math.max(1, Math.round(m))} 分钟` : `${(m / 60).toFixed(1)} 小时`;
+
+    const spdN = { max: '质量优先', balanced: '均衡', speed: '极速' }[SPD] || '均衡';
+
+    const mdlN = { glm53: 'GLM-5.3', glm52: '经济模型', mixed: '三引擎均分', deepseek: 'DeepSeek-V4', 'ds-pro': 'DeepSeek-V4-Pro' }[MDL] || MDL;
+
+    document.getElementById('eta').textContent = `预计 ${txt} 完成（${CONC} 路并发 · ${mdlN} · ${spdN}档 · 每篇均摊约 ${per} 分钟）`;
+
+    document.querySelectorAll('#chips .gnc').forEach(b => b.classList.toggle('on', parseInt(b.textContent) === n));
+
+}
+
+
+
+async function runGen() {
+
+    const n = Math.max(1, Math.min(500, parseInt(document.getElementById('gen-n').value) || 1));
+
+    const r = await fetch('/api/run', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+
+        body: JSON.stringify({ count: n, no_publish: document.getElementById('gen-nopub').checked,
+
+                               contact_mode: CM, provider: MDL, concurrency: CONC, speed: SPD }) });
+
+    const d = await r.json();
+
+    if (!d.ok) { alert(d.error || '启动失败'); return; }
+
+    go('run');
+
+}
+
+
+
+async function pauseGen() {
+
+    if (!confirm('暂停生成？\n进行中的文章会写完（不浪费），队列里未开始的不再启动。选题保留，随时可续跑。')) return;
+
+    const r = await fetch('/api/run/pause', { method: 'POST' });
+
+    const d = await r.json();
+
+    if (!d.ok) alert(d.error || '操作失败');
+
+}
+
+
+
+// 状态机: idle / run / pausing
+
+function go(state) {
+
+    const b = document.getElementById('go');
+
+    const pill = document.getElementById('pc-run');   // 统一页头里的状态 chip
+
+    const pt = pill;
+
+    if (state === 'run') {
+
+        b.disabled = false; b.textContent = '暂停生成'; b.style.opacity = 1; b.onclick = pauseGen;
+
+        pill.classList.remove('off'); pt.textContent = '生成运行中';
+
+    } else if (state === 'pausing') {
+
+        b.disabled = true; b.textContent = '正在暂停…'; b.style.opacity = .55;
+
+        pill.classList.remove('off'); pt.textContent = '正在暂停(写完进行中)';
+
+    } else {
+
+        b.disabled = false; b.textContent = '开始生成'; b.style.opacity = 1; b.onclick = runGen;
+
+        pill.classList.add('off'); pt.textContent = '待启动';
+
+        if (timer) { clearInterval(timer); timer = null; }
+
+    }
+
+    if ((state === 'run' || state === 'pausing') && !timer) timer = setInterval(poll, 2000);
+
+}
+
+
+
+function esc(s) { return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
+
+function colorLine(l) {
+
+    let cls = '';
+
+    if (l.includes('\u2705')) cls = 'c-ok';
+
+    else if (l.includes('\u274C')) cls = 'c-bad';
+
+    else if (l.includes('[B]') || l.includes('审稿')) cls = 'c-b';
+
+    else if (l.includes('[C]') || l.includes('修改')) cls = 'c-c';
+
+    else if (l.includes('[A]') || l.includes('生成')) cls = 'c-a';
+
+    else if (l.includes('发布')) cls = 'c-w';
+
+    else if (l.startsWith('[') || l.includes('====') || l.includes('\uD83D\uDE80')) cls = 'c-ok';
+
+    else if (l.startsWith('  ') || /\[\d+s\]/.test(l)) cls = '';
+
+    // worker标签([W1|xxx])淡色
+
+    l = esc(l).replace(/^(\[W\d+\|[^\]]*\])/, '<span class="c-tag">$1</span>');
+
+    return `<div class="ln ${cls}">${l}</div>`;
+
+}
+
+
+
+async function poll() {
+
+    try {
+
+        const s = await (await fetch('/api/status?lines=800')).json();
+
+        const p = s.progress || {};
+
+        document.getElementById('s-total').textContent = p.total || 0;
+
+        document.getElementById('s-done').textContent = p.done || 0;
+
+        document.getElementById('s-ok').textContent = p.success || 0;
+
+        document.getElementById('s-fail').textContent = p.fail || 0;
+
+        const pct = p.total ? Math.round((p.done || 0) * 100 / p.total) : 0;
+
+        document.getElementById('bar').style.width = pct + '%';
+
+        document.getElementById('pct').textContent = pct + '%';
+
+        document.getElementById('cur').textContent = s.running ? (s.current || '处理中…') : '已完成';
+
+        document.getElementById('log-n').textContent = (s.log_total || 0) + ' 行';
+
+
+
+        const term = document.getElementById('term');
+
+        if ((s.log_tail || []).length && s.log_total !== lastLogN) {
+
+            lastLogN = s.log_total;
+
+            term.innerHTML = (s.log_tail || []).map(colorLine).join('');
+
+            if (stick) term.scrollTop = term.scrollHeight;
+
+        }
+
+
+
+        const arts = s.articles || [];
+
+        if (arts.length) {
+
+            document.getElementById('art-n').textContent = arts.length + ' 篇';
+
+            document.getElementById('arts').innerHTML = arts.slice().reverse().map(a => `
+
+                <div class="gn-art">
+
+                    <span class="pill ${a.ok ? 'ok' : 'bad'}">${a.ok ? '成功' : '失败'}</span>
+
+                    <span class="grow" title="${esc(a.title)}">${esc(a.title)}</span>
+
+                    <span class="cl-badge ${a.ok ? '' : 'gray'}">${a.n}/${a.total}</span>
+
+                </div>`).join('');
+
+        }
+
+
+
+        if (!s.running) {
+
+            go('idle');
+
+            if ((p.done || 0) > 0) {
+
+                document.getElementById('cur').textContent = `本批完成：成功 ${p.success} · 失败 ${p.fail}`;
+
+            }
+
+        } else {
+
+            go(s.pausing ? 'pausing' : 'run');
+
+        }
+
+    } catch (e) { }
+
+}
+
+
+
+// 日志区鼠标悬停时暂停自动滚动
+
+document.getElementById('term').addEventListener('mouseenter', () => stick = false);
+
+document.getElementById('term').addEventListener('mouseleave', () => stick = true);
+
+
+
+window.addEventListener('load', () => {
+
+    setMDL(MDL); setCONC(CONC); setSPD(SPD); document.getElementById('conc-custom').value = CONC;
+
+    eta();
+
+    setCM(CM);
+
+    // 已在运行则恢复对应状态(运行中/暂停中)
+
+    fetch('/api/status').then(r => r.json())
+
+        .then(s => { if (s.running) go(s.pausing ? 'pausing' : 'run'); })
+
+        .catch(() => {});
+
+    poll();
+
+});
+
+
+
+/* 文章生成计划 */
+
+async function asLoad(){
+
+    try{
+
+        const d = await (await fetch('/api/autosched')).json();
+
+        const a = d.article_sched || {};
+
+        document.getElementById('as-en').checked = !!a.enabled;
+
+        document.getElementById('as-mode').value = a.mode || 'daily';
+
+        document.getElementById('as-time').value = a.time || '03:00';
+
+        document.getElementById('as-every').value = a.every_min ?? 60;
+
+        document.getElementById('as-count').value = a.count ?? 30;
+
+        asMode();
+
+        document.getElementById('as-side').textContent = `标题库余量 ${d.titles_left} 条`;
+
+    }catch(e){ document.getElementById('as-side').textContent = '加载失败'; }
+
+}
+
+function asMode(){
+
+    const m = document.getElementById('as-mode').value;
+
+    document.getElementById('as-daily').style.display = m === 'daily' ? '' : 'none';
+
+    document.getElementById('as-interval').style.display = m === 'interval' ? '' : 'none';
+
+}
+
+async function asSave(){
+
+    const body = {article_sched: {enabled: document.getElementById('as-en').checked,
+
+        mode: document.getElementById('as-mode').value,
+
+        time: document.getElementById('as-time').value || '03:00',
+
+        every_min: +document.getElementById('as-every').value || 60,
+
+        count: +document.getElementById('as-count').value || 30}};
+
+    const r = await fetch('/api/autosched', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+
+    document.getElementById('as-ok').textContent = r.ok ? '已保存' : '保存失败';
+
+    setTimeout(()=>document.getElementById('as-ok').textContent='', 2500);
+
+    asLoad();
+
+}
+
+asLoad();
+
+
+
+</script>
+
+</body>
+
+</html>
+

@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN" class="theme-light">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>AI 指令自定义 · GEO优化系统</title>
+
+<link rel="stylesheet" href="/static/client_style.css?v={{ asset_ver }}">
+
+<link rel="stylesheet" href="/static/ds.css?v={{ asset_ver }}">
+
+<link rel="stylesheet" href="/static/theme-light.css?v={{ asset_ver }}">
+
+<style>
+
+/* ============================================================
+
+   AI 指令自定义 · 共用页(运营端 /prompts + 客户工作台 /prompts)
+
+   theme-light.css 已提供 顶栏/面包屑/页头/KPI/区块/卡片/按钮/标签/空态 全套,
+
+   此处只保留四类必要规则: 外壳补丁、双栏布局、编辑器卡、文体配比卡
+
+   约束: 只用 var(--*) token / 圆角 ≤ 8px / 无渐变 · 无发光 · 无玻璃拟态
+
+   间距只落 8px 栅格(4/8/12/16/20/24/32), 字号 12/13/14/16/20/24, 图标 16/20
+
+   ============================================================ */
+
+
+
+/* 1) 外壳栅格: theme-light 只给了列宽, display 由本页补(与 dash/settings 一致) */
+
+.cl-app { display: grid; }
+
+html.theme-light .sticky-col { top: 64px; }   /* 顶栏 sticky 48px + 16px 间距 */
+
+
+
+/* 2) 双栏: 左=指令卡片列表, 右=编辑器(编辑器稍宽, 指令文本行长更友好) */
+
+html.theme-light .bento-2 { grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 16px; align-items: start; }
+
+html.theme-light .bento-2 > .sec { margin-bottom: 0; }
+
+
+
+/* 3) 指令卡: 8px 栅格收拢(宿主 14/10/9/11px 间距归一到 16/8/12), 图标槽交给 theme-light */
+
+html.theme-light .icard { padding: 16px; }
+
+html.theme-light .icard-h { gap: 8px; }
+
+html.theme-light .icard-b { margin-top: 8px; }
+
+html.theme-light .icard-f { margin-top: 12px; padding-top: 8px; }
+
+
+
+/* 4) KPI: 进度条填充去渐变(ds.css 的 .sg 仍是渐变), 角标图标统一 20 */
+
+html.theme-light .viz-bar .sg.brand { background: var(--brand); }
+
+html.theme-light .kpi .viz-bar { margin-top: 12px; }
+
+html.theme-light .kpi .kpi-l + .kpi-l { margin-top: 8px; }
+
+html.theme-light body .kpi-x .ic { width: 20px; height: 20px; }
+
+html.theme-light body .kpi-x .ic svg, html.theme-light body .kpi-x .ic .svg-ic { width: 20px !important; height: 20px !important; flex: none; }
+
+
+
+/* 5) 用法说明条: 原「渐变底+emoji」改中性提示条(图标走 icons.js) */
+
+.pr-info { display: flex; align-items: flex-start; gap: 12px; background: var(--bg-soft); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 16px; margin: 0 0 16px; font-size: 13px; color: var(--ink2); line-height: 1.7; }
+
+.pr-info .pinfo-ic { flex: none; width: 20px; height: 20px; color: var(--brand); margin-top: 2px; }
+
+.pr-info b { color: var(--ink); font-weight: 600; }
+
+
+
+/* 6) 编辑器卡: 变量工具行 + 指令文本域(.inp 同族 token 由主题层 textarea 规则提供) + 操作行 */
+
+.ed-toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding-bottom: 12px; border-bottom: 1px solid var(--line-soft); margin-bottom: 12px; }
+
+.ed-toolbar .ed-lab { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink3); }
+
+.pr-vars { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.ed-len { margin-left: auto; font-size: 12px; color: var(--ink3); font-variant-numeric: tabular-nums; }
+
+.ed-none { font-size: 12px; color: var(--ink3); }
+
+html.theme-light body .pr-editor { width: 100%; min-height: 420px; padding: 12px; font-family: ui-monospace, Consolas, "Cascadia Code", monospace; font-size: 13px; line-height: 1.7; tab-size: 4; }
+
+.ed-foot { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
+
+.ed-note { margin: 0 0 12px; font-size: 12px; line-height: 1.6; color: var(--ink3); }
+
+.ed-note code { padding: 1px 4px; border-radius: 4px; background: var(--fill-soft, rgba(127,127,127,.12)); font-family: ui-monospace, Consolas, monospace; }
+
+
+
+/* 7) 文体配比卡: 滑杆行(名称+百分比+说明) 8px 栅格, 滑杆只走 accent-color: var(--brand) */
+
+.gm-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px 24px; }
+
+.gm-row .gm-h { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+
+.gm-row .gm-n { font-size: 13px; font-weight: 600; color: var(--ink); }
+
+.gm-row .gm-v { display: inline-flex; align-items: baseline; gap: 8px; font-size: 14px; font-weight: 600; color: var(--brand); font-variant-numeric: tabular-nums; }
+
+.gm-row .gm-d { font-size: 12px; font-weight: 400; color: var(--ink3); }
+
+.gm-row input[type=range] { width: 100%; margin-top: 8px; accent-color: var(--brand); }
+
+.gm-sum { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 12px; color: var(--ink3); }
+
+.gm-sum b { color: var(--ink); font-variant-numeric: tabular-nums; }
+
+.gm-sum .btn { margin-left: auto; }
+
+/* 8) 选题配置(只读): 内容限宽 880px / 12-13px 正文 / 长文本(覆盖城市)限高滚动 */
+
+.tc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 24px; max-width: 880px; font-size: 13px; color: var(--ink2); line-height: 1.7; }
+
+.tc-grid > div { min-width: 0; }
+
+.tc-grid b { display: block; margin-bottom: 4px; font-size: 12px; font-weight: 500; color: var(--ink3); }
+
+.tc-v { font-size: 13px; color: var(--ink2); word-break: break-word; }
+
+.tc-scroll { max-height: 160px; overflow-y: auto; padding-right: 8px; }
+
+.tc-sub { display: block; margin-top: 4px; font-size: 12px; color: var(--ink3); }
+
+.tc-note { max-width: 880px; margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line-soft); font-size: 12px; color: var(--ink3); line-height: 1.7; }
+
+@media (max-width: 1024px) { .tc-grid { grid-template-columns: 1fr; } .tc-scroll { max-height: 208px; } }
+
+</style>
+
+</head>
+
+<body class="cl" data-page="prompts">
+
+
+
+<header class="topbar" id="topbar">
+
+  <div class="tb-brand"><span class="tb-logo">G</span><span class="tb-name">GEO 优化系统</span><span class="tb-env" id="tb-env">客户工作台</span></div>
+
+  <div class="tb-right">
+
+    <span class="tb-chip" id="model-tag">模型 · —</span>
+
+    <span class="tb-chip" id="run-tag">空闲</span>
+
+    <div class="tb-user" id="tb-user-btn"><span class="tb-av" id="tb-av">客</span><span class="tb-uname" id="tb-uname">—</span><i class="ic" data-ic="chevronDown" data-sz="16"></i></div>
+
+  </div>
+
+  <div class="tb-menu" id="tb-menu"><button onclick="doLogout()"><i class="ic" data-ic="logout"></i>退出登录</button></div>
+
+</header>
+
+
+
+<div class="cl-app">
+
+  <aside class="cl-side" id="sidebar"></aside>
+
+  <main class="cl-main">
+
+    <nav class="crumb" id="crumb"></nav>
+
+
+
+    <!-- ===== 页头 ===== -->
+
+    <div class="phead">
+
+        <div class="phead-l">
+
+            <div class="phead-eyebrow">内容生产 · AI 指令</div>
+
+            <div class="phead-h1">AI 指令自定义</div>
+
+            <div class="phead-sub">自定义「标题选题 / 写文章 / 审稿质检 / 修改文章」四段指令 · 保存后下一批立即生效</div>
+
+            <div class="phead-chips">
+
+                <span class="phead-chip"><i class="ic" data-ic="code" data-sz="16"></i>指令段 <b>4</b> 段</span>
+
+                <span class="phead-chip"><i class="ic" data-ic="check" data-sz="16"></i>当前状态 <b id="pc-pstat">-</b></span>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+
+    <!-- ===== 用法说明 ===== -->
+
+    <div class="pr-info">
+
+        <span class="pinfo-ic"><i class="ic" data-ic="info" data-sz="20"></i></span>
+
+        <div><b>怎么用</b>：四个标签页分别是「标题选题」「写文章」「审稿质检」「修改文章」的 AI 指令。改完点保存，下一批生成立即使用新指令。
+
+            改动会直接影响后续所有文章与图文的生成质量。建议只微调业务描述与行业术语；若需大幅调整写作方向，可联系您的服务顾问协助优化，或随时点「恢复默认」还原。</div>
+
+    </div>
+
+
+
+    <!-- ===== KPI: 自定义进度 / 总字数 / 当前编辑 ===== -->
+
+    <div class="kpi-grid">
+
+        <div class="kpi">
+
+            <div class="kpi-l">已自定义指令 <span class="kpi-x"><i class="ic" data-ic="spark" data-sz="20"></i></span></div>
+
+            <div class="kpi-r"><span class="kpi-v" id="k-cust">-</span><span class="kpi-u">/ 4 段</span></div>
+
+            <div class="viz-bar thin"><span class="sg brand" id="k-cust-bar" style="width:0%"></span></div>
+
+            <div class="kpi-l">自定义后仅影响本客户</div>
+
+        </div>
+
+        <div class="kpi">
+
+            <div class="kpi-l">指令总字数 <span class="kpi-x"><i class="ic" data-ic="log" data-sz="20"></i></span></div>
+
+            <div class="kpi-r"><span class="kpi-v" id="k-len">-</span><span class="kpi-u">字</span></div>
+
+            <div class="kpi-l">四段指令合计</div>
+
+        </div>
+
+        <div class="kpi">
+
+            <div class="kpi-l">当前编辑 <span class="kpi-x"><i class="ic" data-ic="pencil" data-sz="20"></i></span></div>
+
+            <div class="kpi-r"><span class="kpi-v" id="k-cur" style="font-size:16px">-</span></div>
+
+            <div class="kpi-l">保存后下一批文章生效</div>
+
+        </div>
+
+    </div>
+
+
+
+    <!-- ===== 双栏: 左=指令卡片列表, 右=编辑器 ===== -->
+
+    <div class="bento-2">
+
+        <!-- 左: 指令卡片 -->
+
+        <section class="sec">
+
+            <div class="sec-h">
+
+                <span class="sec-ico"><i class="ic" data-ic="code" data-sz="20"></i></span>
+
+                <div class="sec-t"><b>指令卡片</b><span>点卡片切换编辑 · 徽标表示自定义状态</span></div>
+
+            </div>
+
+            <div class="sec-b">
+
+                <div class="icard-grid" id="tabs"></div>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- 右: 编辑器 -->
+
+        <section class="sec sticky-col">
+
+            <div class="sec-h">
+
+                <span class="sec-ico"><i class="ic" data-ic="pencil" data-sz="20"></i></span>
+
+                <div class="sec-t"><b id="cur-name">-</b><span id="cur-desc">-</span></div>
+
+                <div class="sec-x"><span class="pill gray" id="cur-status"></span></div>
+
+            </div>
+
+            <div class="sec-b">
+
+                <div class="ed-toolbar">
+
+                    <span class="ed-lab"><i class="ic" data-ic="code" data-sz="16"></i>可用变量</span>
+
+                    <span class="pr-vars" id="cur-vars"></span>
+
+                    <span class="ed-len" id="cur-len">0 字</span>
+
+                </div>
+
+                <p class="ed-note">只能使用上面列出的变量，写成 <code>{其他名字}</code> 保存会被拒绝（那段文字不会被替换，会原样发给模型）。B 段的输出必须是 JSON——系统会自动追加输出契约。</p>
+
+                <textarea class="pr-editor" id="editor" spellcheck="false" placeholder="加载中..."></textarea>
+
+                <div class="ed-foot">
+
+                    <button class="btn gray" onclick="resetPrompt()"><i class="ic" data-ic="refresh"></i>恢复默认</button>
+
+                    <button class="btn" id="save-btn" onclick="savePrompt()" style="margin-left:auto"><i class="ic" data-ic="check"></i>保存指令</button>
+
+                </div>
+
+            </div>
+
+        </section>
+
+    </div>
+
+
+
+    <!-- ===== 标题文体配比(可调) + 选题配置(只读) ===== -->
+
+    <section class="sec" style="margin-top:16px">
+
+        <div class="sec-h">
+
+            <span class="sec-ico"><i class="ic" data-ic="sliders" data-sz="20"></i></span>
+
+            <div class="sec-t"><b>标题文体配比</b><span>拖动滑杆自定义各类标题的生成比例 · 保存后下次 AI 选题生效</span></div>
+
+        </div>
+
+        <div class="sec-b">
+
+            <div class="gm-grid" id="genre-sliders"></div>
+
+            <div class="gm-sum">
+
+                <span>文体合计 <b id="gm-sum">100%</b>（保存时自动按比例归一化）· 时效词比例独立叠加</span>
+
+                <button class="btn" id="gm-save" onclick="saveGenreMix()">保存配比</button>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+
+    <!-- ===== 选题配置(只读): 由「业务城市」页驱动 ===== -->
+
+    <section class="sec">
+
+        <div class="sec-h">
+
+            <span class="sec-ico"><i class="ic" data-ic="list" data-sz="20"></i></span>
+
+            <div class="sec-t"><b>选题配置</b><span>业务定位 / 专家身份 / 覆盖城市 / 选题方向 —— 只读，由「业务城市」页配置</span></div>
+
+            <div class="sec-x"><span class="pill gray">只读</span></div>
+
+        </div>
+
+        <div class="sec-b"><div id="title-config"></div></div>
+
+    </section>
+
+
+
+  </main>
+
+</div>
+
+
+
+<script src="/static/icons.js?v={{ asset_ver }}"></script>
+
+<script src="/static/layout.js?v={{ asset_ver }}"></script>
+
+<script>
+
+let PROMPTS = [];
+
+// 服务端返回的真实变量清单（/api/my-prompts 的 vars 字段，从 Prompt 正文解析）。
+// 下面那份 VARS 只是离线兜底：手写名单会漂移（实测 A 段少 5 个、B 段少 5 个、
+// C 段少 5 个），服务端一旦给出就以前者为准。
+let SVARS = null;
+
+let curStep = 'A';
+
+let dirty = false;
+
+
+
+const VARS = {
+
+    A: [
+
+        ['{title}', '文章标题（选题库分配的）'],
+
+        ['{brand_data}', '品牌资料（品牌知识库的内容）'],
+
+        ['{audience}', '客户画像（客户画像页填写的内容+AI洞察）'],
+
+        ['{city_context}', '城市定位（标题含哪个城市就锚定哪个）'],
+
+        ['{angle}', '写作视角（系统自动轮换的8个视角之一）'],
+
+        ['{image_html}', '配图HTML（部分视角不配图则为空）'],
+
+    ],
+
+    B: [
+
+        ['{article}', '待审文章（A生成的初稿）'],
+
+    ],
+
+    C: [
+
+        ['{article}', '原文章（需要修改的版本）'],
+
+        ['{review}', '审稿报告（B输出的JSON问题清单）'],
+
+        ['{brand_data}', '品牌资料（用于校验修改是否偏离）'],
+
+    ],
+
+    T: [
+
+        ['{count}', '本次要生成的标题数量'],
+
+        ['{business}', '业务定位（如: 防水补漏/管道检测/漏水维修(全国业务)）'],
+
+        ['{expert}', '专家身份（如: 全国本地生活服务的搜索营销专家）'],
+
+        ['{cities}', '业务城市列表（城市页配置的, /分隔）'],
+
+        ['{city_rule}', '城市选题规则（城市占比自动计算, 含带城/泛地域数量）'],
+
+        ['{directions}', '本次轮换的选题方向（topic配置中抽取）'],
+
+        ['{example_hint}', '避坑类标题的问法示例'],
+
+        ['{winners}', 'GEO表现好的主题（来自监测数据）'],
+
+        ['{competitors}', '同行标题参考（AI引擎引用过的同行内容）'],
+
+        ['{existing}', '已用过的标题（防重复参考, 最近120条）'],
+
+    ],
+
+};
+
+
+
+/* 指令段图标(icons.js): T=标题选题 A=写文章 B=审稿质检 C=修改文章 */
+
+const STEP_IC = { A: 'pencil', B: 'eye', C: 'check', T: 'list' };
+
+
+
+async function load() {
+
+    const d = await (await fetch('/api/my-prompts')).json();
+
+    PROMPTS = d.prompts || [];
+
+    SVARS = d.vars || null;
+
+    renderTabs();
+
+    select(PROMPTS[0]?.step || 'A');
+
+    loadTitleConfig();
+
+}
+
+
+
+function renderTabs() {
+
+    // 卡片化: 每段指令一张卡(SVG图标/名称/状态徽标/描述/字数)
+
+    const box = document.getElementById('tabs');
+
+    box.innerHTML = PROMPTS.map(p => `
+
+        <div class="icard ${p.step === curStep ? 'on' : ''}" onclick="select('${p.step}')">
+
+            <div class="icard-h">
+
+                <span class="ico"><i class="ic" data-ic="${STEP_IC[p.step] || 'code'}" data-sz="16"></i></span>
+
+                <span class="t">${p.name}</span>
+
+                <span class="x"><span class="pill ${p.is_custom ? 'brand' : 'gray'}">${p.is_custom ? '已自定义' : '默认'}</span></span>
+
+            </div>
+
+            <div class="icard-b">${(p.desc || '').slice(0, 46)}${(p.desc || '').length > 46 ? '…' : ''}</div>
+
+            <div class="icard-f">
+
+                <span>${(p.content || '').length} 字</span>
+
+                <span>·</span>
+
+                <span>${p.step === curStep ? '正在编辑' : '点击编辑'}</span>
+
+            </div>
+
+        </div>`).join('');
+
+    if (window.ICONS) ICONS.mount(box);
+
+}
+
+
+
+function select(step) {
+
+    if (dirty && !confirm('当前指令未保存, 切换会丢失修改, 继续?')) return;
+
+    curStep = step;
+
+    dirty = false;
+
+    renderTabs();
+
+    const p = PROMPTS.find(x => x.step === step);
+
+    if (!p) return;
+
+    document.getElementById('cur-name').textContent = p.name;
+
+    const _st = document.getElementById('cur-status'); _st.textContent = p.is_custom ? '已自定义' : '默认模板'; _st.className = 'pill ' + (p.is_custom ? 'brand' : 'gray');
+
+    // 顶部 KPI: 自定义段数 / 总段数
+
+    const _cust = PROMPTS.filter(x => x.is_custom).length;
+
+    const _el2 = id => document.getElementById(id);
+
+    if (_el2('k-cust')) _el2('k-cust').textContent = _cust;
+
+    if (_el2('k-cust-bar')) _el2('k-cust-bar').style.width = Math.round(_cust / Math.max(1, PROMPTS.length) * 100) + '%';
+
+    if (_el2('k-len')) _el2('k-len').textContent = PROMPTS.reduce((n, x) => n + String(x.content || '').length, 0);
+
+    if (_el2('k-cur')) _el2('k-cur').textContent = p.name + ' · ' + (p.is_custom ? '自定义' : '默认');
+
+    const el3 = document.getElementById('pc-pstat');
+
+    if (el3) el3.textContent = _cust + ' / ' + PROMPTS.length + ' 已自定义';
+
+    document.getElementById('cur-desc').textContent = p.desc;
+
+    document.getElementById('editor').value = p.content;
+
+    document.getElementById('cur-len').textContent = p.content.length + ' 字';
+
+    // 变量按钮：优先用服务端清单（与 Prompt 正文同源），取不到才用页面兜底名单
+
+    const vars = ((SVARS && SVARS[step]) || VARS[step] || []).map(x => Array.isArray(x)
+
+        ? { v: x[0], d: x[1] || '' } : { v: '{' + x.name + '}', d: x.desc || '' });
+
+    document.getElementById('cur-vars').innerHTML = vars.map(x =>
+
+        `<span class="var-chip" title="${x.d}">${x.v}</span>`).join('') || '<span class="ed-none">此提示词无变量</span>';
+
+}
+
+
+
+document.getElementById('editor').addEventListener('input', () => {
+
+    dirty = true;
+
+    document.getElementById('cur-len').textContent = document.getElementById('editor').value.length + ' 字';
+
+});
+
+
+
+async function savePrompt() {
+
+    const content = document.getElementById('editor').value.trim();
+
+    const btn = document.getElementById('save-btn');
+
+    btn.disabled = true; btn.textContent = '保存中...';
+
+    try {
+
+        const r = await fetch(`/api/my-prompts/${curStep}`, { method: 'POST',
+
+            headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content }) });
+
+        const d = await r.json();
+
+        if (d.ok) {
+
+            // warning：B 段自定义后的输出契约提示（服务端给，只在这种情况出现）
+            alert(`已保存 ${d.length} 字，下一批文章立即生效` + (d.warning ? '\n\n⚠ ' + d.warning : ''));
+
+            dirty = false;
+
+            load();
+
+        } else alert(d.message || d.error || '保存失败');
+
+    } catch (e) { alert('网络异常'); }
+
+    btn.disabled = false; btn.textContent = '保存指令';
+
+}
+
+
+
+async function resetPrompt() {
+
+    if (!confirm('恢复为系统默认模板？当前自定义内容会被覆盖。')) return;
+
+    try {
+
+        const r = await fetch(`/api/my-prompts/${curStep}/reset`, { method: 'POST' });
+
+        const d = await r.json();
+
+        if (d.ok) {
+
+            alert('已恢复默认模板');
+
+            dirty = false;
+
+            load();
+
+        } else alert(d.error || '重置失败');
+
+    } catch (e) { alert('网络异常'); }
+
+}
+
+
+
+const GM_META = {
+
+    '商业推荐': { desc: '哪家好 / 推荐榜单 / 怎么选 — 询盘主力' },
+
+    '价格咨询': { desc: '多少钱 / 收费 / 报价明细' },
+
+    '避坑对比': { desc: '避坑 / 被坑 / 对比 / 翻车' },
+
+    '科普知识': { desc: '是什么 / 原理 / 区别 — 题材补充' },
+
+    '时效词占比': { desc: '2026年/2026年9月/最新 前缀比例' },
+
+};
+
+let GM = {};
+
+
+
+function renderSliders() {
+
+    // 四文体补齐到合计100(兜底, 服务器已归一化)
+
+    const gk = Object.keys(GM_META).filter(x => x !== '时效词占比');
+
+    let s = gk.reduce((a, k) => a + (GM[k] || 0), 0);
+
+    if (s !== 100 && s > 0) gk.forEach(k => GM[k] = Math.round((GM[k] || 0) * 100 / s / 5) * 5);
+
+    s = gk.reduce((a, k) => a + (GM[k] || 0), 0);
+
+    if (s !== 100 && gk.length) GM[gk[0]] = (GM[gk[0]] || 0) + (100 - s);
+
+    document.getElementById('genre-sliders').innerHTML = Object.keys(GM_META).map(k => `
+
+        <div class="gm-row">
+
+            <div class="gm-h">
+
+                <span class="gm-n">${k}</span>
+
+                <span class="gm-v"><span id="gm-v-${k}">${GM[k] || 0}%</span><span class="gm-d">${GM_META[k].desc}</span></span>
+
+            </div>
+
+            <input type="range" min="0" max="${k === '时效词占比' ? 80 : 100}" step="5" value="${GM[k] || 0}" id="gm-r-${k}"
+
+                oninput="gmBalance('${k}', this.value)">
+
+        </div>`).join('');
+
+    document.getElementById('gm-sum').textContent = gk.reduce((a, k) => a + (GM[k] || 0), 0) + '%';
+
+}
+
+function gmBalance(k, v) {
+
+    v = +v;
+
+    if (k === '时效词占比') { GM[k] = v; document.getElementById('gm-v-时效词占比').textContent = v + '%'; return; }
+
+    v = Math.round(v / 5) * 5;
+
+    GM[k] = v;
+
+    // 联动平衡: 其余文体按现有比例分掉(100-v), 合计恒等于100
+
+    const keys = Object.keys(GM_META).filter(x => x !== '时效词占比');
+
+    const others = keys.filter(x => x !== k);
+
+    const rest = 100 - v;
+
+    const cur = others.reduce((a, x) => a + (GM[x] || 0), 0);
+
+    const prop = others.map(x => cur > 0 ? (GM[x] || 0) / cur : 1 / others.length);
+
+    const vals = prop.map(p => Math.round(p * rest / 5) * 5);
+
+    vals[prop.indexOf(Math.max(...prop))] += rest - vals.reduce((a, b) => a + b, 0);
+
+    others.forEach((x, j) => GM[x] = Math.max(0, vals[j]));
+
+    keys.forEach(x => {
+
+        document.getElementById('gm-r-' + x).value = GM[x];
+
+        document.getElementById('gm-v-' + x).textContent = GM[x] + '%';
+
+    });
+
+    document.getElementById('gm-sum').textContent = keys.reduce((a, x) => a + GM[x], 0) + '%';
+
+}
+
+
+
+async function saveGenreMix() {
+
+    const btn = document.getElementById('gm-save');
+
+    btn.disabled = true; btn.textContent = '保存中...';
+
+    try {
+
+        const r = await fetch('/api/my-title-config', { method: 'POST',
+
+            headers: { 'Content-Type': 'application/json' },
+
+            body: JSON.stringify({ genre_mix: GM, timeliness_ratio: GM['时效词占比'] ?? 25 }) });
+
+        const d = await r.json();
+
+        if (d.ok) { GM = { ...d.genre_mix, '时效词占比': d.timeliness_ratio }; renderSliders(); alert(d.msg + '\n' + Object.entries(GM).map(([k, v]) => k + ' ' + v + '%').join(' · ')); }
+
+        else alert(d.error || '保存失败');
+
+    } catch (e) { alert('网络异常'); }
+
+    btn.disabled = false; btn.textContent = '保存配比';
+
+}
+
+
+
+async function loadTitleConfig() {
+
+    const d = await (await fetch('/api/my-title-config')).json();
+
+    GM = { ...(d.genre_mix || {}), '时效词占比': (d.timeliness_ratio ?? 25) };
+
+    renderSliders();
+
+    const cityList = (d.cities || []).join(' / ') || '未配置';
+
+    const topicList = (d.topics || []).length ? (d.topics || []).slice(0, 6).join('、') + ((d.topics || []).length > 6 ? ' 等' + d.topics.length + ' 个方向' : '') : '未配置';
+
+    document.getElementById('title-config').innerHTML = `
+
+        <div class="tc-grid">
+
+            <div><b>业务定位</b><div class="tc-v">${esc(d.business || '未配置')}</div></div>
+
+            <div><b>专家身份</b><div class="tc-v">${esc(d.expert || '未配置')}</div></div>
+
+            <div><b>覆盖城市</b><div class="tc-v tc-scroll" title="覆盖城市">${esc(cityList)}</div><span class="tc-sub">城市词占比 ${d.city_ratio || 60}% · 共 ${(d.cities || []).length} 个城市</span></div>
+
+            <div><b>选题方向</b><div class="tc-v tc-scroll" title="选题方向">${esc(topicList)}</div><span class="tc-sub">共 ${(d.topics || []).length} 个方向</span></div>
+
+        </div>
+
+        <div class="tc-note">选题规则由「业务城市」页的城市选择和行业配置自动驱动。想调整标题风格（如疑问句比例、城市写法），在上方「标题选题」标签页改指令即可。</div>`;
+
+}
+
+
+
+window.addEventListener('load', load);
+
+</script>
+
+</body>
+
+</html>
+

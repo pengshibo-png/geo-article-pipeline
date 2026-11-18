@@ -1,0 +1,1344 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN" class="theme-light">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>发布中心 · GEO优化系统</title>
+
+<link rel="stylesheet" href="/static/client_style.css?v={{ asset_ver }}">
+
+<link rel="stylesheet" href="/static/ds.css?v={{ asset_ver }}">
+
+<link rel="stylesheet" href="/static/theme-light.css?v={{ asset_ver }}">
+
+<style>
+
+/* ============================================================
+
+   发布中心(任务中心) · 共用页(运营端 /tasks + 客户工作台)
+
+   theme-light.css 已提供 顶栏/面包屑/页头/KPI/区块/卡片/按钮/标签/终端 全套,
+
+   此处只保留: 外壳补丁、本页专属组件(发布CTA/进度/终端/渠道体检/分页/筛选)
+
+   约束: 只用 var(--*) token / 圆角 ≤ 8px / 无渐变 · 无发光 · 无玻璃拟态
+
+   ============================================================ */
+
+
+
+/* 1) 外壳栅格: theme-light 只给了列宽, display 由本页补(与 dash/settings 一致) */
+
+.cl-app { display: grid; }
+
+.phead-r .pr-l { white-space: nowrap; }
+
+/* 旧壳按钮的悬浮位移/光晕, 浅色版一律去掉 */
+
+html.theme-light body .cl-btn:hover, html.theme-light body .cl-btn:active { transform: none; box-shadow: none; }
+
+/* 进度条填充: ds.css 的 .sg 仍是深色期渐变, 这里改纯 token 色 */
+
+html.theme-light .viz-bar .sg { background: var(--brand); }
+
+html.theme-light .viz-bar .sg.ok { background: var(--ok); }
+
+
+
+/* 2) 发布 CTA 卡(无渐变/无光晕, 常规卡片形态) */
+
+.pz-cta { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 20px 24px; color: var(--ink); margin-bottom: 16px; }
+
+.pz-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+
+.pz-t { font-size: 16px; font-weight: 600; color: var(--ink); letter-spacing: -.01em; display: flex; align-items: center; gap: 8px; }
+
+.pz-d { font-size: 12px; color: var(--ink3); margin-top: 4px; }
+
+.pz-main { height: 36px; padding: 0 20px; border: 1px solid var(--brand); border-radius: var(--r-btn); font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; color: #141417; background: var(--brand); display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+
+.pz-main:hover { background: var(--brand-ink); border-color: var(--brand-ink); }
+
+.pz-main:disabled { opacity: .55; cursor: wait; }
+
+.pz-main.go, .pz-main.resume, .pz-main.running { background: var(--brand); border-color: var(--brand); color: #141417; }
+
+.pz-main.pause { background: var(--card); border-color: var(--warn); color: var(--warn); }
+
+/* ds.css 深色期残留(主操作/筛选 .on 的紫色渐变)对本页 CTA 与 day 筛选的覆盖, 页内按 token 收敛 */
+
+html.theme-light body .pz-main, html.theme-light body .pz-main.go,
+
+html.theme-light body .pz-main.resume, html.theme-light body .pz-main.running {
+
+    background: var(--brand) !important; border-color: var(--brand) !important;
+
+    color: #141417 !important; box-shadow: none !important;
+
+}
+
+html.theme-light body .pz-main.pause {
+
+    background: var(--card) !important; border-color: var(--warn) !important;
+
+    color: var(--warn) !important; box-shadow: none !important;
+
+}
+
+html.theme-light body .pz-main:hover {
+
+    background: var(--brand-ink) !important; border-color: var(--brand-ink) !important;
+
+}
+
+html.theme-light body .cst-fc { background: var(--card); border-color: var(--line-strong); color: var(--ink2); }
+
+html.theme-light body .cst-fc:hover { color: var(--brand); border-color: var(--brand); }
+
+html.theme-light body .cst-fc.on {
+
+    background: var(--brand-soft) !important; border-color: var(--brand) !important;
+
+    color: var(--brand) !important; box-shadow: none !important;
+
+}
+
+
+
+/* 3) 发布进度 */
+
+.pz-prog { margin-top: 16px; display: none; }
+
+.pz-pline { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+
+.pz-pn { font-size: 20px; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+
+.pz-pn small { font-size: 12px; color: var(--ink3); font-weight: 400; }
+
+.pz-pt { font-size: 12px; color: var(--ink3); }
+
+.pz-bar { height: 8px; background: var(--bg-deep); border-radius: 4px; overflow: hidden; }
+
+.pz-bar > i { display: block; height: 100%; background: var(--ok); border-radius: 4px; transition: width .6s ease; }
+
+.pz-cur { font-size: 12px; color: var(--ink2); margin-top: 8px; display: flex; align-items: center; gap: 8px; }
+
+.pz-spin { width: 12px; height: 12px; border: 2px solid var(--line-strong); border-top-color: var(--brand); border-radius: 50%; animation: pzspin .8s linear infinite; flex-shrink: 0; }
+
+@keyframes pzspin { to { transform: rotate(360deg); } }
+
+
+
+/* 4) 发布终端(theme-light 第 13 节已浅色化, 这里只留布局与语义色) */
+
+.pz-term { margin-bottom: 16px; overflow: hidden; display: none; }
+
+.pz-th { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+
+.pz-td { width: 8px; height: 8px; border-radius: 50%; }
+
+.pz-tt { font-size: 12px; color: var(--ink4); font-weight: 500; margin-left: 8px; }
+
+.pz-live { margin-left: auto; display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ok); font-weight: 500; }
+
+.pz-live i { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); animation: pzblink 1.2s infinite; }
+
+@keyframes pzblink { 50% { opacity: .25; } }
+
+.pz-tb { padding: 14px 16px; max-height: 260px; overflow-y: auto; font-size: 12px; line-height: 1.9; }
+
+.pz-ln { white-space: pre-wrap; word-break: break-all; }
+
+.pz-ln .ts { color: var(--ink4); margin-right: 8px; font-size: 11px; }
+
+.pz-ln.ok { color: var(--ok); }
+
+.pz-ln.err { color: var(--bad); }
+
+.pz-ln.run { color: var(--brand-ink); }
+
+.pz-ln.info { color: var(--ink3); }
+
+
+
+/* 5) 渠道体检(theme-light 已给卡片底, 这里补布局) */
+
+.pz-hc { padding: 16px 20px; margin-bottom: 16px; display: none; }
+
+.pz-hc.on { display: block; }
+
+.pz-hct { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; margin-bottom: 12px; letter-spacing: -.01em; color: var(--ink); }
+
+.pz-pills { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.pz-pill { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: var(--r-tag); padding: 5px 10px; font-size: 12px; font-weight: 400; color: var(--ink2); background: var(--bg-soft); }
+
+.pz-pill i { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; background: var(--ink4); }
+
+.pz-pill.ok i { background: var(--ok); }
+
+.pz-pill.expired, .pz-pill.frozen { border-color: var(--bad); background: var(--bad-bg); color: var(--bad); }
+
+.pz-pill.expired i, .pz-pill.frozen i { background: var(--bad); }
+
+.pz-pill.error { border-color: var(--warn); background: var(--warn-bg); color: var(--warn); }
+
+.pz-pill.error i { background: var(--warn); }
+
+.pz-hrf { margin-left: auto; border: none; background: none; color: var(--brand); font-size: 12px; font-weight: 500; cursor: pointer; font-family: inherit; }
+
+.pz-hrf:hover { color: var(--brand-ink); }
+
+.pz-hsum { margin-left: auto; font-size: 12px; font-weight: 500; padding: 2px 8px; border-radius: var(--r-tag); }
+
+
+
+/* 6) 发布动态分页 + day 筛选 */
+
+.cst-page { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line-soft); flex-wrap: wrap; }
+
+.cst-pg { display: flex; align-items: center; gap: 4px; }
+
+.cst-pn { min-width: 30px; height: 30px; border-radius: var(--r-btn); border: 1px solid var(--line-strong); background: var(--card); color: var(--ink2); font-weight: 500; font-size: 12px; cursor: pointer; font-family: inherit; font-variant-numeric: tabular-nums; }
+
+.cst-pn:hover { border-color: var(--brand); color: var(--brand); }
+
+.cst-pn.on { background: var(--brand); border-color: var(--brand); color: #141417; }
+
+.cst-pn:disabled { opacity: .4; cursor: default; }
+
+.cst-fc { height: 28px; border: 1px solid var(--line-strong); background: var(--card); border-radius: var(--r-btn); padding: 0 12px; font-size: 12px; font-weight: 500; color: var(--ink2); cursor: pointer; font-family: inherit; }
+
+.cst-fc:hover { color: var(--brand); border-color: var(--brand); }
+
+.cst-fc.on { background: var(--brand-soft); border-color: var(--brand); color: var(--brand); }
+
+.cst-gap { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 30px; color: var(--ink4); font-weight: 500; }
+
+/* 发布动态原文链接 */
+
+.qlnk { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--brand); font-weight: 500; white-space: nowrap; text-decoration: none; }
+
+.qlnk:hover { text-decoration: underline; }
+
+
+
+/* 7) 自动发布计划表单行 */
+
+.pp-f { display: flex; flex-direction: column; gap: 4px; }
+
+.pp-f > label { font-size: 12px; color: var(--ink3); }
+
+.pp-f > select, .pp-f > input { height: 32px; }
+
+#pp-mode { width: 132px; } #pp-time { width: 124px; } #pp-every { width: 112px; } #pp-count { width: 112px; }
+
+.pp-foot { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line-soft); }
+
+.pp-ok { font-size: 12px; font-weight: 600; color: var(--ok); }
+
+
+
+/* 8) 渠道选择弹窗 */
+
+.ch-dlg { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--shadow-lg); max-width: 560px; width: 100%; max-height: 82vh; overflow-y: auto; padding: 20px 24px; }
+
+.ch-x { margin-left: auto; border: none; background: none; color: var(--ink3); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: var(--r-sm); }
+
+.ch-x:hover { background: var(--bg-deep); color: var(--ink); }
+
+.ch-row { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--r-sm); cursor: pointer; }
+
+.ch-row:hover { border-color: var(--brand); background: var(--brand-soft); }
+
+.ch-row b { font-size: 13px; font-weight: 500; color: var(--ink); }
+
+.ch-row .ch-left { margin-left: auto; font-size: 12px; color: var(--ink3); font-variant-numeric: tabular-nums; }
+
+</style>
+
+</head>
+
+<body class="cl" data-page="tasks">
+
+
+
+<header class="topbar" id="topbar">
+
+  <div class="tb-brand"><span class="tb-logo">G</span><span class="tb-name">GEO 优化系统</span><span class="tb-env" id="tb-env">客户工作台</span></div>
+
+  <div class="tb-right">
+
+    <span class="tb-chip" id="model-tag">模型 · 未设置</span>
+
+    <span class="tb-chip" id="run-tag">空闲</span>
+
+    <div class="tb-user" id="tb-user-btn"><span class="tb-av" id="tb-av">客</span><span class="tb-uname" id="tb-uname">未登录</span><i class="ic" data-ic="chevronDown" data-sz="16"></i></div>
+
+  </div>
+
+  <div class="tb-menu" id="tb-menu"><button onclick="doLogout()"><i class="ic" data-ic="logout"></i>退出登录</button></div>
+
+</header>
+
+
+
+<div class="cl-app">
+
+<aside class="cl-side" id="sidebar"></aside>
+
+<main class="cl-main">
+
+<nav class="crumb" id="crumb"></nav>
+
+
+
+    <div class="phead">
+
+        <div class="phead-l">
+
+            <div class="phead-eyebrow">发布分发 · 任务</div>
+
+            <div class="phead-h1">发布中心</div>
+
+            <div class="phead-sub">一键把内容送向全网 · 渠道由系统智能分配 · 自动排队执行</div>
+
+            <div class="phead-chips">
+
+                <span class="phead-chip">待发布 <b id="pc-wait">-</b> 篇</span>
+
+                <span class="phead-chip">今日已发 <b id="pc-today">-</b> 篇</span>
+
+            </div>
+
+        </div>
+
+        <div class="phead-r">
+
+            <div class="pr-l">批量发布</div>
+
+            <button class="btn" onclick="ctaAction()"><i class="ic" data-ic="send" data-sz="16"></i>一键全部发布</button>
+
+        </div>
+
+    </div>
+
+
+
+    <div class="kpi-grid" style="margin-bottom:16px">
+
+        <div class="kpi">
+
+            <div class="kpi-l">今日已发布 <span class="kpi-x"><i class="ic" data-ic="send" data-sz="20"></i></span></div>
+
+            <div class="kpi-r"><span class="kpi-v" id="k-today">-</span><span class="kpi-u">篇</span></div>
+
+            <div class="kpi-l" style="margin-top:12px" id="k-today-sub">近 7 日待统计</div>
+
+        </div>
+
+        <div class="kpi">
+
+            <div class="kpi-l">队列执行中 <span class="kpi-x"><i class="ic" data-ic="clock" data-sz="20"></i></span></div>
+
+            <div class="kpi-r"><span class="kpi-v" id="k-queue">-</span><span class="kpi-u">条</span></div>
+
+            <div class="kpi-l" style="margin-top:12px">发布队列实时状态</div>
+
+        </div>
+
+        <div class="kpi">
+
+            <div class="kpi-l">待发布文章 <span class="kpi-x"><i class="ic" data-ic="archive" data-sz="20"></i></span></div>
+
+            <div class="kpi-r"><span class="kpi-v" id="k-wait">-</span><span class="kpi-u">篇</span></div>
+
+            <div class="kpi-l" style="margin-top:12px">等待分配渠道上架</div>
+
+        </div>
+
+        <div class="kpi">
+
+            <div class="kpi-l">渠道可用率 <span class="kpi-x"><i class="ic" data-ic="sliders" data-sz="20"></i></span></div>
+
+            <div class="kpi-r"><span class="kpi-v" id="k-avail" style="color:var(--ink3)">-</span><span class="kpi-u">%</span></div>
+
+            <div class="viz-bar thin" style="margin-top:12px"><span class="sg ok" id="k-avail-bar" style="width:0%"></span></div>
+
+            <div class="kpi-l" style="margin-top:8px" id="k-avail-sub">渠道体检结果</div>
+
+        </div>
+
+    </div>
+
+
+
+    <div class="pz-hc" id="health">
+
+        <div class="pz-hct">
+
+            <span>发布渠道体检</span>
+
+            <span class="pz-hsum" id="h-sum"></span>
+
+            <button class="pz-hrf" onclick="preflight(true)">重新体检</button>
+
+        </div>
+
+        <div class="pz-pills" id="h-pills"></div>
+
+    </div>
+
+
+
+    <div class="pz-cta" id="cta">
+
+        <div class="pz-row">
+
+            <div>
+
+                <div class="pz-t" id="cta-t">待发布</div>
+
+                <div class="pz-d" id="cta-d">系统将智能分配搜狐 / 百家号 / 美篇等渠道，自动完成上架</div>
+
+            </div>
+
+            <button class="pz-main go" id="cta-btn" data-state="go" onclick="ctaAction()">一键全部发布</button>
+
+        </div>
+
+        <div class="pz-prog" id="prog">
+
+            <div class="pz-pline">
+
+                <span class="pz-pn"><span id="p-done">0</span><small> / <span id="p-total">0</span> 篇</small>　<span style="font-size:12px;color:var(--ink3)" id="p-pct">0%</span></span>
+
+                <span class="pz-pt" id="p-eta"></span>
+
+            </div>
+
+            <div class="pz-bar"><i id="p-bar" style="width:0%"></i></div>
+
+            <div class="pz-cur"><span class="pz-spin" id="p-spin"></span><span id="p-cur">准备中…</span></div>
+
+        </div>
+
+    </div>
+
+
+
+    <div class="pz-term" id="term">
+
+        <div class="pz-th">
+
+            <span class="pz-td" style="background:var(--bad)"></span>
+
+            <span class="pz-td" style="background:var(--warn)"></span>
+
+            <span class="pz-td" style="background:var(--ok)"></span>
+
+            <span class="pz-tt">PUBLISH · LIVE LOG</span>
+
+            <span class="pz-live" id="t-live"><i></i>LIVE</span>
+
+        </div>
+
+        <div class="pz-tb" id="t-body"></div>
+
+    </div>
+
+
+
+    <section class="sec">
+
+        <div class="sec-h">
+
+            <span class="sec-ico"><i class="ic" data-ic="send" data-sz="20"></i></span>
+
+            <div class="sec-t"><b>发布动态</b><span>每条任务的执行结果 · 可跳转已发布原文</span></div>
+
+            <div class="sec-x">
+
+                <span class="pill gray" id="q-stat"></span>
+
+                <span style="display:flex;gap:8px">
+
+                    <button class="cst-fc on" data-d="0" onclick="setDays(0)">全部</button>
+
+                    <button class="cst-fc" data-d="1" onclick="setDays(1)">今天</button>
+
+                    <button class="cst-fc" data-d="7" onclick="setDays(7)">近7天</button>
+
+                    <button class="cst-fc" data-d="30" onclick="setDays(30)">近30天</button>
+
+                </span>
+
+            </div>
+
+        </div>
+
+        <div class="sec-b">
+
+            <div id="qlist" class="rec-grid cols"></div>
+
+            <div class="cst-page" id="pager"></div>
+
+        </div>
+
+    </section>
+
+
+
+    <!-- 自动发布计划 -->
+
+    <section class="sec">
+
+        <div class="sec-h">
+
+            <span class="sec-ico"><i class="ic" data-ic="clock" data-sz="20"></i></span>
+
+            <div class="sec-t"><b>自动发布计划</b><span>每日定时=到点发一批 · 每 N 分钟=按间隔持续发 · 自动跳过已发文章</span></div>
+
+            <div class="sec-x"><span class="pill gray" id="pp-side">加载中…</span></div>
+
+        </div>
+
+        <div class="sec-b">
+
+        <div id="pp-rows" class="rec-grid"></div>
+
+        <div class="pp-foot">
+
+            <div class="pp-f" style="flex:1;min-width:180px"><label for="pp-acc">发布账号</label>
+
+                <select id="pp-acc" class="inp"></select></div>
+
+            <div class="pp-f"><label for="pp-mode">节奏模式</label>
+
+                <select id="pp-mode" class="inp" onchange="ppModeUi()">
+
+                    <option value="daily">每日定时</option>
+
+                    <option value="interval">每 N 分钟</option>
+
+                </select></div>
+
+            <div class="pp-f" id="pp-daily-wrap"><label for="pp-time">发布时间</label>
+
+                <input type="time" id="pp-time" value="08:30" class="inp"></div>
+
+            <div class="pp-f" id="pp-interval-wrap" style="display:none"><label for="pp-every">间隔（分钟）</label>
+
+                <input type="number" id="pp-every" value="30" min="1" max="10080" class="inp"></div>
+
+            <div class="pp-f"><label for="pp-count">每次篇数</label>
+
+                <input type="number" id="pp-count" value="1" min="1" max="500" class="inp"></div>
+
+            <button class="btn sm gray" id="pp-add" onclick="ppAdd()"><i class="ic" data-ic="plus" data-sz="16"></i>添加计划</button>
+
+            <button class="btn sm" id="pp-save" onclick="ppSave()"><i class="ic" data-ic="check" data-sz="16"></i>保存全部</button>
+
+            <span class="pp-ok" id="pp-ok"></span>
+
+        </div>
+
+        </div>
+
+    </section>
+
+
+
+    <!-- 渠道选择弹窗 -->
+
+    <div id="chmask" class="modal-mask" style="display:none;position:fixed;inset:0;z-index:150;align-items:center;justify-content:center;padding:20px">
+
+        <div class="ch-dlg">
+
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+
+                <i class="ic" data-ic="sliders" data-sz="20" style="color:var(--ink3)"></i>
+
+                <b style="font-size:16px">选择发布渠道</b>
+
+                <button class="ch-x" onclick="closeCh()" title="关闭"><i class="ic" data-ic="close" data-sz="16"></i></button>
+
+            </div>
+
+            <div style="font-size:12px;color:var(--ink3);margin-bottom:12px" id="ch-sub"></div>
+
+            <div id="ch-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px"></div>
+
+            <div style="display:flex;gap:8px">
+
+                <button class="btn gray" style="flex:1" onclick="closeCh()">取消</button>
+
+                <button class="btn gray" style="flex:1" onclick="queuePublish([])"><i class="ic" data-ic="spark" data-sz="16"></i>智能分配</button>
+
+                <button class="btn" style="flex:1.2" onclick="queuePublish(null)"><i class="ic" data-ic="check" data-sz="16"></i>按所选渠道发布</button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+
+</main>
+
+</div>
+
+<script src="/static/icons.js?v={{ asset_ver }}"></script>
+
+<script src="/static/layout.js?v={{ asset_ver }}"></script>
+
+<script>
+
+const PLAT = { douyin:['抖音图文','brand'], souhu:['搜狐','blue'], baijiahao:['百家号','brand'], meipian:['美篇','ok'], lieju:['列表网','warn'], wuba:['58同城','bad'], other:['其他','gray'] };
+
+const ST = { pending:['排队中','gray'], running:['发布中','warn'], success:['已发布','ok'], failed:['失败','bad'] };
+
+const PER = 12;
+
+let ALL = [], filtered = [], page = 1, days = 0, WAIT = [];
+
+let timer = null, totalPlan = 0;
+
+
+
+
+
+let HEALTH = null;
+
+const STNAME = { ok: '正常', expired: '授权过期', frozen: '已冻结', error: '连接异常' };
+
+async function prelight_wait() {
+
+    if (HEALTH) return;
+
+    try {
+
+        const r = await fetch('/api/client/preflight');
+
+        const d = await r.json();
+
+        if (d.checking) { await new Promise(r2 => setTimeout(r2, 4000)); return prelight_wait(); }
+
+        HEALTH = d; renderHealth(d);
+
+    } catch (e) { }
+
+}
+
+function renderHealth(d) {
+
+    const box = document.getElementById('health');
+
+    if (!box) return;
+
+    box.classList.add('on');
+
+    const chs = d.channels || [];
+
+    document.getElementById('h-pills').innerHTML = chs.map(c =>
+
+        '<span class="pz-pill ' + c.status + '" title="' + (STNAME[c.status] || c.status) + (c.note ? ' · ' + c.note : '') + '"><i></i>' + esc((c.name || '').slice(0, 10)) + '</span>').join('') ||
+
+        '<span style="font-size:12px;color:var(--ink3)">未检测到渠道</span>';
+
+    const bad = chs.filter(c => c.status !== 'ok').length;
+
+    const sum = document.getElementById('h-sum');
+
+    sum.textContent = d.ok_n + '/' + d.total_n + ' 可用';
+
+    sum.style.background = bad ? 'var(--bad-bg)' : 'var(--ok-bg)';
+
+    sum.style.color = bad ? 'var(--bad)' : 'var(--ok)';
+
+    // KPI: 渠道可用率
+
+    const av = document.getElementById('k-avail');
+
+    if (av && d.total_n) {
+
+        const pct = Math.round((d.ok_n || 0) * 100 / d.total_n);
+
+        av.textContent = pct;
+
+        av.style.color = pct >= 60 ? 'var(--ok)' : pct >= 30 ? 'var(--warn)' : 'var(--bad)';
+
+        const bar = document.getElementById('k-avail-bar');
+
+        if (bar) { bar.style.width = pct + '%'; bar.className = 'sg ' + (pct >= 60 ? 'ok' : pct >= 30 ? 'warn' : 'bad'); }
+
+        const sub = document.getElementById('k-avail-sub');
+
+        if (sub) sub.textContent = bad ? (bad + ' 个渠道需处理（授权/登录）') : '全部渠道状态正常';
+
+    }
+
+}
+
+async function preflight(force) {
+
+    const box = document.getElementById('health');
+
+    box.classList.add('on');
+
+    document.getElementById('h-pills').innerHTML = '<span style="font-size:12px;color:var(--ink3)">渠道体检中…</span>';
+
+    document.getElementById('h-sum').textContent = '';
+
+    try {
+
+        const r = await fetch('/api/client/preflight' + (force ? '?t=' + Date.now() : ''));
+
+        const d = await r.json();
+
+        if (d.checking) { setTimeout(() => preflight(false), 3000); return; }
+
+        HEALTH = d; renderHealth(d);
+
+    } catch (e) {
+
+        document.getElementById('h-pills').innerHTML = '<span style="font-size:12px;color:var(--warn)">体检失败</span>';
+
+    }
+
+}
+
+
+
+let CH_LIST = [];
+
+const PLAT_N = { douyin: '抖音图文', souhu: '搜狐号', baijiahao: '百家号', meipian: '美篇', lieju: '列表网', wuba: '58同城', multi: '多渠道' };
+
+async function openCh() {
+
+    document.getElementById('ch-sub').textContent = '待发布 ' + WAIT.length + ' 篇 · 勾选渠道=每篇都发所选渠道；不勾选点「智能分配」=系统轮换';
+
+    document.getElementById('chmask').style.display = 'flex';
+
+    const el = document.getElementById('ch-list');
+
+    el.innerHTML = '<div style="color:var(--ink3);font-size:12px">渠道加载中…</div>';
+
+    try {
+
+        const d = await (await fetch('/api/client/channels')).json();
+
+        CH_LIST = d.channels || [];
+
+        if (!CH_LIST.length) { el.innerHTML = '<div style="color:var(--bad);font-size:12px">没有可用渠道，请先在「账号授权」添加</div>'; return; }
+
+        el.innerHTML = CH_LIST.map(c => `
+
+            <label class="ch-row">
+
+                <input type="checkbox" value="${c.id}" class="ch-cb">
+
+                <b>${esc(c.name)}</b>
+
+                <span class="cl-badge gray">${PLAT_N[c.platform] || c.platform}</span>
+
+                <span class="ch-left">今日余 ${c.left}</span>
+
+            </label>`).join('');
+
+    } catch (e) { el.innerHTML = '<div style="color:var(--bad);font-size:12px">加载失败</div>'; }
+
+}
+
+function closeCh() { document.getElementById('chmask').style.display = 'none'; }
+
+async function queuePublish(sel) {
+
+    // sel=[] 智能分配; null=按勾选渠道
+
+    let accounts = [];
+
+    if (sel === null) {
+
+        accounts = [...document.querySelectorAll('.ch-cb:checked')].map(b => b.value);
+
+        if (!accounts.length) { alert('请先勾选渠道，或点「智能分配」'); return; }
+
+    }
+
+    closeCh();
+
+    try {
+
+        const r = await fetch('/api/client/queue-publish', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+
+            body: JSON.stringify(accounts.length ? { dirs: WAIT, accounts } : { dirs: WAIT }) });
+
+        const d = await r.json();
+
+        if (!d.ok) { alert(d.error || '发布失败'); return; }
+
+        totalPlan = d.queued;
+
+        document.getElementById('t-body').innerHTML = '';
+
+        addLog('run', '<b>批量发布启动</b> —— ' + d.queued + ' 个任务 · ' + (accounts.length ? '渠道: ' + accounts.length + ' 个所选渠道' : '智能分配'));
+
+        refresh(true);
+
+    } catch (e) { alert('网络异常'); }
+
+}
+
+
+
+async function ctaAction() {
+
+    const btn = document.getElementById('cta-btn');
+
+    const st = btn.dataset.state || 'go';
+
+    if (st === 'go') {
+
+        if (!WAIT.length) return;
+
+        openCh();
+
+    } else if (st === 'running') {
+
+        await fetch('/api/tasks/stop', { method: 'POST' });
+
+        setConsole('paused');
+
+        addLog('info', '已请求暂停 —— 当前这篇完成后停止');
+
+    } else if (st === 'paused') {
+
+        await fetch('/api/tasks/run', { method: 'POST' });
+
+        document.querySelector('.pz-spin').style.display = '';
+
+        setConsole('running');
+
+        addLog('run', '继续发布');
+
+        poll();
+
+    }
+
+}
+
+const NLesc = String.fromCharCode(10);
+
+
+
+function setConsole(state) {
+
+    const btn = document.getElementById('cta-btn');
+
+    const t = document.getElementById('cta-t');
+
+    const d = document.getElementById('cta-d');
+
+    const prog = document.getElementById('prog');
+
+    const term = document.getElementById('term');
+
+    btn.dataset.state = state;
+
+    btn.className = 'pz-main ' + (state === 'paused' ? 'resume' : state);
+
+    btn.disabled = false;
+
+    if (state === 'go') {
+
+        btn.textContent = '一键全部发布';
+
+        t.textContent = `有 ${WAIT.length} 篇待发布`;
+
+        d.textContent = '系统将智能分配搜狐 / 百家号 / 美篇等渠道，自动完成上架';
+
+        prog.style.display = 'none'; term.style.display = 'none';
+
+    } else if (state === 'running') {
+
+        btn.textContent = '暂停发布';
+
+        t.textContent = '正在自动发布';
+
+        d.textContent = '渠道智能分配中 · 每篇约 1~3 分钟 · 可随时暂停';
+
+        prog.style.display = 'block'; term.style.display = 'block';
+
+    } else if (state === 'paused') {
+
+        btn.textContent = '继续发布';
+
+        t.textContent = '发布已暂停';
+
+        d.textContent = '剩余任务已挂起 · 点「继续发布」恢复';
+
+        document.getElementById('p-cur').textContent = '已暂停';
+
+        document.querySelector('.pz-spin').style.display = 'none';
+
+    } else if (state === 'done') {
+
+        btn.textContent = '已全部完成';
+
+        btn.disabled = true;
+
+        t.textContent = '本批发布完成';
+
+        d.textContent = `共发布 ${totalPlan} 篇 · 详情见下方发布动态`;
+
+        document.getElementById('p-cur').textContent = '全部完成';
+
+        document.querySelector('.pz-spin').style.display = 'none';
+
+    }
+
+}
+
+
+
+function addLog(cls, msg) {
+
+    document.getElementById('term').style.display = 'block';
+
+    const tb = document.getElementById('t-body');
+
+    const ts = new Date().toTimeString().slice(0, 8);
+
+    const div = document.createElement('div');
+
+    div.className = 'pz-ln ' + cls;
+
+    div.innerHTML = `<span class="ts">${ts}</span>${msg}`;
+
+    tb.appendChild(div);
+
+    while (tb.children.length > 120) tb.removeChild(tb.firstChild);
+
+    tb.scrollTop = tb.scrollHeight;
+
+}
+
+function renderLogTail(lines) {
+
+    const tb = document.getElementById('t-body');
+
+    lines = lines || [];
+
+    if (!tb.children.length && lines.length) {
+
+        lines.slice(-25).forEach(l => {
+
+            let cls = 'info';
+
+            if (l.includes('\u2705') || l.includes('成功')) cls = 'ok';
+
+            else if (l.includes('\u274C') || l.includes('失败')) cls = 'err';
+
+            else if (l.includes('\u25B6') || l.includes('开始')) cls = 'run';
+
+            const ts = (l.match(/\[(\d{2}:\d{2}:\d{2})\]/) || [, ''])[1];
+
+            const body = l.replace(/\[\d{2}:\d{2}:\d{2}\]\s*/, '');
+
+            const div = document.createElement('div');
+
+            div.className = 'pz-ln ' + cls;
+
+            div.innerHTML = `<span class="ts">${ts}</span>${esc(body)}`;
+
+            tb.appendChild(div);
+
+        });
+
+        tb.scrollTop = tb.scrollHeight;
+
+    }
+
+}
+
+
+
+function poll() {
+
+    if (timer) return;
+
+    timer = setInterval(async () => {
+
+        try { await refresh(false); } catch (e) { }
+
+    }, 2500);
+
+}
+
+
+
+async function refresh(full) {
+
+    const [dt, da] = await Promise.all([fetch('/api/tasks'), fetch('/api/articles')]);
+
+    const d = await dt.json();
+
+    const arts = (await da.json()).articles || [];
+
+    WAIT = arts.filter(a => !a.published && '03_final.html' in (a.files || {})).map(a => a.dir);
+
+    ALL = (d.tasks || []).slice().reverse();
+
+
+
+    const pending = ALL.filter(t => t.status === 'pending' || t.status === 'running');
+
+    const today = new Date().toISOString().slice(0, 10);
+
+    const okToday = ALL.filter(t => t.status === 'success' && (t.finished || '').startsWith(today)).length;
+
+    document.getElementById('k-today').textContent = okToday;
+
+    document.getElementById('k-queue').textContent = pending.length;
+
+    document.getElementById('k-wait').textContent = WAIT.length;
+
+    const pcW = document.getElementById('pc-wait'); if (pcW) pcW.textContent = WAIT.length;
+
+    const pcT = document.getElementById('pc-today'); if (pcT) pcT.textContent = okToday;
+
+    // 近7日成功数(KPI 副标注)
+
+    const wAgo = Date.now() - 7 * 86400000;
+
+    const ok7 = ALL.filter(t => t.status === 'success' && (t.finished || '') && (Date.parse((t.finished || '').replace(' ', 'T')) || 0) > wAgo).length;
+
+    const tsub = document.getElementById('k-today-sub');
+
+    if (tsub) tsub.textContent = '近 7 日累计 ' + ok7 + ' 篇';
+
+
+
+    const btn = document.getElementById('cta-btn');
+
+    const state = btn.dataset.state || 'go';
+
+    if (d.running) {
+
+        // 刷新页面后恢复批次总数: 今日已处理 + 剩余
+
+        if (totalPlan <= 1) {
+
+            const doneToday = ALL.filter(t => (t.status === 'success' || t.status === 'failed') && (t.finished || '').startsWith(today)).length;
+
+            totalPlan = Math.max(doneToday + pending.length, 1);
+
+        }
+
+        if (state !== 'running') { setConsole('running'); poll(); }
+
+        document.getElementById('p-cur').textContent = d.current ? `正在发布：${d.current.slice(0, 36)}` : '准备下一篇…';
+
+    } else if (state === 'running') {
+
+        if (pending.length > 0) { setConsole('paused'); addLog('info', '发布已暂停'); }
+
+        else if (totalPlan > 0) { setConsole('done'); addLog('ok', `<b>本批 ${totalPlan} 篇全部处理完成</b>`); }
+
+        else setConsole(WAIT.length ? 'go' : 'done');
+
+        if (timer) { clearInterval(timer); timer = null; }
+
+    }
+
+    if (state === 'go' || full) setConsole(WAIT.length ? 'go' : (ALL.length ? btn.dataset.state : 'go'));
+
+
+
+    // 进度: 只统计真实success(不含pending/running, 不做表面工程)
+
+    if (totalPlan > 0 && ['running', 'paused', 'done'].includes(btn.dataset.state)) {
+
+        const actualSuccess = ALL.filter(t => t.status === 'success').length;
+
+        const actualFailed = ALL.filter(t => t.status === 'failed').length;
+
+        const done = Math.min(actualSuccess, totalPlan);
+
+        document.getElementById('p-done').textContent = done;
+
+        document.getElementById('p-total').textContent = totalPlan;
+
+        const pct = totalPlan > 0 ? Math.round(done / totalPlan * 100) : 0;
+
+        document.getElementById('p-pct').textContent = pct + '%';
+
+        document.getElementById('p-bar').style.width = pct + '%';
+
+        const realPending = ALL.filter(t => t.status === 'pending').length;
+
+        document.getElementById('p-eta').textContent = realPending > 0
+
+            ? `排队中 ${realPending} 篇 · 已完成 ${done} · 失败 ${actualFailed}`
+
+            : (actualFailed > 0 ? `已完成 ${done} 篇 · 失败 ${actualFailed} 篇` : '');
+
+    }
+
+    renderLogTail(d.log_tail);
+
+    if (full || !timer) renderList();
+
+}
+
+
+
+function setDays(dd) {
+
+    days = dd; page = 1;
+
+    document.querySelectorAll('.cst-fc').forEach(b => b.classList.toggle('on', +b.dataset.d === dd));
+
+    renderList();
+
+}
+
+function renderList() {
+
+    if (!days) filtered = ALL;
+
+    else {
+
+        const cut = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
+
+        filtered = ALL.filter(t => (t.created || t.finished || '') >= cut);
+
+    }
+
+    const pages = Math.max(1, Math.ceil(filtered.length / PER));
+
+    if (page > pages) page = pages;
+
+    const slice = filtered.slice((page - 1) * PER, page * PER);
+
+    document.getElementById('q-stat').textContent = filtered.length ? `共 ${filtered.length} 条` : '';
+
+    document.getElementById('qlist').innerHTML = slice.map(t => {
+
+        const s = ST[t.status] || ST.pending;
+
+        const c = PLAT[t.platform] || PLAT.other;
+
+        return `
+
+        <div class="rec">
+
+            <div class="rec-h">
+
+                <span class="pill ${s[1]}">${s[0]}</span>
+
+                <span class="rec-t" style="flex:1" title="${esc(t.title)}">${esc(t.title)}</span>
+
+                ${t.url ? `<a class="qlnk" href="${t.url}" target="_blank"><i class="ic" data-ic="external" data-sz="16"></i>原文</a>` : ''}
+
+            </div>
+
+            <div class="rec-m">
+
+                <span class="pill ${c[1]}">${esc(t.account_name || '')}</span>
+
+                <span>${(t.finished || t.created || '').slice(5, 16)}</span>
+
+                <span style="margin-left:auto">${(t.status === 'failed' && t.error) ? '原因：' + esc(friendlyErr(t.error)) : ''}</span>
+
+            </div>
+
+        </div>`;
+
+    }).join('') || '<div class="empty"><div class="e-ic"><i class="ic" data-ic="send" data-sz="24"></i></div><div class="e-t">暂无发布记录</div><div class="e-s">发布后这里会逐条显示任务结果</div></div>';
+
+    if (window.ICONS) ICONS.mount(document.getElementById('qlist'));
+
+    const el = document.getElementById('pager');
+
+    if (pages <= 1) { el.innerHTML = ''; return; }
+
+    const btns = [`<button class="cst-pn" ${page === 1 ? 'disabled' : ''} onclick="goPage(${page - 1})">‹</button>`];
+
+    // 页码窗口: 1 … 当前±1 … 末页, 中间用省略号补齐(旧版只显示 1 2 5 会让人以为缺页)
+
+    const NUMS = [];
+
+    for (let i = 1; i <= pages; i++) if (i === 1 || i === pages || Math.abs(i - page) <= 1) NUMS.push(i);
+
+    NUMS.forEach((n, idx) => {
+
+        if (idx && n - NUMS[idx - 1] > 1) btns.push('<span class="cst-gap">…</span>');
+
+        btns.push(`<button class="cst-pn ${n === page ? 'on' : ''}" onclick="goPage(${n})">${n}</button>`);
+
+    });
+
+    btns.push(`<button class="cst-pn" ${page === pages ? 'disabled' : ''} onclick="goPage(${page + 1})">›</button>`);
+
+    el.innerHTML = `<span style="font-size:12px;color:var(--ink3)">第 ${page}/${pages} 页</span><div class="cst-pg">${btns.join('')}</div>`;
+
+}
+
+function goPage(p) { page = p; renderList(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+
+
+
+(async () => {
+
+    preflight(false);
+
+    await refresh(true);
+
+    const d = await (await fetch('/api/tasks')).json();
+
+    if (d.running) { totalPlan = 1; setConsole('running'); renderLogTail(d.log_tail); poll(); }
+
+})();
+
+
+
+/* 自动发布计划 */
+
+let PP = [];
+
+async function ppLoad(){
+
+    try{
+
+        const d = await (await fetch('/api/autosched')).json();
+
+        PP = d.publish_plans || [];
+
+        const sel = document.getElementById('pp-acc');
+
+        sel.innerHTML = (d.accounts || []).map(a => `<option value="${a.id}">${a.name}（${PLAT_N[a.platform] || a.platform}）</option>`).join('') || '<option>无可用账号</option>';
+
+        document.getElementById('pp-side').textContent = `可发文章库存 ${d.articles_ready} 篇`;
+
+        ppRender();
+
+    }catch(e){ document.getElementById('pp-side').textContent = '加载失败'; }
+
+}
+
+function ppRender(){
+
+    document.getElementById('pp-rows').innerHTML = PP.length ? PP.map((p, i) => `
+
+        <div class="rec">
+
+            <div class="rec-h">
+
+                <label style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:500;color:var(--ink2);cursor:pointer">
+
+                    <input type="checkbox" onchange="PP[${i}].enabled=this.checked" ${p.enabled?'checked':''}> 启用</label>
+
+                <span class="pill brand">${PLAT_N[p.channel] || p.channel || '-'}</span>
+
+                <b style="font-size:13px;color:var(--ink)">${esc(p.account_name || p.account_id)}</b>
+
+                <button class="btn sm gray" style="margin-left:auto" onclick="PP.splice(${i},1);ppRender()"><i class="ic" data-ic="trash" data-sz="16"></i>删除</button>
+
+            </div>
+
+            <div class="rec-m">
+
+                <select onchange="PP[${i}].mode=this.value;ppRender()" style="width:112px;padding:4px 8px;font-size:12px;font-weight:500">
+
+                    <option value="daily" ${p.mode!=='interval'?'selected':''}>每日定时</option>
+
+                    <option value="interval" ${p.mode==='interval'?'selected':''}>每 N 分钟</option>
+
+                </select>
+
+                ${p.mode==='interval'
+
+                    ? `<span style="font-size:12px;font-weight:500;color:var(--ink2)">每 <input type="number" value="${p.every_min||30}" min="1" max="10080" style="width:62px;padding:4px 8px" onchange="PP[${i}].every_min=+this.value||30"> 分钟发 <input type="number" value="${p.count}" min="1" max="500" style="width:62px;padding:4px 8px" onchange="PP[${i}].count=+this.value||1"> 篇</span>`
+
+                    : `<span style="font-size:12px;font-weight:500;color:var(--ink2)"><input type="time" value="${p.time||'08:30'}" style="width:104px;padding:4px 8px" onchange="PP[${i}].time=this.value"> 发 <input type="number" value="${p.count}" min="1" max="500" style="width:62px;padding:4px 8px" onchange="PP[${i}].count=+this.value||10"> 篇</span>`
+
+                }
+
+            </div>
+
+        </div>`).join('') : '<div class="empty"><div class="e-ic"><i class="ic" data-ic="clock" data-sz="24"></i></div><div class="e-t">还没有发布计划</div><div class="e-s">在下方选择账号与节奏，添加第一条自动发布计划</div></div>';
+
+    if (window.ICONS) ICONS.mount(document.getElementById('pp-rows'));
+
+}
+
+function ppModeUi(){
+
+    const m = document.getElementById('pp-mode').value;
+
+    document.getElementById('pp-daily-wrap').style.display = m === 'daily' ? '' : 'none';
+
+    document.getElementById('pp-interval-wrap').style.display = m === 'interval' ? '' : 'none';
+
+}
+
+async function ppAdd(){
+
+    const sel = document.getElementById('pp-acc');
+
+    const acc = sel.value;
+
+    if(!acc || acc === '无可用账号'){ alert('无可用账号'); return; }
+
+    const label = sel.selectedOptions[0].textContent;
+
+    const name = label.split('（')[0];
+
+    const plat = (label.match(/（(.+)）/)||[])[1] || '';
+
+    const chMap = {搜狐号:'souhu', 美篇:'meipian', 列表网:'lieju', 百家号:'baijiahao', 抖音图文:'douyin'};
+
+    const mode = document.getElementById('pp-mode').value;
+
+    PP.push({id: Date.now() % 100000, channel: chMap[plat] || plat,
+
+             account_id: acc, account_name: name, count: +document.getElementById('pp-count').value || 1,
+
+             time: document.getElementById('pp-time').value || '08:30', enabled: true,
+
+             mode, every_min: +document.getElementById('pp-every').value || 30});
+
+    ppRender();
+
+}
+
+async function ppSave(){
+
+    const r = await fetch('/api/autosched', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({publish_plans: PP})});
+
+    document.getElementById('pp-ok').textContent = r.ok ? '已保存' : '保存失败';
+
+    setTimeout(()=>document.getElementById('pp-ok').textContent='', 2500);
+
+    ppLoad();
+
+}
+
+ppLoad();
+
+
+
+</script>
+
+</body>
+
+</html>
+

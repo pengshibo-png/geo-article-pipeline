@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="theme-light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>系统设置 · GEO 优化系统</title>
+<link rel="stylesheet" href="/static/client_style.css?v={{ asset_ver }}">
+<link rel="stylesheet" href="/static/ds.css?v={{ asset_ver }}">
+<link rel="stylesheet" href="/static/theme-light.css?v={{ asset_ver }}">
+</head>
+<body class="cl" data-page="settings">
+<header class="topbar" id="topbar">
+  <div class="tb-brand"><span class="tb-logo">G</span><span class="tb-name">GEO 优化系统</span><span class="tb-env">运营管理端</span></div>
+  <div class="tb-right">
+    <span class="tb-chip" id="model-tag">模型 · 未就绪</span>
+    <span class="tb-chip" id="run-tag">空闲</span>
+    <div class="tb-user" id="tb-user-btn"><span class="tb-av" id="tb-av">管</span><span class="tb-uname" id="tb-uname">管理员</span><i class="ic" data-ic="chevronDown" data-sz="16"></i></div>
+  </div>
+  <div class="tb-menu" id="tb-menu"><button onclick="doLogout()"><i class="ic" data-ic="logout"></i>退出登录</button></div>
+</header>
+
+<div class="cl-app">
+  <aside class="cl-side" id="sidebar"></aside>
+  <main class="cl-main">
+    <nav class="crumb" id="crumb"></nav>
+    <div class="phead">
+      <div class="phead-l">
+        <div class="phead-eyebrow">系统管理 · 运行参数</div>
+        <div class="phead-h1">系统设置</div>
+        <div class="phead-sub">接入任意 OpenAI 兼容大模型与生图 API · 保存即生效（下一批生成/写稿按新配置跑），无需重启</div>
+      </div>
+      <div class="phead-r">
+        <button class="btn gray" id="btn-reset" onclick="resetCfg()" hidden><i class="ic" data-ic="refresh"></i><span>恢复环境默认</span></button>
+      </div>
+    </div>
+
+    <!-- 语言模型 -->
+    <section class="sec">
+      <div class="sec-h">
+        <span class="sec-ico"><i class="ic" data-ic="robot" data-sz="20"></i></span>
+        <div class="sec-t"><b>语言模型（选题 / 写稿 / 审稿 / 修改 / 监测）</b><span>任意 OpenAI 兼容端点均可</span></div>
+        <div class="sec-x"><span class="pill gray" id="llm-src">…</span></div>
+      </div>
+      <div style="padding:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
+        <div><label class="kpi-l" for="p-provider">供应商类型</label>
+          <select id="p-provider" class="inp" style="width:100%">
+            <option value="fake">fake（内置演示模型，离线）</option>
+            <option value="openai">openai（任意 OpenAI 兼容端点）</option>
+            <option value="deepseek">deepseek（内置地址）</option>
+            <option value="doubao">doubao 火山方舟（内置地址）</option>
+            <option value="qwen">qwen 阿里百炼（内置地址）</option>
+          </select></div>
+        <div style="grid-column:1/-1"><label class="kpi-l" for="p-url">接口地址 base_url（openai 类型必填；预设类型可覆盖）</label>
+          <input id="p-url" class="inp" type="text" placeholder="如 https://api.moonshot.cn/v1 或 http://localhost:11434/v1"></div>
+        <div><label class="kpi-l" for="p-model">模型名 model</label>
+          <input id="p-model" class="inp" type="text" placeholder="如 deepseek-chat / moonshot-v1-8k / qwen-plus"></div>
+        <div><label class="kpi-l" for="p-key">API Key（留空 = 保持已存）</label>
+          <input id="p-key" class="inp" type="password" autocomplete="new-password" placeholder="未设置"></div>
+        <div><label class="kpi-l" for="p-temp">温度 temperature</label>
+          <input id="p-temp" class="inp" type="number" min="0" max="2" step="0.1" value="0.7"></div>
+      </div>
+      <div style="padding:0 16px 16px;display:flex;gap:8px;align-items:center">
+        <button class="btn gray" onclick="testLlm()"><i class="ic" data-ic="plug"></i><span>测试连接</span></button>
+        <button class="btn" onclick="saveCfg('llm')"><i class="ic" data-ic="check"></i><span>保存语言模型</span></button>
+        <span class="t-sub" id="llm-msg"></span>
+      </div>
+    </section>
+
+    <!-- 生图模型 -->
+    <section class="sec">
+      <div class="sec-h">
+        <span class="sec-ico"><i class="ic" data-ic="image" data-sz="20"></i></span>
+        <div class="sec-t"><b>生图模型（抖音图文配图）</b><span>内置生图 / OpenAI 兼容</span></div>
+        <div class="sec-x"><span class="pill gray" id="img-state">未配置</span></div>
+      </div>
+      <div style="padding:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
+        <div><label class="kpi-l" for="i-protocol">生图协议</label>
+          <select id="i-protocol" class="inp">
+            <option value="sensenova">内置生图（推荐）</option>
+            <option value="openai-images">OpenAI 兼容 /images/generations</option>
+          </select></div>
+        <div style="grid-column:1/-1"><label class="kpi-l" for="i-url">接口地址 base_url（内置生图可留空，自动用默认地址）</label>
+          <input id="i-url" class="inp" type="text" placeholder="留空 · 或 https://api.siliconflow.cn/v1"></div>
+        <div><label class="kpi-l" for="i-model">生图模型名</label>
+          <input id="i-model" class="inp" type="text" placeholder="如 SDXL-Image-Plus / dall-e-3"></div>
+        <div><label class="kpi-l" for="i-size">出图尺寸</label>
+          <input id="i-size" class="inp" type="text" value="1024x1024"></div>
+        <div><label class="kpi-l" for="i-key">API Key（留空 = 保持已存）</label>
+          <input id="i-key" class="inp" type="password" autocomplete="new-password" placeholder="未设置"></div>
+      </div>
+      <div style="padding:0 16px 16px;display:flex;gap:8px;align-items:center">
+        <button class="btn gray" onclick="testImg()"><i class="ic" data-ic="plug"></i><span>测试生图</span></button>
+        <button class="btn" onclick="saveCfg('image')"><i class="ic" data-ic="check"></i><span>保存生图配置</span></button>
+        <span class="t-sub" id="img-msg"></span>
+      </div>
+    </section>
+
+    <!-- GEO 四引擎 -->
+    <style>
+      .eng-row { display: grid; grid-template-columns: 76px 1fr 1fr 1fr auto; gap: 8px; align-items: center; }
+      .eng-name { font-size: 13px; font-weight: 600; color: var(--ink2); }
+      .eng-row .eng-msg { grid-column: 5 / -1; font-size: 12px; }
+      @media (max-width: 900px) {
+        .eng-row { grid-template-columns: 76px 1fr; }
+        .eng-row button { grid-column: 2; }
+      }
+    </style>
+    <section class="sec">
+      <div class="sec-h">
+        <span class="sec-ico"><i class="ic" data-ic="radar" data-sz="20"></i></span>
+        <div class="sec-t"><b>GEO 监测四引擎</b><span>各配各的端点与 Key：不配的引擎共用上面的语言模型（四引擎问同一模型会让监测数据失真）</span></div>
+        <div class="sec-x"><span class="pill gray" id="eng-state">未配置独立端点</span></div>
+      </div>
+      <div style="padding:16px;display:grid;gap:10px">
+        <div class="eng-row" data-engine="doubao">
+          <div class="eng-name">豆包</div>
+          <input class="inp eng-url" type="text" placeholder="base_url">
+          <input class="inp eng-model" type="text" placeholder="模型名">
+          <input class="inp eng-key" type="password" autocomplete="new-password" placeholder="API Key（留空=保持已存）">
+          <button class="btn sm gray" onclick="testEngine('doubao', this)">测试</button>
+          <span class="t-sub eng-msg"></span>
+        </div>
+        <div class="eng-row" data-engine="qwen">
+          <div class="eng-name">通义千问</div>
+          <input class="inp eng-url" type="text" placeholder="base_url">
+          <input class="inp eng-model" type="text" placeholder="模型名">
+          <input class="inp eng-key" type="password" autocomplete="new-password" placeholder="API Key（留空=保持已存）">
+          <button class="btn sm gray" onclick="testEngine('qwen', this)">测试</button>
+          <span class="t-sub eng-msg"></span>
+        </div>
+        <div class="eng-row" data-engine="yuanbao">
+          <div class="eng-name">元宝</div>
+          <input class="inp eng-url" type="text" placeholder="base_url">
+          <input class="inp eng-model" type="text" placeholder="模型名">
+          <input class="inp eng-key" type="password" autocomplete="new-password" placeholder="API Key（留空=保持已存）">
+          <button class="btn sm gray" onclick="testEngine('yuanbao', this)">测试</button>
+          <span class="t-sub eng-msg"></span>
+        </div>
+        <div class="eng-row" data-engine="deepseek">
+          <div class="eng-name">DeepSeek</div>
+          <input class="inp eng-url" type="text" placeholder="base_url">
+          <input class="inp eng-model" type="text" placeholder="模型名">
+          <input class="inp eng-key" type="password" autocomplete="new-password" placeholder="API Key（留空=保持已存）">
+          <button class="btn sm gray" onclick="testEngine('deepseek', this)">测试</button>
+          <span class="t-sub eng-msg"></span>
+        </div>
+      </div>
+      <div style="padding:0 16px 16px;display:flex;gap:8px;align-items:center">
+        <button class="btn" onclick="saveCfg('engines')"><i class="ic" data-ic="check"></i><span>保存四引擎</span></button>
+        <span class="t-sub" id="eng-msg"></span>
+      </div>
+    </section>
+
+    <!-- 蚁小二 -->
+    <section class="sec">
+      <div class="sec-h">
+        <span class="sec-ico"><i class="ic" data-ic="send" data-sz="20"></i></span>
+        <div class="sec-t"><b>蚁小二（一键多平台发布）</b><span>经 yxer CLI 云发布；授权登录在蚁小二客户端管理，API Key 随时可换（换 Key = 换账号库）</span></div>
+        <div class="sec-x"><span class="pill gray" id="yx-state">未接入</span></div>
+      </div>
+      <div style="padding:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
+        <div><label class="kpi-l" for="y-token">蚁小二 API Key（留空 = 保持已存）</label>
+          <input id="y-token" class="inp" type="password" autocomplete="new-password" placeholder="未设置"></div>
+        <div><label class="kpi-l" for="y-accpath">账号列表路径</label>
+          <input id="y-accpath" class="inp" type="text" value="/accounts"></div>
+        <div><label class="kpi-l" for="y-pubpath">发布接口路径</label>
+          <input id="y-pubpath" class="inp" type="text" value="/publish"></div>
+        <div style="display:flex;align-items:flex-end;padding-bottom:6px">
+          <label class="kpi-l" style="cursor:pointer"><input type="checkbox" id="y-mock" style="margin-right:6px">演示模式（离线假账号，体验全流程）</label>
+        </div>
+      </div>
+      <div style="padding:0 16px 16px;display:flex;gap:8px;align-items:center">
+        <button class="btn gray" onclick="testYx()"><i class="ic" data-ic="plug"></i><span>测试连接</span></button>
+        <button class="btn" onclick="saveCfg('yxer')"><i class="ic" data-ic="check"></i><span>保存蚁小二配置</span></button>
+        <span class="t-sub" id="yx-msg"></span>
+      </div>
+    </section>
+
+    <!-- 运行概况 -->
+    <section class="sec">
+      <div class="sec-h">
+        <span class="sec-ico"><i class="ic" data-ic="sliders" data-sz="20"></i></span>
+        <div class="sec-t"><b>运行概况</b><span>只读</span></div>
+      </div>
+      <div style="padding:16px;font-size:13px;color:var(--ink2);line-height:1.9">
+        · 当前生效模型：<b id="s-model">…</b>（来源：<span id="s-src">—</span>）<br>
+        · 登录身份：<span id="s-role">…</span> <span id="s-who">—</span><br>
+        · 数据目录：文章与报告落盘 <code>data/&lt;租户&gt;/</code>；配置持久化 <code>data/model_config.json</code><br>
+        · 四段 AI 指令：请到「AI指令」页自定义（标题/写作/审稿/修改，保存即生效）<br>
+        · 环境变量兜底：<code>GEO_LLM_PROVIDER / GEO_LLM_KEYS / GEO_LLM_BASE_URL / GEO_LLM_MODEL</code>（本页在线配置优先）
+      </div>
+    </section>
+  </main>
+</div>
+
+<script src="/static/icons.js?v={{ asset_ver }}"></script>
+<script src="/static/layout.js?v={{ asset_ver }}"></script>
+<script>
+let ME = null, CFG = null;
+const $v = id => (document.getElementById(id).value || '').trim();
+
+async function load() {
+    ME = await (await fetch('/api/me')).json().catch(() => null);
+    CFG = await (await fetch('/api/model-config')).json().catch(() => null);
+    if (!CFG) return;
+    const l = CFG.llm || {}, im = CFG.image || {};
+    document.getElementById('p-provider').value = l.provider || 'fake';
+    document.getElementById('p-url').value = l.base_url || '';
+    document.getElementById('p-model').value = l.model || '';
+    document.getElementById('p-key').placeholder = l.has_key ? `已存 ${l.key_masked}（留空保持不变）` : '未设置';
+    document.getElementById('p-temp').value = l.temperature ?? 0.7;
+    document.getElementById('llm-src').textContent = l.source === 'online' ? '在线配置' : '环境变量默认';
+    // 内置生图渠道的端点与模型名由服务端常量给出，不在界面回显（避免暴露所用供应商）；
+    // 留空保存会自动回落到服务端默认值，功能不受影响。
+    const _builtinImg = (im.protocol || 'sensenova') === 'sensenova';
+    document.getElementById('i-url').value = _builtinImg ? '' : (im.base_url || '');
+    document.getElementById('i-protocol').value = im.protocol || 'sensenova';
+    document.getElementById('i-model').value = _builtinImg ? '' : (im.model || '');
+    document.getElementById('i-size').value = im.size || '1024x1024';
+    document.getElementById('i-key').placeholder = im.has_key ? `已存 ${im.key_masked}（留空保持不变）` : '未设置';
+    document.getElementById('img-state').textContent = im.configured ? '已配置' : '未配置';
+    const yx = CFG.yxer || {};
+    document.getElementById('y-accpath').value = yx.accounts_path || '/accounts';
+    document.getElementById('y-pubpath').value = yx.publish_path || '/publish';
+    document.getElementById('y-mock').checked = !!yx.use_mock;
+    // GEO 四引擎：各自端点回填；Key 只显示掩码（不落前端）
+    const eng = CFG.engines || {};
+    let engN = 0;
+    document.querySelectorAll('.eng-row').forEach(row => {
+        const name = row.dataset.engine, e = eng[name] || {};
+        row.querySelector('.eng-url').value = e.base_url || '';
+        row.querySelector('.eng-model').value = e.model || '';
+        const k = row.querySelector('.eng-key');
+        k.value = '';
+        k.placeholder = e.has_key ? `已存 ${e.key_masked}（留空保持不变）` : '未设置';
+        if (e.has_key && e.base_url) engN++;
+    });
+    const engState = document.getElementById('eng-state');
+    engState.textContent = engN ? `独立端点 ${engN}/4` : '未配置独立端点';
+    engState.className = 'pill ' + (engN ? 'green' : 'gray');
+    document.getElementById('y-token').placeholder = yx.has_token ? `已存 ${yx.token_masked}（留空保持不变）` : '未设置';
+    document.getElementById('yx-state').textContent = yx.use_mock ? '演示模式' : (yx.configured ? '已接入' : '未接入');
+    const cfg2 = await (await fetch('/api/config')).json().catch(() => null);
+    document.getElementById('s-model').textContent = cfg2 && cfg2.ai ? cfg2.ai.model : '未知';
+    document.getElementById('s-src').textContent = l.source === 'online' ? '本页在线配置' : '环境变量';
+    if (ME) {
+        document.getElementById('s-role').textContent = ME.role === 'admin' ? '管理员（可修改配置）' : '客户（只读）';
+        document.getElementById('s-who').textContent = (ME.tenant_name || '') + '（' + (ME.tenant || '') + '）';
+    }
+    const admin = ME && ME.role === 'admin';
+    document.getElementById('btn-reset').hidden = !admin;
+    document.querySelectorAll('input.inp,select.inp').forEach(el => { if (!admin) el.disabled = true; });
+    if (!admin) document.querySelectorAll('button.btn').forEach(b => {
+        if (b.closest('.sec') && b.getAttribute('onclick')) b.style.display = 'none';
+    });
+    if (window.ICONS) ICONS.mount(document);
+}
+async function saveCfg(section) {
+    let body;
+    if (section === 'llm') {
+        body = {llm: {provider: $v('p-provider'), base_url: $v('p-url'), model: $v('p-model'),
+                      key: $v('p-key'), temperature: parseFloat($v('p-temp'))}};
+    } else if (section === 'image') {
+        body = {image: {protocol: $v('i-protocol'), base_url: $v('i-url'), model: $v('i-model'),
+                        size: $v('i-size'), key: $v('i-key')}};
+    } else if (section === 'engines') {
+        const e = {};
+        document.querySelectorAll('.eng-row').forEach(row => {
+            e[row.dataset.engine] = {
+                base_url: row.querySelector('.eng-url').value.trim(),
+                model: row.querySelector('.eng-model').value.trim(),
+                key: row.querySelector('.eng-key').value.trim()};
+        });
+        body = {engines: e};
+    } else {
+        body = {yxer: {token: $v('y-token'), use_mock: document.getElementById('y-mock').checked,
+                       accounts_path: $v('y-accpath') || '/accounts', publish_path: $v('y-pubpath') || '/publish'}};
+    }
+    const r = await fetch('/api/model-config', {method: 'POST',
+        headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
+    const d = await r.json();
+    const msg = document.getElementById(section === 'llm' ? 'llm-msg'
+        : (section === 'image' ? 'img-msg' : (section === 'engines' ? 'eng-msg' : 'yx-msg')));
+    msg.textContent = d.ok ? (d.msg || '已保存') : (d.error || d.message || '保存失败');
+    if (d.ok) setTimeout(load, 400);
+}
+async function testEngine(name, btn) {
+    const row = btn.closest('.eng-row'), m = row.querySelector('.eng-msg');
+    m.textContent = '测试中…';
+    try {
+        const r = await fetch('/api/model-config/test-engine', {method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({engine: name, config: {
+                base_url: row.querySelector('.eng-url').value.trim(),
+                model: row.querySelector('.eng-model').value.trim(),
+                key: row.querySelector('.eng-key').value.trim()}})});
+        const d = await r.json();
+        m.textContent = d.ok ? (d.msg || '连接成功') : (d.error || '连接失败');
+    } catch (e) { m.textContent = '网络异常'; }
+}
+async function testYx() {
+    const m = document.getElementById('yx-msg'); m.textContent = '测试中…';
+    const d = await (await fetch('/api/model-config/test-yxer', {method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({token: $v('y-token'),
+                              use_mock: document.getElementById('y-mock').checked,
+                              accounts_path: $v('y-accpath') || '/accounts'})})).json();
+    m.textContent = d.ok ? ('✅ ' + d.msg) : ('❌ ' + (d.error || '失败'));
+}
+async function resetCfg() {
+    if (!confirm('清除本页在线配置，恢复环境变量默认？')) return;
+    await fetch('/api/model-config/reset', {method: 'POST'});
+    load();
+}
+async function testLlm() {
+    const m = document.getElementById('llm-msg'); m.textContent = '测试中…（真实往返，约几秒）';
+    const d = await (await fetch('/api/model-config/test-llm', {method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({provider: $v('p-provider'), base_url: $v('p-url'),
+                              model: $v('p-model'), key: $v('p-key')})})).json();
+    m.textContent = d.ok ? ('✅ ' + d.msg) : ('❌ ' + (d.error || '失败'));
+}
+async function testImg() {
+    const m = document.getElementById('img-msg'); m.textContent = '测试中…';
+    const d = await (await fetch('/api/model-config/test-image', {method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({protocol: $v('i-protocol'), base_url: $v('i-url'), model: $v('i-model'),
+                              key: $v('i-key'), size: $v('i-size')})})).json();
+    m.textContent = d.ok ? ('✅ ' + d.msg) : ('❌ ' + (d.error || '失败'));
+}
+window.addEventListener('load', load);
+</script>
+</body>
+</html>

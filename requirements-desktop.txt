@@ -1,0 +1,2 @@
+# 桌面版构建依赖（仅打包机需要；运行依赖见 requirements.txt）
+pyinstaller>=6.10,<7

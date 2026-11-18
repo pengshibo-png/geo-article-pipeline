@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="theme-light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>客户管理 · GEO 优化系统</title>
+<link rel="stylesheet" href="/static/client_style.css?v={{ asset_ver }}">
+<link rel="stylesheet" href="/static/ds.css?v={{ asset_ver }}">
+<link rel="stylesheet" href="/static/theme-light.css?v={{ asset_ver }}">
+</head>
+<body class="cl" data-page="tenants">
+<header class="topbar" id="topbar">
+  <div class="tb-brand"><span class="tb-logo">G</span><span class="tb-name">GEO 优化系统</span><span class="tb-env">运营管理端</span></div>
+  <div class="tb-right">
+    <span class="tb-chip" id="model-tag">模型 · 未就绪</span>
+    <span class="tb-chip" id="run-tag">空闲</span>
+    <div class="tb-user" id="tb-user-btn"><span class="tb-av" id="tb-av">管</span><span class="tb-uname" id="tb-uname">管理员</span><i class="ic" data-ic="chevronDown" data-sz="16"></i></div>
+  </div>
+  <div class="tb-menu" id="tb-menu"><button onclick="doLogout()"><i class="ic" data-ic="logout"></i>退出登录</button></div>
+</header>
+
+<div class="cl-app">
+  <aside class="cl-side" id="sidebar"></aside>
+  <main class="cl-main">
+    <nav class="crumb" id="crumb"></nav>
+    <div class="phead">
+      <div class="phead-l">
+        <div class="phead-eyebrow">系统管理 · 租户</div>
+        <div class="phead-h1">客户管理</div>
+        <div class="phead-sub">多客户租户一览 · 点击「切入视角」以该租户身份查看与配置数据（全程留审计）</div>
+      </div>
+      <div class="phead-r">
+        <button class="btn" id="open-btn" onclick="openCreate()"><i class="ic" data-ic="plus"></i><span>开通新客户</span></button>
+      </div>
+    </div>
+
+    <section class="sec">
+      <div class="sec-h">
+        <span class="sec-ico"><i class="ic" data-ic="city" data-sz="20"></i></span>
+        <div class="sec-t"><b>租户列表</b><span>数据来自 /api/me（仅 admin 可见全量）</span></div>
+        <div class="sec-x"><span class="pill gray" id="t-count">加载中</span></div>
+      </div>
+      <div class="tbl-wrap"><div class="tbl-scroll">
+        <table class="tbl">
+          <thead><tr><th>租户 ID</th><th>客户名称</th><th>当前视角</th><th class="col-op">操作</th></tr></thead>
+          <tbody id="rows"><tr><td colspan="4"><div class="empty"><div class="e-t">加载中…</div></div></td></tr></tbody>
+        </table>
+      </div></div>
+    </section>
+  </main>
+</div>
+
+<!-- 开通新客户弹窗（复用 archives 的 cl-modal 结构；提交走 /api/tenants/register） -->
+<div class="cl-modal" id="create-modal" onclick="if(event.target===this)closeCreate()">
+  <div class="inner" style="max-width:640px">
+    <div class="mh">
+      <b style="font-size:14px">开通新客户</b>
+      <button class="btn sm gray" onclick="closeCreate()">关闭</button>
+    </div>
+    <div class="mb">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
+        <div><label class="kpi-l" for="nt-id">租户标识（登录名，2–32 位小写字母/数字/下划线/连字符）</label>
+          <input id="nt-id" class="inp" type="text" placeholder="如 hangzhou-shiner"></div>
+        <div><label class="kpi-l" for="nt-name">企业名称</label>
+          <input id="nt-name" class="inp" type="text" placeholder="如 杭州示例珠宝工坊"></div>
+        <div><label class="kpi-l" for="nt-pass">登录密码（至少 6 位）</label>
+          <input id="nt-pass" class="inp" type="password" autocomplete="new-password" placeholder="交付给客户的登录密码"></div>
+        <div><label class="kpi-l" for="nt-brand">品牌名（留空 = 同企业名称）</label>
+          <input id="nt-brand" class="inp" type="text" placeholder="写入品牌资料首句的主名"></div>
+        <div><label class="kpi-l" for="nt-biz">业务线（逗号分隔）</label>
+          <input id="nt-biz" class="inp" type="text" placeholder="如 断镯修复,金缮修缮"></div>
+        <div><label class="kpi-l" for="nt-cities">业务城市（逗号分隔）</label>
+          <input id="nt-cities" class="inp" type="text" placeholder="如 杭州,上海"></div>
+        <div><label class="kpi-l" for="nt-phones">联系电话（逗号分隔，可空）</label>
+          <input id="nt-phones" class="inp" type="text" placeholder="如 13800000000"></div>
+        <div style="grid-column:1/-1"><label class="kpi-l" for="nt-doc">品牌文档（留空 = 按上面信息自动拼骨架，首句可解析主名）</label>
+          <textarea id="nt-doc" class="inp" rows="4" placeholder="粘贴客户的品牌资料全文（九大分区格式更佳）"></textarea></div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;margin-top:14px">
+        <button class="btn" id="nt-go" onclick="submitCreate()"><i class="ic" data-ic="check"></i><span>开通并铺四件套</span></button>
+        <span class="t-sub" id="nt-msg"></span>
+      </div>
+      <p class="t-sub" style="margin-top:10px">开通即铺四件套：租户 / 登录账号 / 品牌资料骨架 / 标题配置（业务线+城市）。客户用「标识 + 密码」即可登录自己的工作台。</p>
+    </div>
+  </div>
+</div>
+
+<script src="/static/icons.js?v={{ asset_ver }}"></script>
+<script src="/static/layout.js?v={{ asset_ver }}"></script>
+<script>
+function $v(id) { return (document.getElementById(id).value || '').trim(); }
+function splitList(text) {
+    return text.split(/[,，、;；]/).map(s => s.trim()).filter(Boolean);
+}
+function openCreate() {
+    document.getElementById('create-modal').classList.add('show');
+    document.getElementById('nt-msg').textContent = '';
+}
+function closeCreate() { document.getElementById('create-modal').classList.remove('show'); }
+async function submitCreate() {
+    const msg = document.getElementById('nt-msg');
+    const go = document.getElementById('nt-go');
+    go.disabled = true; msg.textContent = '开通中…';
+    try {
+        const r = await fetch('/api/tenants/register', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                id: $v('nt-id'), name: $v('nt-name'), pass: $v('nt-pass'),
+                brand: $v('nt-brand'), biz: splitList($v('nt-biz')),
+                cities: $v('nt-cities'), phones: splitList($v('nt-phones')),
+                brand_doc: $v('nt-doc'),
+            }),
+        });
+        const d = await r.json();
+        if (d.ok) {
+            closeCreate();
+            ['nt-id', 'nt-name', 'nt-pass', 'nt-brand', 'nt-biz', 'nt-cities', 'nt-phones', 'nt-doc']
+                .forEach(id => { document.getElementById(id).value = ''; });
+            load();
+            msg.textContent = '';
+        } else {
+            msg.textContent = '❌ ' + (d.message || d.error || '开通失败');
+        }
+    } catch (e) {
+        msg.textContent = '❌ 网络错误：' + e.message;
+    } finally {
+        go.disabled = false;
+    }
+}
+async function load() {
+    const me = await (await fetch('/api/me')).json().catch(() => null);
+    const tbody = document.getElementById('rows');
+    if (!me || me.role !== 'admin' || !(me.tenants || []).length) {
+        tbody.innerHTML = '<tr><td colspan="4"><div class="empty"><div class="e-t">仅运营管理端可见</div><div class="e-s">当前账号没有租户管理权限</div></div></td></tr>';
+        document.getElementById('t-count').textContent = '—';
+        return;
+    }
+    document.getElementById('t-count').textContent = me.tenants.length + ' 个租户';
+    tbody.innerHTML = me.tenants.map(t => `
+        <tr>
+            <td class="t-title strong">${esc(t.id)}</td>
+            <td>${esc(t.name)}</td>
+            <td>${t.id === me.tenant ? '<span class="pill brand">当前</span>' : ''}</td>
+            <td class="col-op"><div class="row-act">
+                ${t.id === me.tenant ? '<span class="t-sub">无需切换</span>'
+                    : `<button class="btn sm" onclick="switchTenant('${esc(t.id)}')">切入视角</button>`}
+            </div></td>
+        </tr>`).join('');
+    if (window.ICONS) ICONS.mount(tbody);
+}
+window.addEventListener('load', load);
+</script>
+</body>
+</html>

@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# 测试与缓存
+.pytest_cache/
+pytest-cache-files-*/
+.coverage
+htmlcov/
+
+# 运行期数据（按租户隔离，不入版本库）
+data/
+*.db
+*.sqlite3
+
+# 本地配置（含密钥，绝不入库）
+.env
+.env.local
+
+# 本地运行日志
+*.log
+app_run.log
+
+# 编辑器
+.idea/
+.vscode/
+*.swp
+
+# 打包产物（PyInstaller，单个 zip 400MB+）
+dist/
+build/
+*.spec
+
+# 临时/一次性调试脚本与产物
+.tmp_*
+.tmp-*
+payload.json
+.ci-result.txt
+.pytest-result.json

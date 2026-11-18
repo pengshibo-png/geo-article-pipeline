@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>抖音图文 · 改风格指南（玉器修复科普版）</title>
+<style>
+  :root{
+    --ink:#1f2937; --ink2:#4b5563; --mut:#8a93a3; --line:#e5e7eb;
+    --bg:#f7f8fa; --card:#fff;
+    --gold:#c9a227; --jade:#2f6b5f; --jade-l:#e9f4e8; --paper:#f5f1e4;
+    --code-bg:#1e2430; --code-fg:#d8e2f0;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font:15px/1.75 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+  }
+  .wrap{max-width:960px;margin:0 auto;padding:40px 22px 80px}
+  header{
+    text-align:center;padding:44px 20px 36px;margin-bottom:34px;
+    background:linear-gradient(160deg,var(--paper),#fbfaf6 60%,#fff);
+    border:1px solid #ebe5d5;border-radius:18px;
+  }
+  header h1{margin:0 0 10px;font-size:27px;letter-spacing:.5px}
+  header p{margin:0;color:var(--ink2);font-size:14.5px}
+  .badge{
+    display:inline-block;margin-top:14px;padding:5px 13px;border-radius:20px;
+    background:var(--jade);color:#fff;font-size:12.5px;letter-spacing:.4px;
+  }
+  h2{
+    margin:44px 0 16px;padding-left:12px;font-size:20px;
+    border-left:4px solid var(--gold);
+  }
+  h3{margin:26px 0 10px;font-size:16.5px}
+  p{margin:10px 0}
+  .mut{color:var(--mut);font-size:13.5px}
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:14px;
+    padding:22px 24px;margin:16px 0;
+  }
+  .steps{counter-reset:s;list-style:none;padding:0;margin:0}
+  .steps li{
+    counter-increment:s;position:relative;padding:14px 0 14px 46px;
+    border-bottom:1px dashed var(--line);
+  }
+  .steps li:last-child{border-bottom:0}
+  .steps li::before{
+    content:counter(s);position:absolute;left:0;top:13px;
+    width:28px;height:28px;border-radius:50%;background:var(--jade);color:#fff;
+    font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:center;
+  }
+  .steps b{color:var(--jade)}
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:14px}
+  th,td{padding:10px 12px;border:1px solid var(--line);text-align:left;vertical-align:top}
+  th{background:#f3f5f8;font-weight:600}
+  .style-card{
+    background:var(--card);border:1px solid var(--line);border-radius:16px;
+    margin:22px 0;overflow:hidden;
+  }
+  .style-card .head{
+    padding:18px 24px;border-bottom:1px solid var(--line);
+    background:linear-gradient(135deg,#fbfbf8,#f4f7f5);
+    display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;
+  }
+  .style-card .head h3{margin:0 0 4px;font-size:17.5px;color:var(--jade)}
+  .tagrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+  .tag{
+    font-size:12px;padding:3px 10px;border-radius:20px;
+    background:var(--jade-l);color:var(--jade);border:1px solid #d7e8d4;
+  }
+  .tag.gold{background:#fdf6e0;color:#96791a;border-color:#f0e3bb}
+  .style-card .body{padding:20px 24px}
+  .swatches{display:flex;gap:10px;margin:8px 0 16px;flex-wrap:wrap}
+  .sw{
+    width:64px;text-align:center;font-size:11px;color:var(--mut);
+  }
+  .sw i{
+    display:block;height:34px;border-radius:8px;border:1px solid rgba(0,0,0,.06);
+    margin-bottom:4px;
+  }
+  pre{
+    position:relative;margin:12px 0;padding:16px 18px;border-radius:12px;
+    background:var(--code-bg);color:var(--code-fg);
+    font:13px/1.7 "SFMono-Regular",Consolas,monospace;
+    white-space:pre-wrap;word-break:break-word;
+  }
+  .copy{
+    position:absolute;right:10px;top:10px;padding:4px 10px;border-radius:6px;
+    background:rgba(255,255,255,.14);color:#fff;border:0;cursor:pointer;font-size:12px;
+  }
+  .copy:hover{background:rgba(255,255,255,.26)}
+  .note{
+    border-left:3px solid var(--gold);background:#fffdf5;
+    padding:12px 16px;border-radius:0 10px 10px 0;margin:16px 0;font-size:14px;
+  }
+  .warn{border-left-color:#d97706;background:#fffbeb}
+  kbd{
+    background:#eef1f5;border:1px solid #d9dee6;border-bottom-width:2px;
+    border-radius:5px;padding:1px 7px;font-size:12.5px;font-family:inherit;
+  }
+  footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);
+    color:var(--mut);font-size:13px;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>抖音图文改风格指南</h1>
+  <p>玉器修复 · 科普向 · 引导下单 —— 在页面里改，不用改代码</p>
+  <span class="badge">2026-11-05 版 · 画风已支持页面配置</span>
+</header>
+
+<h2>一、现在改风格有多简单</h2>
+
+<p>以前改海报风格要动 <code>douyin_visual.py</code> 里的代码常量 <code>STYLE</code>，改完还得重新打包 exe。现在<strong>直接在页面上改</strong>，保存就生效。</p>
+
+<div class="card">
+  <ol class="steps">
+    <li>打开工作台 → 左侧进 <b>抖音图文</b> 页面</li>
+    <li>找到 <b>海报画风（STYLE）</b> 这个输入框（就在「海报提示词兜底池」下面）</li>
+    <li>把下面任意一种风格的文本<b>整段粘进去</b> → 点页面底部的<b>保存配置</b></li>
+    <li>下次生成图文时，海报就按新画风出图 —— <b>不用重启，不用打包</b></li>
+  </ol>
+  <p class="mut" style="margin-top:14px">想恢复原来的米白/淡绿科普风：把那个输入框<b>清空</b>再保存即可（留空 = 用内置风格）。</p>
+</div>
+
+<h2>二、5 种推荐风格（玉器修复 / 科普 / 转化）</h2>
+
+<p>每一种都可以整段复制粘贴。共同的设计原则：<strong>信息图骨架 + 强禁止项</strong>——骨架保证「像专业科普」，禁止项挡住「像微商广告」。</p>
+
+<!-- 风格1 -->
+<div class="style-card">
+  <div class="head">
+    <div>
+      <h3>① 国风水墨 · 宣纸科普（默认推荐）</h3>
+      <p class="mut" style="margin:0">最贴玉器修复的气质，也最容易被 AI 引擎当「知识型内容」引用</p>
+      <div class="tagrow">
+        <span class="tag">首选</span>
+        <span class="tag">AI 引用率高</span>
+        <span class="tag gold">平台最安全</span>
+      </div>
+    </div>
+  </div>
+  <div class="body">
+    <div class="swatches">
+      <div class="sw"><i style="background:#F3EDE0"></i>宣纸底</div>
+      <div class="sw"><i style="background:#2F4F3A"></i>墨绿</div>
+      <div class="sw"><i style="background:#9C6B3F"></i>赭石</div>
+      <div class="sw"><i style="background:#C9A227"></i>金</div>
+      <div class="sw"><i style="background:#1F1F1F"></i>墨黑</div>
+    </div>
+<pre><button class="copy">复制</button>竖版 9:16 国风水墨科普信息图，宣纸质感米色底（#F3EDE0），带极淡纸纹。
+主色：墨绿（#2F4F3A）+ 赭石（#9C6B3F），点缀金（#C9A227）。
+顶部正中一行品牌名，用隶书体、深墨绿、字距略宽（占画面宽度约 40%）。
+主标题：宋体/思源宋体加粗，墨黑色，压在画面上三分之一，两行以内。
+正文：2~4 个宣纸色卡片，细墨线描边（1px，浅灰褐），卡片内文字用宋体、字号适中、行距开阔。
+装饰：卡片之间用一道细墨线 + 一枚小印章红点分隔；画面角落点缀淡墨线稿（玉镯剖面 / 祥云 / 金缮金线），线稿要淡、不抢主体。
+整体：留白充分，像一本线装书的内页，而不是广告海报。
+严禁：照片写实、卡通插画、鲜艳渐变、红色促销标签、爆炸贴、夸张阴影、荧光色。</pre>
+    <p class="mut">适用：全部玉器修复题材。尤其适合「裂纹辨别」「修复方案对比」「工艺解释」这类需要建立专业信任的内容。</p>
+  </div>
+</div>
+
+<!-- 风格2 -->
+<div class="style-card">
+  <div class="head">
+    <div>
+      <h3>② 金缮美学 · 深褐金线</h3>
+      <p class="mut" style="margin:0">直接呼应「金缮修复」这门工艺，视觉记忆点最强</p>
+      <div class="tagrow">
+        <span class="tag">辨识度高</span>
+        <span class="tag gold">转化力强</span>
+      </div>
+    </div>
+  </div>
+  <div class="body">
+    <div class="swatches">
+      <div class="sw"><i style="background:#2B2118"></i>深褐底</div>
+      <div class="sw"><i style="background:#C9A227"></i>金线</div>
+      <div class="sw"><i style="background:#E8DCC8"></i>米白</div>
+      <div class="sw"><i style="background:#7A8B7F"></i>灰绿</div>
+    </div>
+<pre><button class="copy">复制</button>竖版 9:16 深色调工艺美学信息图，深褐底色（#2B2118）带细微磨砂质感。
+主色：金色（#C9A227）+ 米白（#E8DCC8），辅助灰绿（#7A8B7F）。
+视觉母题：金缮的「金线」—— 用 1.5px 金色不规则曲线贯穿画面，象征修复的裂痕，线条优雅克制、不夸张。
+顶部正中品牌名：金色、衬线体、字距宽（占宽 35~40%）。
+主标题：米白色衬线体大字，居中偏上，两行以内。
+正文：2~3 个深色半透明卡片，金色细描边，文字米白、行距宽松。
+关键对比处：左侧用暗红（#8B4A4A）写「被否定的做法」，右侧用金色写「正确做法」，中间用一段金线连接。
+严禁：照片写实、卡通插画、彩虹渐变、红色促销标签、荧光色、拥挤排版。</pre>
+    <p class="mut">适用：金缮 / 包金 / 锔钉类工艺内容。深色底在信息流里跳脱，但要注意单条内容别太长（深色大片读久了累）。</p>
+  </div>
+</div>
+
+<!-- 风格3 -->
+<div class="style-card">
+  <div class="head">
+    <div>
+      <h3>③ 宋代极简 · 雨过天青</h3>
+      <p class="mut" style="margin:0">最「高级」的一版，适合抓高客单（收藏级玉镯、传家镯）</p>
+      <div class="tagrow">
+        <span class="tag">高客单</span>
+        <span class="tag">差异化强</span>
+      </div>
+    </div>
+  </div>
+  <div class="body">
+    <div class="swatches">
+      <div class="sw"><i style="background:#EDF2F0"></i>天青底</div>
+      <div class="sw"><i style="background:#5B7A72"></i>青灰</div>
+      <div class="sw"><i style="background:#B8C7C0"></i>淡青</div>
+      <div class="sw"><i style="background:#2B2F2E"></i>墨</div>
+    </div>
+<pre><button class="copy">复制</button>竖版 9:16 宋代极简信息图，雨过天青底色（#EDF2F0），大面积留白。
+主色：青灰（#5B7A72）+ 墨（#2B2F2E），极少量淡青（#B8C7C0）做分区。
+顶部正中品牌名：细体字、深青灰、字号克制（占宽 30%）。
+主标题：细宋体大字，墨色，居中偏上，字距略宽，最多两行。
+正文：不使用卡片边框，只用极细分割线（0.5px，淡青）划分区块；文字用宋体，行距很大（1.9 倍）。
+装饰：仅用极简的玉璧圆形 / 一段弧线，绝不堆砌纹样。
+整体气质：安静、克制、像博物馆展签。
+严禁：照片写实、卡通、任何渐变与阴影、红色黄色等暖色促销元素、密集文字块。</pre>
+    <p class="mut">适用：高端修复、收藏级玉器、传家镯修复。留白多意味着<strong>文字要更精炼</strong>——每张图最多 3 个信息点。</p>
+  </div>
+</div>
+
+<!-- 风格4 -->
+<div class="style-card">
+  <div class="head">
+    <div>
+      <h3>④ 典藏珠宝 · 高级留白</h3>
+      <p class="mut" style="margin:0">贴近珠宝杂志版式，把「修复」讲成「典藏养护」</p>
+      <div class="tagrow">
+        <span class="tag">质感强</span>
+        <span class="tag">适合封面</span>
+      </div>
+    </div>
+  </div>
+  <div class="body">
+    <div class="swatches">
+      <div class="sw"><i style="background:#FFFFFF"></i>纯白</div>
+      <div class="sw"><i style="background:#1C1C1E"></i>炭黑</div>
+      <div class="sw"><i style="background:#C0A062"></i>香槟金</div>
+      <div class="sw"><i style="background:#F2F2F4"></i>浅灰</div>
+    </div>
+<pre><button class="copy">复制</button>竖版 9:16 高端珠宝杂志版式信息图，纯白底（#FFFFFF）或极浅灰（#F2F2F4）。
+主色：炭黑（#1C1C1E）+ 香槟金（#C0A062），无其他彩色。
+顶部正中品牌名：极细字、字距很宽、炭黑色（占宽 30%）。
+主标题：超大号无衬线细体（如思源黑体 Light），炭黑，压在画面上三分之一，一行最好。
+正文：数字编号（01 / 02 / 03）+ 短句，编号用香槟金细体、数字较大；正文文字炭黑、行距 1.8。
+装饰：仅用一条极细香槟金横线；不使用卡片底纹、不使用圆角。
+整体气质：像珠宝品牌的养护手册，冷静、留白、少即是多。
+严禁：照片写实、卡通、渐变、阴影、任何促销色（红/黄/橙）、贴纸式元素。</pre>
+    <p class="mut">适用：封面图 / 单条重点图。全篇都用会显得信息量不足，建议与「① 国风水墨」交替使用。</p>
+  </div>
+</div>
+
+<!-- 风格5 -->
+<div class="style-card">
+  <div class="head">
+    <div>
+      <h3>⑤ 医疗科普 · 信任蓝白</h3>
+      <p class="mut" style="margin:0">最强的「可信感」，适合讲检测、参数、辨别标准</p>
+      <div class="tagrow">
+        <span class="tag">信任感最强</span>
+        <span class="tag">适合技术篇</span>
+      </div>
+    </div>
+  </div>
+  <div class="body">
+    <div class="swatches">
+      <div class="sw"><i style="background:#F7FAFC"></i>浅蓝白</div>
+      <div class="sw"><i style="background:#1B4F72"></i>深蓝</div>
+      <div class="sw"><i style="background:#2E86C1"></i>中蓝</div>
+      <div class="sw"><i style="background:#EAF3F8"></i>淡蓝</div>
+    </div>
+<pre><button class="copy">复制</button>竖版 9:16 医疗级科普信息图，浅蓝白底色（#F7FAFC）。
+主色：深蓝（#1B4F72）+ 中蓝（#2E86C1），辅助淡蓝（#EAF3F8）做区块底。
+顶部正中品牌名：深蓝色、无衬线中黑，右侧配一个极简盾牌/对勾线性图标。
+主标题：深蓝粗黑体，压在画面上三分之一，两行以内。
+正文：白色卡片 + 淡蓝描边 + 极轻阴影；每张卡片前加一个线性图标（放大镜 / 天平 / 温度计 / 证书）。
+数据呈现：关键数字用深蓝大号加粗，单位用小字；可用极简条形图或刻度线示意。
+底部：一行浅灰小字放服务说明。
+整体气质：像正规检测机构的说明图，干净、有依据、不煽情。
+严禁：照片写实、卡通插画、鲜艳渐变、红色促销标签、夸张感叹号。</pre>
+    <p class="mut">适用：「怎么辨别裂纹」「检测手段是什么」「参数怎么看」这类需要权威感的内容。注意别写成医疗诊断，平台对医疗类内容有资质要求。</p>
+  </div>
+</div>
+
+<h2>三、为什么这样改就生效（原理）</h2>
+
+<p>每张海报的生图提示词是这样拼出来的：</p>
+
+<pre>【画风 STYLE】+ 【版式】+ 【内容】+ 【底部小字】</pre>
+
+<table>
+  <tr><th style="width:22%">组成</th><th>由谁决定</th><th>你能改吗</th></tr>
+  <tr>
+    <td><b>画风</b></td>
+    <td>你刚填的「海报画风（STYLE）」；<b>留空</b>则用代码内置的米白/淡绿科普风</td>
+    <td>✅ 页面可改（本次新增）</td>
+  </tr>
+  <tr>
+    <td><b>版式</b></td>
+    <td>代码内置 4 种：封面 / 科普 / 清单 / 流程，由 AI 按内容自动选</td>
+    <td>❌ 暂不支持页面改</td>
+  </tr>
+  <tr>
+    <td><b>内容</b></td>
+    <td>AI 生成的图纲（走「创意一体化指令」）；AI 失败时用「海报提示词兜底池」</td>
+    <td>✅ 页面可改（两块都是页面配置）</td>
+  </tr>
+  <tr>
+    <td><b>底部小字</b></td>
+    <td>「服务行内容」+ 城市</td>
+    <td>✅ 页面可改</td>
+  </tr>
+</table>
+
+<div class="note">
+  <b>关键一点：兜底池改不了画风。</b>「海报提示词兜底池」只提供<strong>每张图说什么内容</strong>，而且只在 AI 出图纲失败时才用上。画风是另一段文本（就是你现在能填的这个 STYLE），两条路径都会套用。
+</div>
+
+<h2>四、改之前先看这几条</h2>
+
+<div class="note warn">
+  <b>① 别删「禁止项」。</b>每种风格末尾都有一句「严禁：照片写实、卡通插画、鲜艳渐变、红色促销标签」。<strong>这句是防止图片变成微商广告的关键</strong>——删了之后模型很容易给你出「大红底 + 爆炸贴」。
+</div>
+
+<div class="note warn">
+  <b>② 保持「信息图」三个字。</b>风格文本里出现「信息图 / 科普图 / 版式」这类词，模型才会按排版出图；只说「国风海报」容易出成纯插画，字都放不上去。
+</div>
+
+<div class="note warn">
+  <b>③ 字号和留白别写太满。</b>抖音是竖屏小图，提示词里要求「超大主标题 + 大留白」比「信息要密」更安全。文字挤了会糊成一团，反而降低完读率。
+</div>
+
+<div class="note warn">
+  <b>④ 换风格后先出 1 条试。</b>在抖音图文页选 1 个城市、1 条内容生成，看实际出图效果，满意再批量跑。不同出图模型的执行力差别不小。
+</div>
+
+<h2>五、附：怎么验证「改动真的生效了」</h2>
+
+<p>生成一条图文后，到内容包目录里看 <code>pack.json</code> 的 <code>image_prompts</code> 字段，每条提示词的第一行应该就是你填的画风文本。或者直接看生成的图片——底色、配色、字体应该立刻变。</p>
+
+<pre>内容包位置：
+article-pipeline\data\local\douyin\packs\&lt;包号&gt;\pack.json
+（如果用 exe：dist_v4\GEOArticlePipeline\data\local\douyin\packs\）</pre>
+
+<h2>六、常见问题</h2>
+
+<table>
+  <tr><th style="width:34%">问题</th><th>说明</th></tr>
+  <tr>
+    <td>改完没生效？</td>
+    <td>① 确认点了「保存配置」；② 确认生成的<b>新</b>内容包（老包不会回溯改）；③ 如果用的是 exe，重启一次 exe 让它重新读配置。</td>
+  </tr>
+  <tr>
+    <td>能不能只改某一张图的风格？</td>
+    <td>不能。画风是全局的，一次配置作用于所有海报。要单张不同，得改代码里的版式逻辑。</td>
+  </tr>
+  <tr>
+    <td>风格文本能写多长？</td>
+    <td>上限 3000 字符。建议控制在 300~500 字——太长了会挤占正文内容的位置。</td>
+  </tr>
+  <tr>
+    <td>改了风格，影响已经发出去的图文吗？</td>
+    <td>不影响。只对之后新生成的内容包生效。</td>
+  </tr>
+  <tr>
+    <td>4 种版式能改吗？</td>
+    <td>目前不能，版式写在代码里（封面 / 科普 / 清单 / 流程）。如果需要，可以后续做成页面可选。</td>
+  </tr>
+</table>
+
+<footer>
+  本文档对应 article-pipeline 的「抖音图文 · 海报画风页面配置」功能（2026-11-05）。<br>
+  画风字段：<code>douyin_config.DEFAULTS.style_prompt</code> ／ 渲染入口：<code>douyin_visual.render_prompt()</code>
+</footer>
+
+</div>
+
+<script>
+document.querySelectorAll('.copy').forEach(function(btn){
+  btn.addEventListener('click', function(){
+    var pre = btn.parentNode;
+    var text = pre.textContent.replace(/^复制/, '').trim();
+    var done = function(){
+      btn.textContent = '已复制';
+      setTimeout(function(){ btn.textContent = '复制'; }, 1400);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done, function(){
+        fallback(text); done();
+      });
+    } else { fallback(text); done(); }
+    function fallback(t){
+      var ta = document.createElement('textarea');
+      ta.value = t; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); } catch(e){}
+      document.body.removeChild(ta);
+    }
+  });
+});
+</script>
+</body>
+</html>

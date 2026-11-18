@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN" class="theme-light">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>业务城市 - GEO优化系统</title>
+
+<link rel="stylesheet" href="/static/style.css?v={{ asset_ver }}">
+
+<link rel="stylesheet" href="/static/client_style.css?v={{ asset_ver }}">
+
+<link rel="stylesheet" href="/static/ds.css?v={{ asset_ver }}">
+
+<link rel="stylesheet" href="/static/theme-light.css?v={{ asset_ver }}">
+
+<style>
+
+/* ============================================================
+
+   业务城市 · 页内样式(近黑 #08080A + 铜金 #B08D57)
+
+   规则: 只用 var(*) token / 圆角 ≤8px / 无渐变 无发光 无玻璃 / 间距 4-8-12-16-20-24-32
+
+   长度治理: 600+ 城市词条改表格 + 分页 + 「按市折叠」, 不再一次性渲染全部 pill
+
+   ============================================================ */
+
+
+
+/* 1) 外壳栅格 + 顶栏租户 chip 收紧(与 settings/dash 一致) */
+
+html.theme-light .cl-app { display: grid; }
+
+#tb-tenant {
+
+    width: auto !important; height: 22px !important; padding: 0 2px !important;
+
+    border: none !important; background: transparent !important; box-shadow: none !important;
+
+    color: var(--ink2); font-size: 12px;
+
+}
+
+#tb-tenant option { background: var(--card); color: var(--ink); }
+
+
+
+/* 2) 旧主题的按钮位移与光晕一律去掉; loading 态转为语义色文字按钮 */
+
+html.theme-light .btn:hover, html.theme-light .btn:active,
+
+html.theme-light .cl-btn:hover, html.theme-light .cl-btn:active { transform: none !important; box-shadow: none !important; }
+
+html.theme-light body .btn.loading::before, html.theme-light body .cl-btn.loading::before {
+
+    content: ''; width: 12px; height: 12px; border-radius: 50%; margin-right: 6px; box-sizing: border-box;
+
+    border: 2px solid currentColor; border-right-color: transparent; opacity: .6; animation: tl-spin .7s linear infinite;
+
+}
+
+html.theme-light .viz-bar .sg.blue, html.theme-light .viz-bar .sg.brand { background: var(--brand); }
+
+
+
+/* 3) 页头右侧说明不折行 + 区块内表格去二层边框(外层 .sec 已提供) */
+
+.phead-r .pr-l { white-space: nowrap; }
+
+html.theme-light .sec > .sec-b > .tbl-wrap { border: none; border-radius: 0; }
+
+html.theme-light .tbl td.empty-cell { padding: 0; border-bottom: none; }
+
+/* 表格内空态/错误态按钮: 覆盖第 21 节「行内文字按钮」规则(需同权重 4 个 :not 才压得住), 还原可见描边 */
+
+html.theme-light body table.tbl tbody td .empty .btn:not(.plain):not(.text):not(.danger):not(.ghost) {
+
+    background: transparent !important; border: 1px solid var(--line-strong) !important; color: var(--ink2) !important;
+
+}
+
+html.theme-light body table.tbl tbody td .empty .btn:not(.plain):not(.text):not(.danger):not(.ghost):hover {
+
+    border-color: var(--brand) !important; color: var(--brand) !important; background: transparent !important;
+
+}
+
+html.theme-light body table.tbl tbody td .empty .btn.danger {
+
+    background: transparent !important; border: 1px solid var(--bad) !important; color: var(--bad) !important;
+
+}
+
+
+
+/* 4) 工具条控件宽度(宿主 select 自带箭头底图, 这里只收宽度) */
+
+html.theme-light .toolbar select.inp { width: auto; min-width: 116px; }
+
+html.theme-light .toolbar .toolbar-new { flex: 0 1 300px; min-width: 220px; }
+
+
+
+/* 5) 折叠子行(区县行): 缩进 + 深一档底色, 不用斑马纹 */
+
+html.theme-light #ct-tbl tr.sub td { background: var(--bg-deep); }
+
+html.theme-light #ct-tbl tr.sub td:first-child { padding-left: 44px; }
+
+/* 表格区高度封顶(12 行 × 44 + 表头 40 = 568): 每页 50 条也不会把页面拉到 3000px 以上 */
+
+html.theme-light .ct-scroll { max-height: 568px; overflow: auto; }
+
+html.theme-light #ct-tbl .ct-exp .ic { transition: transform .16s; }
+
+html.theme-light #ct-tbl .ct-exp.open .ic { transform: rotate(180deg); }
+
+html.theme-light #ct-tbl .ct-indent { display: inline-flex; align-items: center; width: 20px; margin-right: 4px; color: var(--ink4); vertical-align: -3px; }
+
+
+
+/* 6) 城市词条 pill(区县行内可移除) + 新加入高亮 */
+
+.au-city { font-weight: 500; }
+
+.au-city.fresh { background: var(--ok-bg); color: var(--ok); }
+
+.au-city .x { width: 16px; height: 16px; border-radius: 2px; display: inline-flex; align-items: center; justify-content: center; color: var(--ink3); cursor: pointer; }
+
+.au-city .x:hover { background: var(--bad-bg); color: var(--bad); }
+
+
+
+/* 7) 决策说明条 + 表单行(控件 32 高, 间距 8/12/16) */
+
+.ct-info { font-size: 13px; color: var(--ink2); line-height: 1.8; }
+
+.ct-info b { color: var(--ink); font-weight: 600; }
+
+.toolbar.plain { padding: 0; border-bottom: none; }
+
+.ct-ratio { display: flex; align-items: center; gap: 12px; }
+
+.ct-ratio .rl { font-size: 12px; color: var(--ink3); white-space: nowrap; }
+
+.ct-range { flex: 1; min-width: 0; accent-color: var(--brand); }
+
+.ct-range::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: var(--line); }
+
+.ct-ratio-detail { margin-top: 12px; padding: 12px 14px; background: var(--bg-deep); border: 1px solid var(--line-soft); border-radius: var(--r); font-size: 12px; color: var(--ink2); line-height: 1.8; }
+
+.ct-ratio-detail .ic { vertical-align: -2px; color: var(--warn); }
+
+.ct-ta { min-height: 130px; width: 100%; }
+
+.batch-out { font-size: 12px; display: block; }
+
+</style>
+
+</head>
+
+<body class="cl" data-page="cities">
+
+
+
+<header class="topbar" id="topbar">
+
+  <div class="tb-brand"><span class="tb-logo">G</span><span class="tb-name">GEO优化系统</span><span class="tb-env" id="tb-env">运营管理端</span></div>
+
+  <div class="tb-right">
+
+    <span class="tb-chip" id="model-tag">模型 · —</span>
+
+    <span class="tb-chip" id="run-tag">空闲</span>
+
+    <span class="tb-chip"><select class="cl-tsel" id="tb-tenant" style="height:24px;border:none;background:transparent"></select></span>
+
+    <div class="tb-user" id="tb-user-btn"><span class="tb-av" id="tb-av">管</span><span class="tb-uname" id="tb-uname">—</span><i class="ic" data-ic="chevronDown" data-sz="14"></i></div>
+
+  </div>
+
+  <div class="tb-menu" id="tb-menu"><button onclick="doLogout()"><i class="ic" data-ic="logout"></i>退出登录</button></div>
+
+</header>
+
+
+
+<div class="cl-app">
+
+<aside class="cl-side" id="sidebar"></aside>
+
+<main class="cl-main">
+
+  <nav class="crumb" id="crumb"></nav>
+
+
+
+  <div class="phead">
+
+    <div class="phead-l">
+
+      <div class="phead-eyebrow">内容生产 · 地域覆盖</div>
+
+      <div class="phead-h1">业务城市</div>
+
+      <div class="phead-sub">选题自动带地域词 · 文章锚定对应城市 · 列表网发布到对应区域</div>
+
+      <div class="phead-chips">
+
+        <span class="phead-chip"><i class="ic" data-ic="pin" data-sz="16"></i>已开通地域 <b id="pc-city">-</b> 个</span>
+
+        <span class="phead-chip"><i class="ic" data-ic="city" data-sz="16"></i>覆盖城市 <b id="pc-city-n">-</b> 座</span>
+
+      </div>
+
+    </div>
+
+    <div class="phead-r">
+
+      <div class="pr-l">城市配置</div>
+
+      <button class="btn" onclick="save(this)"><i class="ic" data-ic="check"></i>保存城市配置</button>
+
+    </div>
+
+  </div>
+
+
+
+  <div class="kpi-grid">
+
+    <div class="kpi">
+
+      <div class="kpi-l">已开通地域 <span class="kpi-x"><i class="ic" data-ic="pin" data-sz="20"></i></span></div>
+
+      <div class="kpi-r"><span class="kpi-v" id="k-city">-</span><span class="kpi-u">个</span></div>
+
+      <div class="kpi-l">市级 + 区县级</div>
+
+    </div>
+
+    <div class="kpi">
+
+      <div class="kpi-l">覆盖城市 <span class="kpi-x"><i class="ic" data-ic="city" data-sz="20"></i></span></div>
+
+      <div class="kpi-r"><span class="kpi-v" id="k-city-n">-</span><span class="kpi-u">座</span></div>
+
+      <div class="kpi-l">去重后的地级市数量</div>
+
+    </div>
+
+    <div class="kpi">
+
+      <div class="kpi-l">地域词密度 <span class="kpi-x"><i class="ic" data-ic="layers" data-sz="20"></i></span></div>
+
+      <div class="kpi-r"><span class="kpi-v" id="k-city-lv">-</span></div>
+
+      <div class="viz-bar thin"><span class="sg brand" id="k-city-bar" style="width:0%"></span></div>
+
+      <div class="kpi-l">地域越密，本地搜索覆盖越广</div>
+
+    </div>
+
+  </div>
+
+
+
+  <!-- 链路说明 -->
+
+  <section class="sec">
+
+    <div class="sec-h">
+
+      <span class="sec-ico"><i class="ic" data-ic="pin" data-sz="20"></i></span>
+
+      <div class="sec-t"><b>城市驱动的全链路</b><span>选题 · 写作 · 发布自动带上地域</span></div>
+
+      <div class="sec-x"><span class="pill brand">市级 + 区县级</span></div>
+
+    </div>
+
+    <div class="sec-b">
+
+      <div class="ct-info">添加城市 / 区县后 → <b>AI 选题</b>自动生成「南京防水补漏公司哪家好」类标题（比例可调）→ <b>文章写作</b>自动锚定该城市 → <b>列表网发布</b>自动发对应城市区域。<b>区县级</b>（如 南京市玄武区）会生成更精准的本地标题。</div>
+
+    </div>
+
+  </section>
+
+
+
+  <!-- 已开通地域: 表格 + 分页 + 按市折叠 -->
+
+  <section class="sec">
+
+    <div class="sec-h">
+
+      <span class="sec-ico"><i class="ic" data-ic="city" data-sz="20"></i></span>
+
+      <div class="sec-t"><b>已开通地域</b><span id="ct-stat">-</span></div>
+
+      <div class="sec-x"><span id="dirty-tip"></span></div>
+
+    </div>
+
+    <div class="sec-b flush">
+
+      <div class="toolbar">
+
+        <div class="search-wrap">
+
+          <i class="ic" data-ic="search"></i>
+
+          <input class="inp" id="ct-search-inp" type="text" placeholder="搜索城市 / 区县" oninput="render()">
+
+        </div>
+
+        <select class="inp" id="ct-level" onchange="render()" title="层级筛选">
+
+          <option value="all">全部层级</option>
+
+          <option value="city">仅市级</option>
+
+          <option value="dist">含区县</option>
+
+        </select>
+
+        <input class="inp toolbar-new" id="new-city" placeholder="单个添加（如：青岛 或 南京市鼓楼区）" onkeydown="if(event.key==='Enter'){event.preventDefault();addCity();}">
+
+        <button class="btn sm gray" onclick="addCity()"><i class="ic" data-ic="plus" data-sz="16"></i>添加</button>
+
+        <span class="sp"></span>
+
+        <div class="colvis">
+
+          <button class="btn sm gray" onclick="ctColvis(event,'colvis-ct')"><i class="ic" data-ic="columns"></i>列显示</button>
+
+          <div class="colvis-pop" id="colvis-ct" onclick="event.stopPropagation()">
+
+            <label><input type="checkbox" checked onchange="ctCol('dist',this.checked)">已开通区县</label>
+
+            <label><input type="checkbox" checked onchange="ctCol('word',this.checked)">词条数</label>
+
+          </div>
+
+        </div>
+
+        <select class="inp" id="ct-size" onchange="ctSize(this.value)" title="每页条数">
+
+          <option value="20">20 条/页</option>
+
+          <option value="50" selected>50 条/页</option>
+
+          <option value="100">100 条/页</option>
+
+        </select>
+
+      </div>
+
+      <div class="tbl-wrap"><div class="tbl-scroll ct-scroll">
+
+        <table class="tbl" id="ct-tbl">
+
+          <thead><tr>
+
+            <th class="sortable" data-sort="name" onclick="ctSort('name')">城市 / 区县 <i class="ic sort-ic" data-ic="sortAsc" data-sz="16"></i></th>
+
+            <th data-w="140">层级</th>
+
+            <th class="sortable num" data-sort="dist" data-col="dist" data-w="130" onclick="ctSort('dist')">已开通区县 <i class="ic sort-ic" data-ic="sortAsc" data-sz="16"></i></th>
+
+            <th class="sortable num" data-sort="word" data-col="word" data-w="110" onclick="ctSort('word')">词条数 <i class="ic sort-ic" data-ic="sortAsc" data-sz="16"></i></th>
+
+            <th class="col-op">操作</th>
+
+          </tr></thead>
+
+          <tbody id="chips">
+
+            <tr><td class="empty-cell" colspan="5"><div class="skel" style="height:14px;margin:14px 16px"></div></td></tr>
+
+            <tr><td class="empty-cell" colspan="5"><div class="skel" style="height:14px;margin:14px 16px"></div></td></tr>
+
+            <tr><td class="empty-cell" colspan="5"><div class="skel" style="height:14px;margin:14px 16px"></div></td></tr>
+
+            <tr><td class="empty-cell" colspan="5"><div class="skel" style="height:14px;margin:14px 16px"></div></td></tr>
+
+            <tr><td class="empty-cell" colspan="5"><div class="skel" style="height:14px;margin:14px 16px"></div></td></tr>
+
+            <tr><td class="empty-cell" colspan="5"><div class="skel" style="height:14px;margin:14px 16px"></div></td></tr>
+
+            <tr><td class="empty-cell" colspan="5"><div class="skel" style="height:14px;margin:14px 16px"></div></td></tr>
+
+            <tr><td class="empty-cell" colspan="5"><div class="skel" style="height:14px;margin:14px 16px"></div></td></tr>
+
+          </tbody>
+
+        </table>
+
+      </div></div>
+
+      <div class="pager" id="ct-pager"></div>
+
+    </div>
+
+  </section>
+
+
+
+  <!-- 双栏: 批量添加 + 选题城市词比例 -->
+
+  <div class="bento-2">
+
+    <section class="sec" style="margin-bottom:0">
+
+      <div class="sec-h">
+
+        <span class="sec-ico"><i class="ic" data-ic="download" data-sz="20"></i></span>
+
+        <div class="sec-t"><b>批量添加</b><span>一行一个，支持市级（青岛）和区县级（青岛市市南区），自动去重</span></div>
+
+      </div>
+
+      <div class="sec-b">
+
+        <textarea id="batch-city" class="cl-ta ct-ta" placeholder="青岛&#10;宁波市鄞州区&#10;泰安市泰山区"></textarea>
+
+        <div class="toolbar plain" style="margin-top:12px">
+
+          <button class="btn sm gray" onclick="batchAdd()"><i class="ic" data-ic="download" data-sz="16"></i>批量添加到列表</button>
+
+          <button class="btn sm gray" onclick="document.getElementById('batch-city').value=''">清空</button>
+
+          <span class="batch-out" id="batch-out"></span>
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+
+    <section class="sec" style="margin-bottom:0">
+
+      <div class="sec-h">
+
+        <span class="sec-ico"><i class="ic" data-ic="sliders" data-sz="20"></i></span>
+
+        <div class="sec-t"><b>选题城市词比例</b><span id="ratio-desc"></span></div>
+
+      </div>
+
+      <div class="sec-b">
+
+        <div class="toolbar plain ct-ratio">
+
+          <span class="rl">全部泛地域</span>
+
+          <input type="range" id="ratio" min="0" max="100" step="10" value="60" class="ct-range" oninput="updateRatio(this.value)">
+
+          <span class="rl">全部城市词</span>
+
+        </div>
+
+        <div class="ct-ratio-detail" id="ratio-detail"></div>
+
+      </div>
+
+    </section>
+
+  </div>
+
+
+
+</main>
+
+</div>
+
+<script src="/static/icons.js?v={{ asset_ver }}"></script>
+
+<script src="/static/layout.js?v={{ asset_ver }}"></script>
+
+<script>
+
+let cities = [];
+
+let ratio = 60;
+
+let dirty = false;
+
+let freshSet = new Set();
+
+
+
+const $ = id => document.getElementById(id);
+
+
+
+/* ══════════════ 表格件(排序 / 层级筛选 / 分页 / 列显隐 / 折叠 / 骨架 / 空态 / 错误态) ══════════════ */
+
+const CT = { sortKey: '', sortDir: 0, page: 1, size: 50, level: 'all', cols: { dist: true, word: true }, open: new Set() };
+
+
+
+function ctSort(k) {
+
+    if (CT.sortKey !== k) { CT.sortKey = k; CT.sortDir = 1; }
+
+    else if (CT.sortDir === 1) { CT.sortDir = 2; }
+
+    else if (CT.sortDir === 2) { CT.sortDir = 0; CT.sortKey = ''; }
+
+    else { CT.sortDir = 1; }
+
+    CT.page = 1;
+
+    render();
+
+}
+
+function ctSortIcons() {
+
+    document.querySelectorAll('#ct-tbl thead th.sortable').forEach(th => {
+
+        const on = CT.sortKey === th.getAttribute('data-sort') && CT.sortDir > 0;
+
+        th.classList.toggle('on', on);
+
+        const i = th.querySelector('.sort-ic');
+
+        if (!i) return;
+
+        const nm = (on && CT.sortDir === 2) ? 'sortDesc' : 'sortAsc';
+
+        if (i.getAttribute('data-ic') !== nm) { i.setAttribute('data-ic', nm); i.removeAttribute('data-ic-done'); i.innerHTML = ''; }
+
+    });
+
+    if (window.ICONS) ICONS.mount(document);
+
+}
+
+function ctSize(v) { CT.size = parseInt(v, 10) || 50; CT.page = 1; render(); }
+
+function ctGoto(n) {
+
+    const pg = $('ct-pager');
+
+    const pages = parseInt((pg && pg.getAttribute('data-pages')) || '1', 10);
+
+    if (n < 1 || n > pages || n === CT.page) return;
+
+    CT.page = n;
+
+    render();
+
+}
+
+function ctPageNums(cur, total) {
+
+    if (total <= 7) { const a = []; for (let i = 1; i <= total; i++) a.push(i); return a; }
+
+    const set = new Set([1, total, cur, cur - 1, cur + 1]);
+
+    const nums = Array.from(set).filter(n => n >= 1 && n <= total).sort((a, b) => a - b);
+
+    const out = []; let prev = 0;
+
+    nums.forEach(n => { if (n - prev > 1) out.push('…'); out.push(n); prev = n; });
+
+    return out;
+
+}
+
+function ctPager(total, pages) {
+
+    const el = $('ct-pager');
+
+    if (!el) return;
+
+    const p = CT.page;
+
+    const from = total ? (p - 1) * CT.size + 1 : 0;
+
+    const to = Math.min(p * CT.size, total);
+
+    let btns = `<button class="pg-btn" ${p <= 1 ? 'disabled' : ''} onclick="ctGoto(${p - 1})" title="上一页">‹</button>`;
+
+    ctPageNums(p, pages).forEach(n => {
+
+        btns += (n === '…') ? '<span class="pg-gap">…</span>'
+
+            : `<button class="pg-btn ${n === p ? 'on' : ''}" onclick="ctGoto(${n})">${n}</button>`;
+
+    });
+
+    btns += `<button class="pg-btn" ${p >= pages ? 'disabled' : ''} onclick="ctGoto(${p + 1})" title="下一页">›</button>`;
+
+    el.setAttribute('data-pages', pages);
+
+    el.innerHTML = `<span class="pg-info">共 <b>${total}</b> 条 · 第 <b>${p}</b>/<b>${pages}</b> 页</span>
+
+        <span class="pg-range">${from}-${to}</span><span class="sp"></span><div class="pg-btns">${btns}</div>`;
+
+}
+
+function ctCol(name, on) { CT.cols[name] = !!on; ctApplyCols(); }
+
+function ctApplyCols() {
+
+    Object.keys(CT.cols).forEach(k => {
+
+        const show = CT.cols[k] !== false;
+
+        document.querySelectorAll('#ct-tbl thead th[data-col="' + k + '"], #chips td[data-col="' + k + '"]')
+
+            .forEach(el => { el.style.display = show ? '' : 'none'; });
+
+    });
+
+    document.querySelectorAll('#ct-tbl thead th[data-w]').forEach(th => { th.style.width = th.getAttribute('data-w') + 'px'; });
+
+}
+
+function ctColvis(e, id) {
+
+    if (e) e.stopPropagation();
+
+    document.querySelectorAll('.colvis-pop').forEach(p => { if (p.id !== id) p.classList.remove('on'); });
+
+    const pop = $(id);
+
+    if (pop) pop.classList.toggle('on');
+
+}
+
+function ctToggle(key) {
+
+    if (CT.open.has(key)) CT.open.delete(key); else CT.open.add(key);
+
+    render();
+
+}
+
+function ctRow(cls, icon, title, sub, btn) {
+
+    const cols = document.querySelectorAll('#ct-tbl thead th').length || 5;
+
+    return `<tr><td class="empty-cell" colspan="${cols}"><div class="${cls}">
+
+        <div class="e-ic"><i class="ic" data-ic="${icon}" data-sz="20"></i></div>
+
+        <div class="e-t">${title}</div>
+
+        <div class="e-s">${sub}</div>${btn || ''}
+
+      </div></td></tr>`;
+
+}
+
+function emptyCT(title, sub, icon, btn) { return ctRow('empty', icon, title, sub, btn); }
+
+function focusNewCity() { const el = $('new-city'); if (el) { el.scrollIntoView({ block: 'center' }); el.focus(); } }
+
+
+
+/* ══════════════ 数据 ══════════════ */
+
+async function load() {
+
+    try {
+
+        const d = await (await fetch('/api/cities')).json();
+
+        cities = d.cities || [];
+
+        ratio = d.ratio ?? 60;
+
+        $('ratio').value = ratio;
+
+        updateRatio(ratio);
+
+        render();
+
+    } catch (e) {
+
+        const tb = $('chips');
+
+        if (tb) tb.innerHTML = ctRow('empty err', 'alert', '城市配置加载失败', String(e.message || '接口异常'),
+
+            '<button class="btn gray sm" onclick="load()"><i class="ic" data-ic="refresh" data-sz="16"></i>重试</button>');
+
+        if (window.ICONS) ICONS.mount(tb);
+
+    }
+
+}
+
+function updateRatio(v) {
+
+    ratio = parseInt(v);
+
+    const gen = Math.round(12 * ratio / 100);
+
+    const pan = 12 - gen;
+
+    $('ratio-desc').textContent = `城市词 ${ratio}% / 泛地域 ${100 - ratio}%`;
+
+    $('ratio-detail').innerHTML =
+
+        `每次生成 12 条选题 → <b style="color:var(--brand)">${gen} 条带地域</b>（已开通地域轮换，精准本地搜索） + <b style="color:var(--brand)">${pan} 条泛地域</b>（全国通用，一篇覆盖全城）` +
+
+        (ratio === 100 ? '<br><i class="ic" data-ic="alert" data-sz="16"></i> 全是城市词，泛搜索流量覆盖为零' : ratio === 0 ? '<br><i class="ic" data-ic="alert" data-sz="16"></i> 全是泛地域，本地精准流量为零' : '');
+
+    if (window.ICONS) ICONS.mount($('ratio-detail'));
+
+}
+
+function chip(c) {
+
+    return `<span class="pill au-city ${freshSet.has(c) ? 'fresh' : ''}">${c}<span class="x" title="移除" onclick="delCity('${c.replace(/'/g, "\\'")}')"><i class="ic" data-ic="close" data-sz="16"></i></span></span>`;
+
+}
+
+function render() {
+
+    const tb = $('chips');
+
+    CT.level = ($('ct-level') || {}).value || 'all';
+
+    const q = ($('ct-search-inp').value || '').trim();
+
+    $('ct-stat').textContent = `共 ${cities.length} 个地域`;
+
+    // KPI 汇总
+
+    const citySet = new Set(cities.map(c => String(c).replace(/(市|区|县|镇|街道).*$/, '')).filter(Boolean));
+
+    const el = id => document.getElementById(id);
+
+    if (el('k-city')) el('k-city').textContent = cities.length;
+
+    if (el('k-city-n')) el('k-city-n').textContent = citySet.size;
+
+    if (el('pc-city')) el('pc-city').textContent = cities.length;
+
+    if (el('pc-city-n')) el('pc-city-n').textContent = citySet.size;
+
+    const lv = cities.length >= 80 ? '充足' : cities.length >= 30 ? '良好' : cities.length ? '偏少' : '未设置';
+
+    if (el('k-city-lv')) el('k-city-lv').textContent = lv;
+
+    if (el('k-city-bar')) el('k-city-bar').style.width = Math.min(100, Math.round(cities.length / 80 * 100)) + '%';
+
+    $('dirty-tip').innerHTML = dirty ? '<span class="pill warn">有未保存的修改</span>' : '';
+
+    if (!tb) return;
+
+    const hit = c => !q || c.includes(q);
+
+    // 分组: 市级(无市区结构) / 区县级(按市分组) —— 组键统一去掉尾部「市」, 使「潍坊市」与「潍坊市潍城区」归到同一组行
+
+    const cityLevel = cities.filter(c => !/市.+[区县]$/.test(c) && hit(c));
+
+    const dists = cities.filter(c => /市.+[区县]$/.test(c) && hit(c));
+
+    const byCity = {};
+
+    dists.forEach(d => {
+
+        const city = d.slice(0, d.indexOf('市'));
+
+        (byCity[city] = byCity[city] || []).push(d);
+
+    });
+
+    const groups = new Map();
+
+    cityLevel.forEach(c => {
+
+        const k = c.replace(/市$/, '');
+
+        const g = groups.get(k) || { key: k, name: k, own: '', dists: [] };
+
+        g.own = c;
+
+        groups.set(k, g);
+
+    });
+
+    Object.keys(byCity).forEach(k => {
+
+        const g = groups.get(k) || { key: k, name: k, own: '', dists: [] };
+
+        g.dists = byCity[k].slice();
+
+        groups.set(k, g);
+
+    });
+
+    const rows = Array.from(groups.values()).sort((a, b) => String(a.key).localeCompare(String(b.key), 'zh-Hans-CN'));
+
+    // 层级筛选 → 排序 → 分页
+
+    let list = rows.filter(r => CT.level === 'all' ? true : (CT.level === 'city' ? !r.dists.length : !!r.dists.length));
+
+    if (CT.sortKey && CT.sortDir) {
+
+        const m = CT.sortDir === 2 ? -1 : 1, k = CT.sortKey;
+
+        const words = r => r.dists.length + (r.own ? 1 : 0);
+
+        list = list.slice().sort((x, y) => {
+
+            if (k === 'name') return String(x.name).localeCompare(String(y.name), 'zh-Hans-CN') * m;
+
+            if (k === 'dist') return (x.dists.length - y.dists.length) * m;
+
+            if (k === 'word') return (words(x) - words(y)) * m;
+
+            return 0;
+
+        });
+
+    }
+
+    const pages = Math.max(1, Math.ceil(list.length / CT.size));
+
+    if (CT.page > pages) CT.page = pages;
+
+    if (CT.page < 1) CT.page = 1;
+
+    const slice = list.slice((CT.page - 1) * CT.size, CT.page * CT.size);
+
+
+
+    if (!rows.length) {
+
+        tb.innerHTML = emptyCT(q ? '没有匹配「' + q + '」的地域' : '尚未添加任何地域',
+
+            '用上方搜索框查找，或输入城市名 / 批量粘贴开始配置', 'pin',
+
+            '<button class="btn gray sm" onclick="focusNewCity()"><i class="ic" data-ic="plus" data-sz="16"></i>添加地域</button>');
+
+    } else if (!list.length) {
+
+        tb.innerHTML = emptyCT('没有符合条件的地域', '调整层级筛选或清空关键词后重试', 'search');
+
+    } else {
+
+        tb.innerHTML = slice.map(r => {
+
+            const open = CT.open.has(r.key) || (!!q && r.dists.length > 0);
+
+            const words = r.dists.length + (r.own ? 1 : 0);
+
+            const ops = [
+
+                r.dists.length ? `<button class="btn sm gray ct-exp ${open ? 'open' : ''}" onclick="ctToggle('${r.key.replace(/'/g, "\\'")}')"><i class="ic" data-ic="chevronDown" data-sz="16"></i>${open ? '收起' : '展开' + r.dists.length + ' 个区县'}</button>` : '',
+
+                r.own ? `<button class="btn sm danger" onclick="delCity('${r.own.replace(/'/g, "\\'")}')"><i class="ic" data-ic="trash" data-sz="16"></i>移除</button>` : ''
+
+            ].filter(Boolean).join('') || '<span class="t-sub">—</span>';
+
+            const head = `<tr${open ? ' class="on"' : ''}>
+
+                <td class="strong">${r.name}${r.own ? '' : '<span class="pill gray" style="margin-left:8px">仅区县</span>'}</td>
+
+                <td>${r.own ? '<span class="pill gray">市级</span>' : ''}${r.dists.length ? '<span class="pill brand" style="margin-left:4px">区县级</span>' : ''}</td>
+
+                <td class="num" data-col="dist">${r.dists.length || '—'}</td>
+
+                <td class="num" data-col="word">${words}</td>
+
+                <td class="col-op"><div class="row-act">${ops}</div></td>
+
+            </tr>`;
+
+            const subs = open ? r.dists.map(d => `<tr class="sub">
+
+                <td><span class="ct-indent"><i class="ic" data-ic="chevronRight" data-sz="16"></i></span>${chip(d)}</td>
+
+                <td><span class="pill gray">区县级</span></td>
+
+                <td class="num" data-col="dist"><span class="t-sub">—</span></td>
+
+                <td class="num" data-col="word">1</td>
+
+                <td class="col-op"><div class="row-act"><button class="btn sm danger" onclick="delCity('${d.replace(/'/g, "\\'")}')"><i class="ic" data-ic="trash" data-sz="16"></i>移除</button></div></td>
+
+            </tr>`).join('') : '';
+
+            return head + subs;
+
+        }).join('');
+
+    }
+
+    if (window.ICONS) ICONS.mount(tb);
+
+    ctSortIcons();
+
+    ctApplyCols();
+
+    ctPager(list.length, pages);
+
+}
+
+function normCity(s) {
+
+    s = s.trim();
+
+    if (!s) return '';
+
+    if (/市.+[区县]$/.test(s)) return s;         // 区县全称原样保留
+
+    return s.replace(/市$/, '');                   // 市级去掉尾部"市"
+
+}
+
+function addCity() {
+
+    const inp = $('new-city');
+
+    const c = normCity(inp.value);
+
+    if (!c) return;
+
+    if (cities.includes(c)) { alert('该地域已在列表中'); return; }
+
+    cities.push(c);
+
+    freshSet = new Set([c]);
+
+    inp.value = '';
+
+    dirty = true;
+
+    CT.open.add(/市.+[区县]$/.test(c) ? c.slice(0, c.indexOf('市')) : c);   // 新加入的条目默认展开可见
+
+    render();
+
+}
+
+function batchAdd() {
+
+    const raw = $('batch-city').value.split(/\r?\n/).map(normCity).filter(Boolean);
+
+    if (!raw.length) { $('batch-out').textContent = '请输入内容（一行一个）'; return; }
+
+    const uniq = [...new Set(raw)];
+
+    let added = 0, dup = 0;
+
+    freshSet = new Set();
+
+    uniq.forEach(c => {
+
+        if (cities.includes(c)) dup++;
+
+        else { cities.push(c); added++; freshSet.add(c); }
+
+    });
+
+    $('batch-city').value = '';
+
+    $('batch-out').innerHTML = added
+
+        ? `<span style="color:var(--ok)">新增 ${added} 个</span>${dup ? ` · <span style="color:var(--warn)">跳过重复 ${dup} 个</span>` : ''} · 记得点「保存城市配置」`
+
+        : `<span style="color:var(--warn)">全部 ${dup} 个已存在，未新增</span>`;
+
+    if (added) dirty = true;
+
+    render();
+
+}
+
+function delCity(c) {
+
+    const i = cities.indexOf(c);
+
+    if (i < 0) return;
+
+    cities.splice(i, 1);
+
+    dirty = true;
+
+    render();
+
+}
+
+async function save(btn) {
+
+    if (!cities.length) { alert('至少保留一个城市'); return; }
+
+    if (btn) { btn.classList.add('loading'); btn.disabled = true; }
+
+    try {
+
+        const r = await fetch('/api/cities', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+
+            body: JSON.stringify({ cities, ratio }) });
+
+        const d = await r.json();
+
+        if (d.ok) { alert(`已保存 ${d.count} 个地域，选题 / 写作 / 发布全部生效`); dirty = false; freshSet.clear(); render(); }
+
+        else alert(d.error || '保存失败');
+
+    } finally {
+
+        if (btn) { btn.classList.remove('loading'); btn.disabled = false; }
+
+    }
+
+}
+
+window.addEventListener('load', load);
+
+document.addEventListener('click', () => { document.querySelectorAll('.colvis-pop').forEach(p => p.classList.remove('on')); });
+
+</script>
+
+</body>
+
+</html>
+

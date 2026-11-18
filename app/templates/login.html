@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="theme-light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>登录 · GEO优化系统</title>
+<link rel="stylesheet" href="/static/ds.css?v={{ asset_ver }}">
+<link rel="stylesheet" href="/static/theme-light.css?v={{ asset_ver }}">
+<style>
+/* ============================================================
+   登录页 · 独立版式(近黑画布 + 铜金品牌色) 全 token 化
+   规范: 只用 var(--*) token / 圆角 ≤8px(输入 4 · 按钮 6 · 卡片 8)
+        无渐变 无发光 无玻璃拟态 / 无装饰光晕背景
+   间距全部落在 8px 栅格(4/8/12/16/20/24/32)
+   ============================================================ */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { min-height: 100vh; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    display: flex; background: var(--bg); color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+}
+/* 左侧品牌区: 中性深底 + 1px 分隔线, 无光晕 */
+.lg-brand {
+    flex: 1.25; display: flex; flex-direction: column; justify-content: center;
+    padding: 64px 72px; border-right: 1px solid var(--line); background: var(--bg-deep);
+}
+.lg-badge {
+    display: inline-flex; align-items: center; gap: 8px; align-self: flex-start;
+    font-size: 12px; font-weight: 500; letter-spacing: .08em;
+    color: var(--ink2); border: 1px solid var(--line); border-radius: var(--r-tag);
+    padding: 4px 12px; background: var(--bg-soft);
+}
+.lg-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ok); }
+.lg-title { font-size: 32px; font-weight: 600; letter-spacing: -.01em; line-height: 1.3; margin-top: 24px; max-width: 480px; }
+.lg-title span { color: var(--brand); }
+.lg-sub { font-size: 13px; color: var(--ink2); margin-top: 12px; line-height: 1.85; max-width: 460px; }
+.lg-feats { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 32px; max-width: 520px; }
+.lg-feat { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 16px; }
+.lg-feat > .ic { color: var(--brand); }
+.lg-feat b { display: block; font-size: 13px; font-weight: 600; margin-top: 8px; }
+.lg-feat span { display: block; font-size: 12px; color: var(--ink3); margin-top: 4px; line-height: 1.6; }
+.lg-foot { margin-top: 32px; font-size: 12px; color: var(--ink3); letter-spacing: .04em; }
+/* 右侧登录卡 */
+.lg-panel { flex: 1; min-width: 480px; display: flex; align-items: center; justify-content: center; padding: 40px; background: var(--bg); }
+.box {
+    width: 396px; background: var(--card); border: 1px solid var(--line);
+    border-radius: var(--r); padding: 32px;
+}
+.brand { text-align: center; margin-bottom: 24px; }
+.brand .t { font-size: 20px; font-weight: 600; color: var(--ink); letter-spacing: -.01em; }
+.brand .t span { color: var(--brand); }
+.brand .s { font-size: 12px; color: var(--ink3); margin-top: 8px; letter-spacing: .18em; font-weight: 400; }
+.field { margin-bottom: 16px; }
+.field label { display: block; font-size: 12px; color: var(--ink2); margin-bottom: 8px; font-weight: 500; }
+.box .field input {
+    width: 100%; height: 40px; padding: 0 12px; border-radius: var(--r-input);
+    font-size: 14px; font-family: inherit; transition: border-color .16s, background .16s;
+}
+.box .field input::placeholder { color: var(--ink3) !important; }
+.box .field input:focus { background: var(--bg-soft) !important; }
+/* 浏览器自动填充时保持主题底色 */
+.box .field input:-webkit-autofill,
+.box .field input:-webkit-autofill:hover,
+.box .field input:-webkit-autofill:focus {
+    -webkit-text-fill-color: var(--ink) !important;
+    -webkit-box-shadow: 0 0 0 1000px var(--card) inset !important;
+    caret-color: var(--ink);
+    transition: background-color 9999s ease-out;
+}
+.box .btn { width: 100%; height: 40px; margin-top: 8px; font-size: 14px; letter-spacing: .04em; }
+/* 错误提示: 红条(有内容才占位) */
+.err {
+    margin-top: 12px; padding: 8px 12px; background: var(--bad-bg);
+    border: 1px solid rgba(194, 91, 84, .35); border-radius: var(--r-input);
+    color: var(--bad); font-size: 12px; text-align: left; line-height: 1.6;
+}
+.err:empty { display: none; }
+.foot { text-align: center; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line-soft); font-size: 12px; color: var(--ink3); line-height: 1.7; }
+@media (max-width: 980px) { .lg-brand { display: none; } .lg-panel { min-width: 0; flex: 1; } }
+</style>
+</head>
+<body>
+<div class="lg-brand">
+    <span class="lg-badge"><span class="dot"></span>GEO OPTIMIZATION OS · 企业版</span>
+    <div class="lg-title">让 AI 搜索<br>成为您的<span>品牌新增长极</span></div>
+    <div class="lg-sub">从关键词选题、AI 生成与审稿，到多渠道自动分发，再到四大 AI 引擎的效果监测 —— 一条为品牌方打造的生成式搜索优化流水线。</div>
+    <div class="lg-feats">
+        <div class="lg-feat"><i class="ic" data-ic="robot" data-sz="20"></i><b>AI 内容流水线</b><span>A生成 · B审稿 · C修改，硬规则校验后发布</span></div>
+        <div class="lg-feat"><i class="ic" data-ic="send" data-sz="20"></i><b>多渠道自动分发</b><span>搜狐 / 百家号 / 美篇 / 列表网 / 抖音图文</span></div>
+        <div class="lg-feat"><i class="ic" data-ic="radar" data-sz="20"></i><b>GEO 效果监测</b><span>豆包 · DeepSeek · 千问 · 元宝 品牌提及追踪</span></div>
+        <div class="lg-feat"><i class="ic" data-ic="shield" data-sz="20"></i><b>多租户隔离</b><span>数据 · 账号 · 调度按品牌独立运行</span></div>
+    </div>
+    <div class="lg-foot">GEO OPTIMIZATION SYSTEM · POWERED BY AI CONTENT PIPELINE</div>
+</div>
+<div class="lg-panel">
+    <div class="box">
+        <div class="brand">
+            <div class="t">GEO<span>优化系统</span></div>
+            <div class="s">ENTERPRISE CONSOLE</div>
+        </div>
+        <div class="field">
+            <label for="li-user">账号</label>
+            <input id="li-user" placeholder="管理员 / 客户账号" autocomplete="username">
+        </div>
+        <div class="field">
+            <label for="li-pass">密码</label>
+            <input id="li-pass" type="password" placeholder="请输入密码" autocomplete="current-password"
+                   onkeydown="if(event.key==='Enter')doLogin()">
+        </div>
+        <button class="btn" id="li-btn" onclick="doLogin()">登 录</button>
+        <div class="err" id="li-err"></div>
+        <div class="foot">管理员端 / 客户工作台 分权登录<br>登录即代表同意系统使用规范 · 账号由管理员开通</div>
+    </div>
+</div>
+<script src="/static/icons.js?v={{ asset_ver }}"></script>
+<script>
+async function doLogin() {
+    const id = document.getElementById('li-user').value.trim();
+    const pass = document.getElementById('li-pass').value;
+    const btn = document.getElementById('li-btn');
+    const err = document.getElementById('li-err');
+    if (!id || !pass) { err.textContent = '请输入账号和密码'; return; }
+    btn.disabled = true; btn.textContent = '登录中...'; err.textContent = '';
+    try {
+        // CSRF: 登录页是匿名会话(不加载 layout.js, 否则 401 会被弹走), 令牌现取
+        let tok = '';
+        try { tok = (await (await fetch('/api/csrf')).json()).token || ''; } catch (e) { }
+        const r = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': tok},
+            body: JSON.stringify({ username: id, password: pass })
+        });
+        const d = await r.json();
+        if (d.ok) { location.href = '/'; return; }
+        err.textContent = d.message || d.error || '登录失败';
+    } catch (e) { err.textContent = '网络异常'; }
+    btn.disabled = false; btn.textContent = '登 录';
+}
+</script>
+</body>
+</html>
